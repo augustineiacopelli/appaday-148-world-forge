@@ -248,6 +248,86 @@ SESSION 3 / PHASE 3 (2026-10-02, Opus): CONTINENTS AND THE OVERWORLD. COMPLETE.
   Next: Phase 4, interiors (src/engine-interiors.js). It reads the map_ record's sites (entrance and front cells) for the
     exits back to the overworld, the site records' interior hint (town, dungeon, cave, castle), and palette.stamps' sets.
 === END SESSION 3 ===
+SESSION 4 / PHASE 4 (2026-10-02, Opus): INTERIORS. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61 before any change.
+  ENGINE:WORLD section src/engine-interiors.js: ENGINE_WORLD.interiors {DEFAULTS, ARCHETYPES, RESIDENT_WEIGHTS, BUILDINGS,
+    KEYS, settings, palette(art), floors(spec), slots(spec), build(spec), check(site, pal), walk, reach}. Pure: spec = {seed,
+    key, kind (town, dungeon, castle, cave), role, settings, palette, outdoor (biome id), archetypes, prize, troop, grants,
+    finale}. Attempt a floor f draws from rng(hash.str(seed + '|' + a + '|' + f)); a failed walking check retries with a two
+    cell larger map, up to settings.interiors.attempts (8). 258 of 272 sites across both fixtures on 8 seeds build first try.
+  Palette: sets town, dungeon, cave, castle with the Phase 3 fallbacks (cave and castle to dungeon, town to whichever exists);
+    a missing tile key falls back to the dungeon set, then the town set. The altar is dungeon:counter. Town ground is the
+    biome on the overworld cell in front of the site (the boss lock's lowland included), else grassland, steppe, forest,
+    any dry passable biome; paths are the desert biome unless the town stands on desert, else town floor.
+  Towns (Dragon Quest cutaway, one floor): a town wall ring with a two cell gate at the bottom middle (both cells are
+    overworld exits, arrival one cell in), a 6 by 4 plaza of path, a two wide street to the gate. Prefabs, walls included:
+    inn 9x6 (three counters, innkeeper behind, shelf closing the back, three beds, barrel, rug), shop 6x5 (full width counter,
+    merchant behind, shelves and barrel), church 7x7 (three altar cells, priest (healer) behind, plants, four pews of tables,
+    rug aisle), house 5x5 (bed, table, barrel, a resident at home). Start towns: inn, item, weapon, armor shops, church,
+    3 houses, 6 residents (34x28); other towns: inn, item shop, church, 2 houses, 4 residents (30x24). Placement: essentials
+    nearest the plaza with jitter, houses anywhere, rect plus a one cell margin clear, picked among the best six; houses may
+    be dropped only from attempt 3 on. Every door front joins the plaza by an L path, the other L, else a shortest path.
+    Up to six planters on open ground, each kept only if nothing is cut off. Doors carry the lintel (flag 33); counters 16;
+    building floors flag 1; DECISION: towns carry no zone table (outdoor ground keeps its biome's flag 2), per the plan.
+  People: fixed slots inn, shop:item, shop:weapon, shop:armor, church, guard1, guard2, resident1..N, named by role and
+    counted from settings only, so npc_ IDs never move on a reroll. Residents drawn by weight (elder 2, child 3, merchant 1,
+    worker 3, scholar 2, healer 1, traveler 2, noble 1) among archetypes the art has npc:<archetype> sprites for.
+  Dungeons and castles (BSP): split while a side is at least twice the minimum leaf (7; castles 8), stopping early one time
+    in five when both sides are under three leaves; one room per leaf, inset one cell, at least 3 by 3; at each split the
+    nearest pair of rooms across it is joined by an L. Floor 1 opens on the bottom edge through an arched door (corridor
+    down from the room nearest the bottom middle). Deeper floors: up stairs in the room nearest where the stairs above
+    stood; down stairs in the room farthest from the arrival. Floors: key dungeon 1, boss dungeon 2, castle 2 (settings
+    interiors.dungeon.keyFloors, bossFloors, castle.floors). Last floor, in breadth first order from the arrival: the goal
+    room is the farthest room that can be given exactly one entry (other entries walled up when every other room stays
+    reachable; orphaned corridor stubs walled); the locked door (door plus arch) on that entry needs item:key:<site key>;
+    the key chest goes in the farthest room reachable while the lock is shut; the goal is the boss (troop, grants, finale)
+    or, in a key dungeon, the prize chest holding its seal. Treasure chests in dead end rooms. Torches on north walls
+    every three cells; castles add pillars in the inset corners of rooms 5 by 5 and larger, each kept only if nothing is
+    cut off. Chests are decorations on floor (flag 0) placed against a wall, never in a doorway, kept only when every other
+    floor cell stays reachable.
+  Caves: fill 0.45, five steps of the 4-5 rule, largest region kept, pockets of three or more tunneled to their nearest
+    main cell by breadth first search in order of their first cell, smaller pockets filled; the cave must be a fifth open.
+    Stairs in near the bottom middle (a cell with two open sides), a treasure chest at the farthest cell that cuts nothing.
+  Walking check (interiors.check): exits reachable; stairs paired both ways; every chest has a reachable side; on a built
+    last floor a lock must exist, the key chest and lock are reachable while shut, the goal is not and is with the key; no
+    unreachable floor in dungeons and caves; towns: every door, the cell inside it, every counter front, and the plaza
+    reachable from the gate; nobody stands on a blocking cell.
+  WORLD side (WORLD:GENERATE): WORLD.interiors {palette, sprites, specs, site, mapKey, npcKey, maps, generated, stale, apply}.
+    Sub seed = hash.seed(master, 'interior|' + site key). Records: map_ per floor (key map|<site key>|<floor>) {kind, site,
+    chapter, floor, floors, w, h, seed, generatorVersion, paramHash, digest, attempts, tileset, exits [{kind, at, arrive, to
+    {map, at}}], features (cells as [x, y]), people, stats, buildings (towns) or rooms (count), outdoor and path (towns)};
+    npc_ per person (key npc|<site key>|<slot>) {chapter, site, map, at, slot, archetype, role, sprite (spr_ for
+    npc:<archetype> or null), facing, wander, building, counter}. Two way links: floor 1 overworld exits name the overworld
+    map_ and the site's front cell; the overworld record's site entry gains enter {map, at}; stairs name the partner floor
+    and its arrival; twn_/dgn_ gain maps, people, entrance {map, at}, overworld {map, at}, interiorHash. No tile arrays (four
+    fixture: 31 maps, 87 people). apply generates the overworld first when missing or stale, refuses a site that fails its
+    check, keeps user records, and removes generated interior map_ and npc_ records no site makes any more. Regenerating the
+    overworld drops the enter links (stale); the World tab regenerates the interiors with it once they exist.
+  Validator world.interiors (recordId 'world', field interiors): no interiors yet and stale are warnings; an exit to a missing
+    map, a missing person, a missing site, or a person on a missing map are errors; a person whose archetype has no sprite
+    is a warning (Phase 6 makes sprite references part of the reference check).
+  Sites tab (WS:SITES, src/ws-sites.js, CSS src/world-sites.css): Generate every interior (or again), chips (kinds, maps,
+    people, out of date), the preview of the chosen site one cell to a pixel (biome ground, tile keys colored, exits, locks,
+    bosses, people marked) with a floor radio group, exits and features in words, a people table for towns, and the sites
+    by chapter with 44 px Preview buttons. Phase 7 adds the tile preview through tiles.drawMap and the exits overlay.
+  Tests: test/phase4.js 53 of 53 (identical interiors for all 25 sites in two vm contexts and the plain context; seeds
+    differ; floor counts and NPC slots seed independent; 272 fixture sites on 8 seeds and 240 solo sites on 40 seeds walk
+    clean; settings take effect; every ref resolves; every wall autotiled, blocking, with a valid blobIndex of its mask8;
+    counters and altars 16, lintels and arches 33, dungeon and cave floors 3, building floors 1, town ground the front
+    biome; leaves and rooms; key before lock and goal behind it in every dungeon and castle, prize is the seal, boss carries
+    troop and grants; castle pillars, torches, finale; stairs paired; caves 45 percent fill, one region, tunnels, chest;
+    town buildings, posts behind counters, the altar from the dungeon set, guards, beds; paths join every door to the plaza
+    and the plaza to the gate; the checker catches a missing lock, key, a stray floor, an unpaired stair; 25 interiors in
+    45 ms plain; the page matches the engine's 31 digests, writes 31 map_ and 87 npc_ with sprites, links both ways,
+    validates clean but the Marches warning, goes stale on a reroll and on an overworld regenerate and recovers with every
+    ID kept, keeps a user map_, removes npc_ records when residents drop; Draft manifest 150 created, none unresolved; Days
+    146 and 147 open it identical with no new errors; the Sites tab). phase0 63, phase1 37 (static scan covers the new
+    section), phase2 40, phase3 61; layout.js 28 views pass (Sites generated, a boss dungeon floor 2, a town). Pictures:
+    test/out/phase4-town.png, phase4-dungeon.png, phase4-cave.png, phase4-sites-dungeon-*.png, phase4-sites-town-*.png.
+  Next: Phase 5, encounter zones (src/engine-zones.js): one zone per continent slug and biome from flag 2 overworld cells,
+    one table per dungeon, castle, and cave map_ (none for towns), boss troops on boss features, and the sdq_.giver fill
+    from npc_ records in a town of the quest's chapter (prefer role resident).
+=== END SESSION 4 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

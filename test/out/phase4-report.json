@@ -1,0 +1,381 @@
+{
+  "when": "2026-10-02T14:10:03.400Z",
+  "pass": 53,
+  "total": 53,
+  "buildMs": 33,
+  "firstTry": "258/272",
+  "results": [
+    {
+      "name": "one seed gives identical interiors for all 25 sites of the four fixture in two vm contexts and the plain context",
+      "ok": true
+    },
+    {
+      "name": "another seed gives a different interior for every site",
+      "ok": true
+    },
+    {
+      "name": "floor counts and NPC slot names never depend on the seed, so map_ and npc_ IDs survive a reroll",
+      "ok": true
+    },
+    {
+      "name": "each site has its own sub seed from the master seed and its structural key",
+      "ok": true
+    },
+    {
+      "name": "every interior of demo and four on 8 seeds each walks clean (272 of 272, 258 on the first attempt)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "each of the six site shapes builds clean on 40 seeds (240 sites)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "settings take effect: a four floor boss dungeon on 30 by 24 floors, and a town too small at first grows on a later attempt",
+      "ok": true,
+      "detail": {
+        "many": [],
+        "tiny": [
+          4,
+          32
+        ]
+      }
+    },
+    {
+      "name": "every ground and decoration ref of every floor resolves through tiles.resolve",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "every wall (18936 cells) resolves as an autotiled, blocking tile with a valid blobIndex of its 8 neighbor mask",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "every counter and altar reads flag 16 through flagsAt (118 cells)",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "every lintel and arch reads flag 33 through flagsAt (77 doors)",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "dungeon, castle, and cave floors read flag 3 (13641 cells); building floors read flag 1 (562)",
+      "ok": true,
+      "detail": {
+        "dFloorBad": 0,
+        "bFloorBad": 0
+      }
+    },
+    {
+      "name": "town outdoor ground is the biome in front of the site or the path",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "every leaf is at least the minimum leaf (7, castles 8) and every room is at least 3 by 3, inset inside its leaf",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "in every dungeon and castle the key chest and the lock are reachable while the lock is shut, the goal is not, and with the key it is; the key dungeon's prize is its seal, the boss carries its troop and grants",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "the finale castle has pillars and torches and a boss marked finale",
+      "ok": true
+    },
+    {
+      "name": "stairs pair up between floors in both directions, on stairs tiles",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "caves seed near 45 percent fill (0.414 to 0.477)",
+      "ok": true
+    },
+    {
+      "name": "every cave is one connected region after tunneling (30 seeds), and pockets were tunneled",
+      "ok": true,
+      "detail": {
+        "comps": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "tunnels": [
+          2,
+          2,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "every cave is lit by stairs in, a treasure chest at its far end, and at least a fifth of it is open",
+      "ok": true
+    },
+    {
+      "name": "start towns have an inn, three shops, and a church; the second town an inn, an item shop, and a church; houses around them",
+      "ok": true,
+      "detail": [
+        "church,inn,shop:armor,shop:item,shop:weapon",
+        "church,inn,shop:item",
+        "church,inn,shop:armor,shop:item,shop:weapon",
+        "church,inn,shop:armor,shop:item,shop:weapon",
+        "church,inn,shop:armor,shop:item,shop:weapon",
+        "church,inn,shop:armor,shop:item,shop:weapon",
+        "church,inn,shop:armor,shop:item,shop:weapon"
+      ]
+    },
+    {
+      "name": "the innkeeper stands behind the inn counter, merchants behind their shop counters, the priest behind the altar (the dungeon set's counter), two gate guards, beds in the inn, archetypes from the ten",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "in every town each door's front is joined to the plaza by path tiles, and the plaza runs to the two exit cells on the bottom edge",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "the walking check catches a missing lock, a missing key chest, a stray floor cell, and stairs without a partner",
+      "ok": true,
+      "detail": {
+        "noLock": [
+          "no-lock"
+        ],
+        "noKey": [
+          "key-after-lock"
+        ],
+        "orphan": [
+          "orphan"
+        ],
+        "lonely": [
+          "stairs"
+        ]
+      }
+    },
+    {
+      "name": "... the key chest, the orphan, and the stairs each by their own code",
+      "ok": true,
+      "detail": {
+        "noKey": [
+          "key-after-lock"
+        ],
+        "orphan": [
+          "orphan"
+        ],
+        "lonely": [
+          "stairs"
+        ]
+      }
+    },
+    {
+      "name": "all 25 interiors of the four fixture build in 33 ms in a plain context (under 1500)",
+      "ok": true,
+      "detail": 33
+    },
+    {
+      "name": "nothing is generated before apply",
+      "ok": true
+    },
+    {
+      "name": "apply generates the overworld first, then writes 31 interior map_ records and 87 npc_ records for 25 sites",
+      "ok": true,
+      "detail": {
+        "sites": 25,
+        "floors": 31,
+        "people": 87,
+        "written": 118,
+        "removed": 0,
+        "kept": [],
+        "ms": 222
+      }
+    },
+    {
+      "name": "map_ and npc_ IDs derive from map|<site key>|<floor> and npc|<site key>|<slot>",
+      "ok": true
+    },
+    {
+      "name": "the page builds the very floors the engine builds outside it (all 31 digests match at seed 42)",
+      "ok": true
+    },
+    {
+      "name": "records hold kind, site, chapter, floor, size, seed, version, hash, digest, tileset, exits, features, and people, and no tile arrays",
+      "ok": true,
+      "detail": 131059
+    },
+    {
+      "name": "every person names its map, cell, slot, archetype, and a Day 147 field sprite for that archetype",
+      "ok": true
+    },
+    {
+      "name": "exits link both ways: every overworld site enters floor 1 at a cell whose way out leads back to the cell in front of the site, the site record holds both ends, and stairs name each other's arrival",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "site records list their maps and people",
+      "ok": true
+    },
+    {
+      "name": "no field named id inside any world record",
+      "ok": true
+    },
+    {
+      "name": "charter, codex, rules, and art are untouched; sdq_ givers are left for Phase 5",
+      "ok": true
+    },
+    {
+      "name": "the generated four fixture validates with no errors, no broken references, and only the Marches boss warning",
+      "ok": true,
+      "detail": {
+        "s": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "w": [
+          "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
+        ],
+        "e": []
+      }
+    },
+    {
+      "name": "after a reroll the interiors are stale and validation says so",
+      "ok": true
+    },
+    {
+      "name": "generating again clears the warning, keeps every world ID, and changes every floor",
+      "ok": true
+    },
+    {
+      "name": "regenerating the overworld alone drops its enter links, which marks the interiors stale",
+      "ok": true
+    },
+    {
+      "name": "and generating the interiors again restores them",
+      "ok": true
+    },
+    {
+      "name": "a map_ record marked user made is kept on generate",
+      "ok": true
+    },
+    {
+      "name": "fewer residents in the settings removes the npc_ records no site makes any more",
+      "ok": true,
+      "detail": {
+        "sites": 25,
+        "floors": 31,
+        "people": 69,
+        "written": 100,
+        "removed": 18,
+        "kept": [],
+        "ms": 129
+      }
+    },
+    {
+      "name": "settings restored: 87 people again",
+      "ok": true
+    },
+    {
+      "name": "Draft manifest lists 150 created world IDs (32 before plus 31 maps and 87 people) and nothing unresolved",
+      "ok": true,
+      "detail": {
+        "created": 150,
+        "unresolved": [],
+        "counts": {
+          "map_": 32,
+          "reg_": 6,
+          "npc_": 87,
+          "twn_": 7,
+          "dgn_": 18
+        }
+      }
+    },
+    {
+      "name": "Day 146 opens the Draft with interiors, every namespace identical and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "e": []
+      }
+    },
+    {
+      "name": "Day 147 opens the Draft with interiors, every namespace identical, coverage green, and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        }
+      }
+    },
+    {
+      "name": "the Sites tab offers Generate every interior before anything exists",
+      "ok": true
+    },
+    {
+      "name": "after Generate: chips for 3 towns, dungeons, a castle, and caves, a preview canvas of the first site, and nine site rows",
+      "ok": true,
+      "detail": "SitesEvery town, dungeon, castle, and cave on the overworld gets its interior from the seed. Towns are single map cutaways with an inn, shops, a church, and houses around a plaza; dungeons and castles are rooms split by binary space partitioning with a key chest before the locked door to the boss; c"
+    },
+    {
+      "name": "Preview on the boss dungeon shows it with a two floor switch as a radio group",
+      "ok": true
+    },
+    {
+      "name": "choosing Floor 2 draws floor 2 with its locked door and boss listed",
+      "ok": true
+    },
+    {
+      "name": "a town preview lists its people with archetype and place",
+      "ok": true
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

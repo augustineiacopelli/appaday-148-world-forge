@@ -249,6 +249,86 @@ SESSION 3 / PHASE 3 (2026-10-02, Opus): CONTINENTS AND THE OVERWORLD. COMPLETE.
   Next: Phase 4, interiors (src/engine-interiors.js). It reads the map_ record's sites (entrance and front cells) for the
     exits back to the overworld, the site records' interior hint (town, dungeon, cave, castle), and palette.stamps' sets.
 === END SESSION 3 ===
+SESSION 4 / PHASE 4 (2026-10-02, Opus): INTERIORS. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61 before any change.
+  ENGINE:WORLD section src/engine-interiors.js: ENGINE_WORLD.interiors {DEFAULTS, ARCHETYPES, RESIDENT_WEIGHTS, BUILDINGS,
+    KEYS, settings, palette(art), floors(spec), slots(spec), build(spec), check(site, pal), walk, reach}. Pure: spec = {seed,
+    key, kind (town, dungeon, castle, cave), role, settings, palette, outdoor (biome id), archetypes, prize, troop, grants,
+    finale}. Attempt a floor f draws from rng(hash.str(seed + '|' + a + '|' + f)); a failed walking check retries with a two
+    cell larger map, up to settings.interiors.attempts (8). 258 of 272 sites across both fixtures on 8 seeds build first try.
+  Palette: sets town, dungeon, cave, castle with the Phase 3 fallbacks (cave and castle to dungeon, town to whichever exists);
+    a missing tile key falls back to the dungeon set, then the town set. The altar is dungeon:counter. Town ground is the
+    biome on the overworld cell in front of the site (the boss lock's lowland included), else grassland, steppe, forest,
+    any dry passable biome; paths are the desert biome unless the town stands on desert, else town floor.
+  Towns (Dragon Quest cutaway, one floor): a town wall ring with a two cell gate at the bottom middle (both cells are
+    overworld exits, arrival one cell in), a 6 by 4 plaza of path, a two wide street to the gate. Prefabs, walls included:
+    inn 9x6 (three counters, innkeeper behind, shelf closing the back, three beds, barrel, rug), shop 6x5 (full width counter,
+    merchant behind, shelves and barrel), church 7x7 (three altar cells, priest (healer) behind, plants, four pews of tables,
+    rug aisle), house 5x5 (bed, table, barrel, a resident at home). Start towns: inn, item, weapon, armor shops, church,
+    3 houses, 6 residents (34x28); other towns: inn, item shop, church, 2 houses, 4 residents (30x24). Placement: essentials
+    nearest the plaza with jitter, houses anywhere, rect plus a one cell margin clear, picked among the best six; houses may
+    be dropped only from attempt 3 on. Every door front joins the plaza by an L path, the other L, else a shortest path.
+    Up to six planters on open ground, each kept only if nothing is cut off. Doors carry the lintel (flag 33); counters 16;
+    building floors flag 1; DECISION: towns carry no zone table (outdoor ground keeps its biome's flag 2), per the plan.
+  People: fixed slots inn, shop:item, shop:weapon, shop:armor, church, guard1, guard2, resident1..N, named by role and
+    counted from settings only, so npc_ IDs never move on a reroll. Residents drawn by weight (elder 2, child 3, merchant 1,
+    worker 3, scholar 2, healer 1, traveler 2, noble 1) among archetypes the art has npc:<archetype> sprites for.
+  Dungeons and castles (BSP): split while a side is at least twice the minimum leaf (7; castles 8), stopping early one time
+    in five when both sides are under three leaves; one room per leaf, inset one cell, at least 3 by 3; at each split the
+    nearest pair of rooms across it is joined by an L. Floor 1 opens on the bottom edge through an arched door (corridor
+    down from the room nearest the bottom middle). Deeper floors: up stairs in the room nearest where the stairs above
+    stood; down stairs in the room farthest from the arrival. Floors: key dungeon 1, boss dungeon 2, castle 2 (settings
+    interiors.dungeon.keyFloors, bossFloors, castle.floors). Last floor, in breadth first order from the arrival: the goal
+    room is the farthest room that can be given exactly one entry (other entries walled up when every other room stays
+    reachable; orphaned corridor stubs walled); the locked door (door plus arch) on that entry needs item:key:<site key>;
+    the key chest goes in the farthest room reachable while the lock is shut; the goal is the boss (troop, grants, finale)
+    or, in a key dungeon, the prize chest holding its seal. Treasure chests in dead end rooms. Torches on north walls
+    every three cells; castles add pillars in the inset corners of rooms 5 by 5 and larger, each kept only if nothing is
+    cut off. Chests are decorations on floor (flag 0) placed against a wall, never in a doorway, kept only when every other
+    floor cell stays reachable.
+  Caves: fill 0.45, five steps of the 4-5 rule, largest region kept, pockets of three or more tunneled to their nearest
+    main cell by breadth first search in order of their first cell, smaller pockets filled; the cave must be a fifth open.
+    Stairs in near the bottom middle (a cell with two open sides), a treasure chest at the farthest cell that cuts nothing.
+  Walking check (interiors.check): exits reachable; stairs paired both ways; every chest has a reachable side; on a built
+    last floor a lock must exist, the key chest and lock are reachable while shut, the goal is not and is with the key; no
+    unreachable floor in dungeons and caves; towns: every door, the cell inside it, every counter front, and the plaza
+    reachable from the gate; nobody stands on a blocking cell.
+  WORLD side (WORLD:GENERATE): WORLD.interiors {palette, sprites, specs, site, mapKey, npcKey, maps, generated, stale, apply}.
+    Sub seed = hash.seed(master, 'interior|' + site key). Records: map_ per floor (key map|<site key>|<floor>) {kind, site,
+    chapter, floor, floors, w, h, seed, generatorVersion, paramHash, digest, attempts, tileset, exits [{kind, at, arrive, to
+    {map, at}}], features (cells as [x, y]), people, stats, buildings (towns) or rooms (count), outdoor and path (towns)};
+    npc_ per person (key npc|<site key>|<slot>) {chapter, site, map, at, slot, archetype, role, sprite (spr_ for
+    npc:<archetype> or null), facing, wander, building, counter}. Two way links: floor 1 overworld exits name the overworld
+    map_ and the site's front cell; the overworld record's site entry gains enter {map, at}; stairs name the partner floor
+    and its arrival; twn_/dgn_ gain maps, people, entrance {map, at}, overworld {map, at}, interiorHash. No tile arrays (four
+    fixture: 31 maps, 87 people). apply generates the overworld first when missing or stale, refuses a site that fails its
+    check, keeps user records, and removes generated interior map_ and npc_ records no site makes any more. Regenerating the
+    overworld drops the enter links (stale); the World tab regenerates the interiors with it once they exist.
+  Validator world.interiors (recordId 'world', field interiors): no interiors yet and stale are warnings; an exit to a missing
+    map, a missing person, a missing site, or a person on a missing map are errors; a person whose archetype has no sprite
+    is a warning (Phase 6 makes sprite references part of the reference check).
+  Sites tab (WS:SITES, src/ws-sites.js, CSS src/world-sites.css): Generate every interior (or again), chips (kinds, maps,
+    people, out of date), the preview of the chosen site one cell to a pixel (biome ground, tile keys colored, exits, locks,
+    bosses, people marked) with a floor radio group, exits and features in words, a people table for towns, and the sites
+    by chapter with 44 px Preview buttons. Phase 7 adds the tile preview through tiles.drawMap and the exits overlay.
+  Tests: test/phase4.js 53 of 53 (identical interiors for all 25 sites in two vm contexts and the plain context; seeds
+    differ; floor counts and NPC slots seed independent; 272 fixture sites on 8 seeds and 240 solo sites on 40 seeds walk
+    clean; settings take effect; every ref resolves; every wall autotiled, blocking, with a valid blobIndex of its mask8;
+    counters and altars 16, lintels and arches 33, dungeon and cave floors 3, building floors 1, town ground the front
+    biome; leaves and rooms; key before lock and goal behind it in every dungeon and castle, prize is the seal, boss carries
+    troop and grants; castle pillars, torches, finale; stairs paired; caves 45 percent fill, one region, tunnels, chest;
+    town buildings, posts behind counters, the altar from the dungeon set, guards, beds; paths join every door to the plaza
+    and the plaza to the gate; the checker catches a missing lock, key, a stray floor, an unpaired stair; 25 interiors in
+    45 ms plain; the page matches the engine's 31 digests, writes 31 map_ and 87 npc_ with sprites, links both ways,
+    validates clean but the Marches warning, goes stale on a reroll and on an overworld regenerate and recovers with every
+    ID kept, keeps a user map_, removes npc_ records when residents drop; Draft manifest 150 created, none unresolved; Days
+    146 and 147 open it identical with no new errors; the Sites tab). phase0 63, phase1 37 (static scan covers the new
+    section), phase2 40, phase3 61; layout.js 28 views pass (Sites generated, a boss dungeon floor 2, a town). Pictures:
+    test/out/phase4-town.png, phase4-dungeon.png, phase4-cave.png, phase4-sites-dungeon-*.png, phase4-sites-town-*.png.
+  Next: Phase 5, encounter zones (src/engine-zones.js): one zone per continent slug and biome from flag 2 overworld cells,
+    one table per dungeon, castle, and cave map_ (none for towns), boss troops on boss features, and the sdq_.giver fill
+    from npc_ records in a town of the quest's chapter (prefer role resident).
+=== END SESSION 4 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -607,6 +687,17 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; border: 1px solid var(--line2); }
 @media (min-width: 900px) { .w8-map { max-width: 760px; } }
 /* === WORLD:MAP CSS END === */
+/* === WORLD:SITES CSS BEGIN === */
+.w8-site .section-h { margin-top: 0; }
+.w8-imap { margin: 0; background: #14110f; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; line-height: 0; }
+.w8-imap canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+@media (min-width: 900px) { .w8-imap { max-width: 760px; } }
+.w8-lines { margin: 10px 0 12px; padding-left: 20px; color: var(--ink2); }
+.w8-lines li { margin: 3px 0; }
+.w8-pick { min-height: 44px; min-width: 44px; padding: 0 14px; }
+.w8-pick[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.w8-sites tr[aria-current="true"] th { color: var(--accent2); }
+/* === WORLD:SITES CSS END === */
 </style>
 </head>
 <body>
@@ -4665,6 +4756,650 @@ var ENGINE_WORLD = (function () {
     settings: owSettings, size: owSize, palette: owPalette, build: owBuild, reach: owReach, walkable: owWalkable, check: owCheck,
     grid: { bfs: bfs, components: components, largest: largest, nb4: nb4 } };
 
+  // ---------------------------------------------------------------- interiors (Phase 4)
+  // Three pure generators, each taking a seed and parameters and returning maps with exits: towns (a Dragon Quest style
+  // single map cutaway), built dungeons and castles (binary space partitioning), and caves (cellular automaton). Like the
+  // overworld, the art arrives as plain data (interiors.palette below) and nothing outside the spec is read.
+  //
+  // build(spec) -> site. spec: {seed (the site's sub seed), key (structural site key), kind 'town' | 'dungeon' |
+  //   'castle' | 'cave', role (start, town, key, boss, cave...), settings (world.settings), palette, outdoor (the biome
+  //   tileset of the overworld cell in front of the site, for town ground), archetypes (NPC archetypes the art has
+  //   sprites for), prize (the gate key a key dungeon's last chest holds), troop (a boss node's troop), grants, finale}.
+  // site: {key, kind, style, floors [floor], npcs [npc], ok, problems, attempts, digest}.
+  // floor: {floor (1 based), w, h, ground [ref], deco [ref or null], exits [{kind 'overworld' | 'up' | 'down', at, arrive,
+  //   toFloor}], features [{kind 'chest' | 'lock' | 'boss' | 'stairs', at, ...}], npcs [slot names], buildings, rooms,
+  //   stats, digest}. Cells are row major indexes; at is the tile itself and arrive is where a party stands on arrival.
+  //
+  // Gate keys follow the world's local scheme: a dungeon's own small key is item:key:<site key>; the lock feature needs
+  // it, the key chest holds it. Locks are world layer state, like the overworld's gates: the door tile itself reads
+  // passable (flag 33 with its arch), and only the feature list says it is shut.
+  //
+  // NPC slots are named by role, never by seed (inn, shop:item, church, guard1, resident3), and their number depends only
+  // on the site's role and settings, so npc_ IDs survive a reroll exactly as map_ IDs do.
+  var IN_DEFAULTS = {
+    town: { w: 34, h: 28, smallW: 30, smallH: 24, residents: 6, smallResidents: 4, houses: 3, smallHouses: 2 },
+    dungeon: { w: 40, h: 30, minLeaf: 7, keyFloors: 1, bossFloors: 2 },
+    castle: { w: 46, h: 36, minLeaf: 8, floors: 2 },
+    cave: { w: 44, h: 32, fill: 0.45, steps: 5, floors: 1 },
+    attempts: 8
+  };
+  var ARCHETYPES = ['elder', 'child', 'merchant', 'guard', 'worker', 'scholar', 'healer', 'traveler', 'noble', 'innkeeper'];
+  // Residents are drawn by weight; innkeepers, merchants, the priest (a healer), and guards have fixed posts.
+  var RESIDENT_WEIGHTS = [['elder', 2], ['child', 3], ['merchant', 1], ['worker', 3], ['scholar', 2], ['healer', 1], ['traveler', 2], ['noble', 1]];
+  // Building footprints, walls included. The door is on the bottom wall at column dx.
+  var BUILDINGS = {
+    inn: { w: 9, h: 6, dx: 4 }, shop: { w: 6, h: 5, dx: 2 }, church: { w: 7, h: 7, dx: 3 }, house: { w: 5, h: 5, dx: 2 }
+  };
+  var SHOP_KINDS = ['item', 'weapon', 'armor'];
+
+  function inSettings(s) {
+    s = s || {};
+    var o = s.interiors || {}, t = o.town || {}, d = o.dungeon || {}, c = o.castle || {}, v = o.cave || {}, D = IN_DEFAULTS;
+    function n(x, def, a, b) { x = x == null || x === '' ? NaN : Number(x); return isFinite(x) ? clamp(Math.floor(x), a, b) : def; }
+    function f(x, def, a, b) { x = x == null || x === '' ? NaN : Number(x); return isFinite(x) ? clamp(x, a, b) : def; }
+    return {
+      town: { w: n(t.w, D.town.w, 26, 64), h: n(t.h, D.town.h, 22, 64), smallW: n(t.smallW, D.town.smallW, 24, 64), smallH: n(t.smallH, D.town.smallH, 20, 64),
+        residents: n(t.residents, D.town.residents, 0, 16), smallResidents: n(t.smallResidents, D.town.smallResidents, 0, 16),
+        houses: n(t.houses, D.town.houses, 0, 8), smallHouses: n(t.smallHouses, D.town.smallHouses, 0, 8) },
+      dungeon: { w: n(d.w, D.dungeon.w, 24, 96), h: n(d.h, D.dungeon.h, 20, 96), minLeaf: n(d.minLeaf, D.dungeon.minLeaf, 6, 16),
+        keyFloors: n(d.keyFloors, D.dungeon.keyFloors, 1, 5), bossFloors: n(d.bossFloors, D.dungeon.bossFloors, 1, 5) },
+      castle: { w: n(c.w, D.castle.w, 28, 96), h: n(c.h, D.castle.h, 24, 96), minLeaf: n(c.minLeaf, D.castle.minLeaf, 6, 16), floors: n(c.floors, D.castle.floors, 1, 5) },
+      cave: { w: n(v.w, D.cave.w, 24, 96), h: n(v.h, D.cave.h, 20, 96), fill: f(v.fill, D.cave.fill, 0.3, 0.6), steps: n(v.steps, D.cave.steps, 1, 10), floors: n(v.floors, D.cave.floors, 1, 5) },
+      attempts: n(o.attempts, D.attempts, 1, 16)
+    };
+  }
+
+  // palette(art): the interior sets and the biomes a town stands on, as plain data. A set falls back exactly as the
+  // overworld's stamps do: castles and caves to the dungeon set, towns to whichever interior exists. A tile key a set
+  // lacks falls back to the same key in the dungeon set, then the town set. sets[kind].refs maps tile key -> ref.
+  var IN_KEYS = ['floor', 'wall', 'door', 'stairs', 'counter', 'table', 'barrel', 'bed', 'shelf', 'rug', 'plant', 'lintel', 'pillar', 'torch', 'chest', 'arch'];
+  function inPalette(art) {
+    var recs = art && art.records && art.records.til_ || {}, flags = {}, ins = {}, biomes = [], problems = [];
+    keys(recs).forEach(function (id) {
+      var t = recs[id];
+      if (!t) return;
+      if (t.kind === 'biome') { flags[id] = Number(t.flags) | 0; biomes.push({ id: id, key: t.key || null, flags: flags[id], climate: t.climate || null }); }
+      if (t.kind === 'interior' && t.subject && typeof t.subject.ref === 'string' && t.subject.ref.indexOf('interior:') === 0) { var k = t.subject.ref.slice(9); if (!ins[k]) ins[k] = t; }
+    });
+    function tileKeys(til) { var has = {}; (til && til.tiles || []).forEach(function (it) { if (it && it.key) { has[it.key] = it; flags[til.id + ':' + it.key] = Number(it.flags) | 0; } }); return has; }
+    var dun = ins.dungeon || ins.town || null, town = ins.town || dun, own = {
+      town: town, dungeon: dun, cave: ins.cave || dun, castle: ins.castle || dun
+    }, sets = {};
+    var hasD = tileKeys(dun), hasT = tileKeys(town);
+    each(own, function (til, kind) {
+      if (!til) return;
+      var has = tileKeys(til), refs = {};
+      IN_KEYS.forEach(function (k) {
+        refs[k] = has[k] ? til.id + ':' + k : hasD[k] && dun ? dun.id + ':' + k : hasT[k] && town ? town.id + ':' + k : null;
+      });
+      if (!refs.wall || !refs.floor || !refs.door || !(flags[refs.door] & 1) || !(flags[refs.floor] & 1) || (flags[refs.wall] & 1)) problems.push({ code: 'set', message: 'Interior tileset ' + til.id + ' needs a passable floor, a passable door, and a wall that blocks, for the ' + kind + ' maps.' });
+      sets[kind] = { til: til.id, own: til.id, refs: refs };
+    });
+    if (!dun) problems.push({ code: 'no-interior', message: 'No interior tileset exists, so no town or dungeon can be built.' });
+    // The church altar borrows the dungeon set's counter (Day 147 labels it Altar) when there is one.
+    var altar = hasD.counter && dun ? dun.id + ':counter' : sets.town ? sets.town.refs.counter : null;
+    // Town ground: passable dry biomes. The path is the desert biome when there is one.
+    var dry = biomes.filter(function (bm) { return (bm.flags & 1) && !(bm.flags & 4) && !(bm.flags & 8) && bm.climate && !bm.climate.feature; });
+    var desert = dry.filter(function (bm) { return bm.key === 'desert'; })[0] || null;
+    var low = dry.filter(function (bm) { var e = bm.climate.elev; return e && e[0] <= 2 && e[1] >= 2; }), pref = ['grassland', 'steppe', 'forest'];
+    low.sort(function (x, y) { var px = pref.indexOf(x.key), py = pref.indexOf(y.key); return (px < 0 ? 9 : px) - (py < 0 ? 9 : py) || (x.id < y.id ? -1 : 1); });
+    var lowland = low[0] || dry[0] || null;
+    return { sets: sets, flags: flags, altar: altar, desert: desert ? desert.id : null, lowland: lowland ? lowland.id : null, dry: dry.map(function (bm) { return bm.id; }), problems: problems,
+      digest: digest([altar, desert ? desert.id : '-', lowland ? lowland.id : '-'].concat(keys(sets).map(function (k) { return k + '=' + sets[k].til + '/' + IN_KEYS.map(function (q) { return sets[k].refs[q] || '-'; }).join(','); }))) };
+  }
+
+  // ---------------------------------------------------------------- shared helpers
+  function grid(w, h, fill) { var g = new Array(w * h); for (var i = 0; i < g.length; i++) g[i] = fill; return g; }
+  function flagOf(pal, ref) { return ref ? pal.flags[ref] | 0 : 0; }
+  function cellFlags(pal, fl, i) { var d = fl.deco[i]; return d ? flagOf(pal, d) : flagOf(pal, fl.ground[i]); }
+  // Walkable cells of a floor: passable flags, minus locks the party has no key for.
+  function inWalk(pal, fl, held) {
+    var shut = {};
+    fl.features.forEach(function (ft) { if (ft.kind === 'lock' && !(held && held[ft.requires[0]])) shut[ft.at] = 1; });
+    return function (i) { return !shut[i] && (cellFlags(pal, fl, i) & 1) === 1; };
+  }
+  function reachFrom(pal, fl, from, held) { return bfs(fl.w, fl.h, [from], inWalk(pal, fl, held)); }
+  function floorDigest(fl) {
+    var parts = [fl.w, fl.h];
+    for (var i = 0; i < fl.ground.length; i++) parts.push((fl.ground[i] || '-') + '|' + (fl.deco[i] || '-'));
+    fl.features.forEach(function (ft) { parts.push(ft.kind + '@' + ft.at); });
+    fl.exits.forEach(function (ex) { parts.push(ex.kind + '@' + ex.at + '>' + ex.arrive); });
+    return digest(parts);
+  }
+  function nbOpen(fl, i, ok) { return nb4(i, fl.w, fl.h).filter(ok); }
+  function setDeco(fl, i, ref) { if (ref) fl.deco[i] = ref; }
+
+  // ---------------------------------------------------------------- towns
+  // A single map cutaway: a ring of town wall with a two cell gate in the bottom row, a plaza of path tiles, a street
+  // from the plaza to the gate, then prefab buildings placed around the plaza in seeded order, each door joined to the
+  // plaza by an L shaped path (a shortest path when both L shapes are blocked). Outdoor ground is the biome of the
+  // site's overworld cell; building floors are the town set's floor (flag 1), so nothing triggers inside a town.
+  function genTown(spec, S, pal, R, attempt) {
+    var small = spec.role !== 'start', T = S.town, set = pal.sets.town, t = set.refs;
+    var w = (small ? T.smallW : T.w) + attempt * 2, h = (small ? T.smallH : T.h) + attempt * 2, n = w * h;
+    var outdoor = spec.outdoor && pal.dry.indexOf(spec.outdoor) >= 0 ? spec.outdoor : pal.lowland || t.floor;
+    var path = pal.desert && pal.desert !== outdoor ? pal.desert : t.floor;
+    var fl = { w: w, h: h, ground: grid(w, h, outdoor), deco: grid(w, h, null), exits: [], features: [], npcList: [], buildings: [], rooms: [], stats: {} };
+    var P = [], occ = new Int16Array(n), x, y, i;
+    for (i = 0; i < n; i++) occ[i] = -1;
+    // Ring wall and gate.
+    for (x = 0; x < w; x++) { fl.ground[x] = t.wall; fl.ground[(h - 1) * w + x] = t.wall; }
+    for (y = 0; y < h; y++) { fl.ground[y * w] = t.wall; fl.ground[y * w + w - 1] = t.wall; }
+    var gx = (w >> 1) - 1;
+    [gx, gx + 1].forEach(function (cx) { var c = (h - 1) * w + cx; fl.ground[c] = path; fl.exits.push({ kind: 'overworld', at: c, arrive: c - w, toFloor: null }); });
+    // Plaza and street. Reserved cells (ring, plaza, street, plus a one cell margin) never hold a building.
+    var pw = 6, ph = 4, px = (w >> 1) - 3, py = Math.floor(h * 0.5) - 1, reserved = new Uint8Array(n);
+    function reserve(x0, y0, x1, y1) { for (var yy = y0; yy <= y1; yy++) for (var xx = x0; xx <= x1; xx++) if (xx >= 0 && yy >= 0 && xx < w && yy < h) reserved[yy * w + xx] = 1; }
+    for (y = py; y < py + ph; y++) for (x = px; x < px + pw; x++) fl.ground[y * w + x] = path;
+    for (y = py + ph; y < h - 1; y++) { fl.ground[y * w + gx] = path; fl.ground[y * w + gx + 1] = path; }
+    reserve(px - 1, py - 1, px + pw, py + ph); reserve(gx - 1, py + ph, gx + 2, h - 1);
+    for (x = 0; x < w; x++) { reserved[w + x] = 1; reserved[(h - 2) * w + x] = 1; }
+    for (y = 0; y < h; y++) { reserved[y * w + 1] = 1; reserved[y * w + w - 2] = 1; }
+    for (i = 0; i < n; i++) if (fl.ground[i] === t.wall) reserved[i] = 1;
+    var pcx = px + (pw >> 1), pcy = py + (ph >> 1);
+    // Buildings, essentials first. The rect plus a one cell margin must be clear; the door's front cell stays outdoors.
+    var plan = [['inn', 'inn']].concat((small ? ['item'] : SHOP_KINDS).map(function (k) { return ['shop', 'shop:' + k]; }), [['church', 'church']]);
+    for (var hq = 1; hq <= (small ? T.smallHouses : T.houses); hq++) plan.push(['house', 'house' + hq]);
+    function fits(bx, by, bw, bh) {
+      if (bx < 2 || by < 2 || bx + bw > w - 2 || by + bh > h - 3) return false;
+      for (var yy = by - 1; yy <= by + bh; yy++) for (var xx = bx - 1; xx <= bx + bw; xx++) { var c = yy * w + xx; if (occ[c] >= 0) return false; if (yy >= by && yy < by + bh && xx >= bx && xx < bx + bw && reserved[c]) return false; }
+      return true;
+    }
+    plan.forEach(function (pl) {
+      var B = BUILDINGS[pl[0]], cands = [];
+      for (var by = 2; by + B.h <= h - 3; by++) for (var bx = 2; bx + B.w <= w - 2; bx++) {
+        if (!fits(bx, by, B.w, B.h)) continue;
+        var dxp = bx + B.dx, dyp = by + B.h, score = pl[0] === 'house' ? R() * 40 : Math.abs(dxp - pcx) + Math.abs(dyp - pcy) + R() * 6;
+        cands.push({ x: bx, y: by, s: score });
+      }
+      cands.sort(function (a, b) { return a.s - b.s || a.y - b.y || a.x - b.x; });
+      // Houses may be dropped only after three attempts at growing the map for them.
+      if (!cands.length) { if (pl[0] !== 'house' || attempt < 3) P.push({ code: 'town-room', message: 'No room for the ' + pl[1] + ' in ' + spec.key + '.' }); return; }
+      var pick = R.pick(cands.slice(0, Math.min(6, cands.length))), k = fl.buildings.length;
+      for (var yy = pick.y; yy < pick.y + B.h; yy++) for (var xx = pick.x; xx < pick.x + B.w; xx++) occ[yy * w + xx] = k;
+      fl.buildings.push({ kind: pl[0], slot: pl[1], x: pick.x, y: pick.y, w: B.w, h: B.h, door: (pick.y + B.h - 1) * w + pick.x + B.dx, front: (pick.y + B.h) * w + pick.x + B.dx });
+    });
+    // Draw each building and its furnishings; record the fixed NPC posts.
+    var posts = [];
+    fl.buildings.forEach(function (bd) {
+      function at(dx, dy) { return (bd.y + dy) * w + bd.x + dx; }
+      for (var dy = 0; dy < bd.h; dy++) for (var dx = 0; dx < bd.w; dx++) fl.ground[at(dx, dy)] = dy === 0 || dx === 0 || dy === bd.h - 1 || dx === bd.w - 1 ? t.wall : t.floor;
+      fl.ground[bd.door] = t.door; setDeco(fl, bd.door, t.lintel);
+      bd.counters = [];
+      function counter(dx, dy, ref) { var c = at(dx, dy); fl.ground[c] = ref || t.counter; bd.counters.push(c); }
+      if (bd.kind === 'inn') {
+        counter(1, 2); counter(2, 2); counter(3, 2);
+        setDeco(fl, at(4, 1), t.shelf); setDeco(fl, at(5, 1), t.bed); setDeco(fl, at(6, 1), t.bed); setDeco(fl, at(7, 1), t.bed);
+        setDeco(fl, at(1, 4), t.barrel); setDeco(fl, at(4, 4), t.rug);
+        posts.push({ slot: 'inn', archetype: 'innkeeper', role: 'innkeeper', at: at(2, 1), facing: 'down', wander: false, building: bd.slot, counter: at(2, 2) });
+      } else if (bd.kind === 'shop') {
+        for (var cx2 = 1; cx2 <= 4; cx2++) counter(cx2, 2);
+        setDeco(fl, at(1, 1), t.shelf); setDeco(fl, at(3, 1), t.shelf); setDeco(fl, at(4, 1), t.barrel);
+        posts.push({ slot: bd.slot, archetype: 'merchant', role: bd.slot, at: at(2, 1), facing: 'down', wander: false, building: bd.slot, counter: at(2, 2) });
+      } else if (bd.kind === 'church') {
+        counter(2, 2, pal.altar); counter(3, 2, pal.altar); counter(4, 2, pal.altar);
+        setDeco(fl, at(1, 1), t.plant); setDeco(fl, at(5, 1), t.plant);
+        setDeco(fl, at(1, 4), t.table); setDeco(fl, at(2, 4), t.table); setDeco(fl, at(4, 4), t.table); setDeco(fl, at(5, 4), t.table);
+        setDeco(fl, at(3, 4), t.rug); setDeco(fl, at(3, 5), t.rug);
+        posts.push({ slot: 'church', archetype: 'healer', role: 'priest', at: at(3, 1), facing: 'down', wander: false, building: bd.slot, counter: at(3, 2) });
+      } else {
+        setDeco(fl, at(1, 1), t.bed); setDeco(fl, at(3, 1), t.table); setDeco(fl, at(3, 3), t.barrel);
+        bd.home = at(2, 2);
+      }
+    });
+    // Paths from every door front to the plaza: an L shape when one is clear, else a shortest path over open ground.
+    function outdoorCell(c) { return occ[c] < 0 && fl.ground[c] !== t.wall; }
+    function clampTo(v, a, b) { return v < a ? a : v > b ? b : v; }
+    fl.buildings.forEach(function (bd) {
+      var fx = bd.front % w, fy = (bd.front - fx) / w, tx = clampTo(fx, px, px + pw - 1), ty = clampTo(fy, py, py + ph - 1), cells;
+      function lPath(horizFirst) {
+        var out = [], xx = fx, yy = fy;
+        out.push(yy * w + xx);
+        if (horizFirst) { while (xx !== tx) { xx += xx < tx ? 1 : -1; out.push(yy * w + xx); } while (yy !== ty) { yy += yy < ty ? 1 : -1; out.push(yy * w + xx); } }
+        else { while (yy !== ty) { yy += yy < ty ? 1 : -1; out.push(yy * w + xx); } while (xx !== tx) { xx += xx < tx ? 1 : -1; out.push(yy * w + xx); } }
+        return out.every(outdoorCell) ? out : null;
+      }
+      var first = R.chance(0.5);
+      cells = lPath(first) || lPath(!first);
+      if (!cells) {
+        var d = bfs(w, h, [ty * w + tx], outdoorCell);
+        if (d[bd.front] < 0) { P.push({ code: 'town-path', message: 'The ' + bd.slot + ' door cannot be joined to the plaza in ' + spec.key + '.' }); return; }
+        cells = [bd.front];
+        var c = bd.front;
+        while (d[c] > 0) { c = nb4(c, w, h).filter(function (q) { return d[q] === d[c] - 1; })[0]; cells.push(c); }
+      }
+      cells.forEach(function (q) { fl.ground[q] = path; });
+      bd.path = cells.length;
+    });
+    // Planters on open ground away from every path, door, and the gate, each kept only if nothing is cut off.
+    var walk = inWalk(pal, fl, null), arrive = fl.exits[0].arrive;
+    function reachCount() { var d = bfs(w, h, [arrive], walk), k = 0; for (var q = 0; q < n; q++) if (d[q] >= 0) k++; return k; }
+    var openSpots = [];
+    for (i = 0; i < n; i++) {
+      if (fl.ground[i] !== outdoor || occ[i] >= 0 || reserved[i] || fl.deco[i]) continue;
+      var near = false;
+      for (var dy3 = -1; dy3 <= 1 && !near; dy3++) for (var dx3 = -1; dx3 <= 1 && !near; dx3++) { var q3 = i + dy3 * w + dx3; if (q3 >= 0 && q3 < n && (fl.ground[q3] === path || occ[q3] >= 0)) near = true; }
+      if (!near) openSpots.push(i);
+    }
+    var base = reachCount(), planters = 0;
+    R.shuffle(openSpots).slice(0, 10).forEach(function (c) {
+      if (planters >= 6 || !t.plant) return;
+      fl.deco[c] = t.plant;
+      if (reachCount() !== base - 1) fl.deco[c] = null; else { base--; planters++; }
+    });
+    // People: fixed posts, two gate guards, then residents (one at home per house, the rest outdoors).
+    var dist = bfs(w, h, [arrive], walk), taken = {};
+    posts.forEach(function (p) { taken[p.at] = 1; });
+    [[gx - 1, h - 2, 'guard1'], [gx + 2, h - 2, 'guard2']].forEach(function (gd) {
+      var c = gd[1] * w + gd[0];
+      if (dist[c] < 0) c = nb4(c, w, h).concat([c - w]).filter(function (q) { return dist[q] >= 0 && !taken[q]; })[0];
+      if (c == null) { P.push({ code: 'town-guard', message: 'No post for ' + gd[2] + ' in ' + spec.key + '.' }); return; }
+      taken[c] = 1;
+      posts.push({ slot: gd[2], archetype: 'guard', role: 'guard', at: c, facing: 'down', wander: false, building: null });
+    });
+    var allowed = RESIDENT_WEIGHTS.filter(function (rw) { return !spec.archetypes || spec.archetypes.indexOf(rw[0]) >= 0; });
+    if (!allowed.length) allowed = RESIDENT_WEIGHTS;
+    var homes = fl.buildings.filter(function (bd) { return bd.home != null; }), gates = {};
+    fl.exits.forEach(function (ex) { gates[ex.arrive] = 1; gates[ex.at] = 1; });
+    var spots = [];
+    for (i = 0; i < n; i++) if (dist[i] >= 0 && occ[i] < 0 && !taken[i] && !gates[i] && fl.ground[i] !== t.door && i % w > 2 && i % w < w - 3 && Math.floor(i / w) < h - 3) spots.push(i);
+    spots = R.shuffle(spots);
+    var fronts = {};
+    fl.buildings.forEach(function (bd) { fronts[bd.front] = 1; });
+    var residents = small ? T.smallResidents : T.residents;
+    for (var rq = 1; rq <= residents; rq++) {
+      var arch = allowed[R.weighted(allowed.map(function (rw) { return rw[1]; }))][0], home = homes[rq - 1], c4 = null;
+      if (home && !taken[home.home]) c4 = home.home;
+      while (c4 == null && spots.length) { var sp = spots.pop(); if (!taken[sp] && !fronts[sp]) c4 = sp; }
+      if (c4 == null) { P.push({ code: 'town-people', message: 'No room for resident ' + rq + ' in ' + spec.key + '.' }); continue; }
+      taken[c4] = 1;
+      posts.push({ slot: 'resident' + rq, archetype: arch, role: 'resident', at: c4, facing: 'down', wander: !home || c4 !== home.home, building: home && c4 === home.home ? home.slot : null });
+    }
+    fl.npcList = posts;
+    fl.stats = { buildings: fl.buildings.length, houses: fl.buildings.filter(function (bd) { return bd.kind === 'house'; }).length, planters: planters, outdoor: outdoor, path: path };
+    fl.plaza = [px, py, pw, ph];
+    return { floors: [fl], problems: P };
+  }
+
+  // ---------------------------------------------------------------- built dungeons and castles
+  // Binary space partitioning to a minimum leaf, one room per leaf (inset one cell, at least 3 by 3), siblings joined by
+  // L corridors between their nearest rooms, every other cell wall. Floor 1 opens on the bottom edge through an arched
+  // door; deeper floors are joined by stairs (down in the room farthest from the arrival, up in the room nearest where
+  // the stairs above stood). The last floor holds, in breadth first order from the arrival, the key chest (in the
+  // farthest room reachable while the lock is shut), the locked door (the single way into the goal room, other entries
+  // walled up), and the goal: the boss, or the prize chest of a key dungeon. Dead end rooms may hold treasure chests.
+  function bspSplit(R, root, ml) {
+    var leaves = [], tree = [];
+    function split(nd) {
+      var canV = nd.w >= 2 * ml, canH = nd.h >= 2 * ml;
+      if (!canV && !canH || nd.w < 3 * ml && nd.h < 3 * ml && R.chance(0.2)) { nd.leaf = leaves.length; leaves.push(nd); return nd; }
+      var vert = canV && canH ? (nd.w > nd.h * 1.2 ? true : nd.h > nd.w * 1.2 ? false : R.chance(0.5)) : canV;
+      var cut = vert ? R.range(ml, nd.w - ml) : R.range(ml, nd.h - ml);
+      nd.a = split(vert ? { x: nd.x, y: nd.y, w: cut, h: nd.h } : { x: nd.x, y: nd.y, w: nd.w, h: cut });
+      nd.b = split(vert ? { x: nd.x + cut, y: nd.y, w: nd.w - cut, h: nd.h } : { x: nd.x, y: nd.y + cut, w: nd.w, h: nd.h - cut });
+      tree.push(nd);
+      return nd;
+    }
+    split(root);
+    return { leaves: leaves, root: root };
+  }
+  function roomCenter(r, w) { return (r.y + (r.h >> 1)) * w + r.x + (r.w >> 1); }
+  function inRoom(r, i, w) { var x = i % w, y = (i - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; }
+  function genBuiltFloor(spec, S, pal, R, attempt, fi, nFloors, prevStairs) {
+    var style = spec.kind === 'castle' ? 'castle' : 'dungeon', C = style === 'castle' ? S.castle : S.dungeon, set = pal.sets[style] || pal.sets.dungeon, t = set.refs;
+    var w = C.w + attempt * 2, h = C.h + attempt * 2, n = w * h, ml = C.minLeaf, P = [];
+    var fl = { w: w, h: h, ground: grid(w, h, t.wall), deco: grid(w, h, null), exits: [], features: [], npcList: [], buildings: [], rooms: [], stats: {} };
+    var tree = bspSplit(R, { x: 0, y: 0, w: w, h: h }, ml);
+    tree.leaves.forEach(function (lf) {
+      var maxW = lf.w - 2, maxH = lf.h - 2, rw = R.range(Math.max(3, Math.floor(maxW * 0.6)), maxW), rh = R.range(Math.max(3, Math.floor(maxH * 0.6)), maxH);
+      var r = { x: lf.x + 1 + R.int(maxW - rw + 1), y: lf.y + 1 + R.int(maxH - rh + 1), w: rw, h: rh, leaf: [lf.x, lf.y, lf.w, lf.h] };
+      fl.rooms.push(r);
+      for (var y = r.y; y < r.y + r.h; y++) for (var x = r.x; x < r.x + r.w; x++) fl.ground[y * w + x] = t.floor;
+    });
+    // Corridors: at every split, the nearest pair of rooms across it is joined by an L.
+    function roomsUnder(nd) { return nd.leaf != null ? [nd.leaf] : roomsUnder(nd.a).concat(roomsUnder(nd.b)); }
+    function carve(a, b) {
+      var ax = a % w, ay = (a - ax) / w, bx = b % w, by = (b - bx) / w, x = ax, y = ay;
+      function put() { if (fl.ground[y * w + x] !== t.floor) fl.ground[y * w + x] = t.floor; }
+      if (R.chance(0.5)) { while (x !== bx) { x += x < bx ? 1 : -1; put(); } while (y !== by) { y += y < by ? 1 : -1; put(); } }
+      else { while (y !== by) { y += y < by ? 1 : -1; put(); } while (x !== bx) { x += x < bx ? 1 : -1; put(); } }
+    }
+    var links = 0;
+    (function join(nd) {
+      if (nd.leaf != null) return;
+      join(nd.a); join(nd.b);
+      var A = roomsUnder(nd.a), B = roomsUnder(nd.b), best = null, bd = Infinity;
+      A.forEach(function (ia) { B.forEach(function (ib) { var ca = roomCenter(fl.rooms[ia], w), cb = roomCenter(fl.rooms[ib], w), d = Math.abs(ca % w - cb % w) + Math.abs(Math.floor(ca / w) - Math.floor(cb / w)); if (d < bd) { bd = d; best = [ca, cb]; } }); });
+      carve(best[0], best[1]); links++;
+    })(tree.root);
+    var isFloor = function (i) { return fl.ground[i] === t.floor; };
+    // Arrival: floor 1 through a door in the bottom edge, deeper floors by up stairs.
+    var arrival, arrRoom;
+    if (fi === 1) {
+      arrRoom = fl.rooms.map(function (r, k) { return k; }).sort(function (a, b) { var ra = fl.rooms[a], rb = fl.rooms[b]; return (h - ra.y - ra.h) - (h - rb.y - rb.h) || Math.abs(ra.x + (ra.w >> 1) - (w >> 1)) - Math.abs(rb.x + (rb.w >> 1) - (w >> 1)) || a - b; })[0];
+      var er = fl.rooms[arrRoom], ex = er.x + (er.w >> 1);
+      for (var yy = er.y + er.h; yy < h - 1; yy++) fl.ground[yy * w + ex] = t.floor;
+      var door = (h - 1) * w + ex;
+      fl.ground[door] = t.door; setDeco(fl, door, t.arch);
+      arrival = door - w;
+      fl.exits.push({ kind: 'overworld', at: door, arrive: arrival, toFloor: null });
+    } else {
+      var px0 = prevStairs % w, py0 = (prevStairs - px0) / w;
+      arrRoom = fl.rooms.map(function (r, k) { return k; }).sort(function (a, b) { var ca = roomCenter(fl.rooms[a], w), cb = roomCenter(fl.rooms[b], w); return Math.abs(ca % w - px0) + Math.abs(Math.floor(ca / w) - py0) - (Math.abs(cb % w - px0) + Math.abs(Math.floor(cb / w) - py0)) || a - b; })[0];
+      var up = roomCenter(fl.rooms[arrRoom], w);
+      fl.ground[up] = t.stairs;
+      arrival = up + w;
+      fl.exits.push({ kind: 'up', at: up, arrive: arrival, toFloor: fi - 1 });
+      fl.features.push({ kind: 'stairs', at: up, dir: 'up' });
+    }
+    var dist = bfs(w, h, [arrival], function (i) { return (flagOf(pal, fl.ground[i]) & 1) === 1; });
+    var order = fl.rooms.map(function (r, k) { return k; }).filter(function (k) { return k !== arrRoom; }).sort(function (a, b) { return dist[roomCenter(fl.rooms[b], w)] - dist[roomCenter(fl.rooms[a], w)] || a - b; });
+    if (!order.length) return { fl: fl, problems: [{ code: 'rooms', message: spec.key + ' floor ' + fi + ' has a single room.' }] };
+    var used = {};
+    used[arrival] = 1;
+    fl.exits.forEach(function (ex2) { used[ex2.at] = 1; });
+    function entries(r) {
+      var out = [];
+      for (var y = r.y - 1; y <= r.y + r.h; y++) for (var x = r.x - 1; x <= r.x + r.w; x++) {
+        var i = y * w + x;
+        if (x < 0 || y < 0 || x >= w || y >= h || inRoom(r, i, w) || !isFloor(i) && fl.ground[i] !== t.door) continue;
+        if ((x >= r.x && x < r.x + r.w) || (y >= r.y && y < r.y + r.h)) out.push(i);
+      }
+      return out;
+    }
+    // A chest against a wall inside a room, whose outer neighbors are wall, kept only when every other floor cell stays
+    // reachable from the arrival.
+    function placeChest(r, held, extra) {
+      var cand = [], k;
+      for (var y = r.y; y < r.y + r.h; y++) for (var x = r.x; x < r.x + r.w; x++) {
+        var i = y * w + x, edge = y === r.y || x === r.x || x === r.x + r.w - 1;
+        if (!edge || used[i] || fl.ground[i] !== t.floor || fl.deco[i]) continue;
+        if (nb4(i, w, h).some(function (q) { return !inRoom(r, q, w) && fl.ground[q] !== t.wall; })) continue;
+        cand.push(i);
+      }
+      cand.sort(function (a, b) { var ay = Math.floor(a / w), by = Math.floor(b / w); return ay - by || Math.abs(a % w - (r.x + (r.w >> 1))) - Math.abs(b % w - (r.x + (r.w >> 1))) || a - b; });
+      for (k = 0; k < cand.length; k++) {
+        var c = cand[k], before = 0, after = 0, d0 = reachFrom(pal, fl, arrival, held), q;
+        for (q = 0; q < n; q++) if (d0[q] >= 0) before++;
+        fl.deco[c] = t.chest;
+        var d1 = reachFrom(pal, fl, arrival, held);
+        for (q = 0; q < n; q++) if (d1[q] >= 0) after++;
+        if (after === before - 1 && nb4(c, w, h).some(function (q2) { return d1[q2] >= 0; })) { used[c] = 1; var ft = { kind: 'chest', at: c }; keys(extra || {}).forEach(function (kk) { ft[kk] = extra[kk]; }); fl.features.push(ft); return ft; }
+        fl.deco[c] = null;
+      }
+      return null;
+    }
+    var deadEnds = function () { return order.filter(function (k) { return entries(fl.rooms[k]).length === 1; }); };
+    if (fi < nFloors) {
+      // Down stairs in the farthest room.
+      var dr = order[0], down = roomCenter(fl.rooms[dr], w);
+      fl.ground[down] = t.stairs;
+      fl.exits.push({ kind: 'down', at: down, arrive: down + w, toFloor: fi + 1 });
+      fl.features.push({ kind: 'stairs', at: down, dir: 'down' });
+      used[down] = 1; used[down + w] = 1;
+      var de = deadEnds().filter(function (k) { return k !== dr; });
+      if (de.length) placeChest(fl.rooms[de[0]], null, { item: null, treasure: true });
+    } else {
+      // The goal room: the farthest room that can be given exactly one way in.
+      var lockKey = 'item:key:' + spec.key, goal = null, lock = null;
+      for (var gi = 0; gi < order.length && goal == null; gi++) {
+        var r = fl.rooms[order[gi]], E = entries(r);
+        if (!E.length) continue;
+        E.sort(function (a, b) { return (dist[a] < 0 ? 1e9 : dist[a]) - (dist[b] < 0 ? 1e9 : dist[b]) || a - b; });
+        var keep = E[0], sealed = E.slice(1), saved = sealed.map(function (c) { return fl.ground[c]; });
+        sealed.forEach(function (c) { fl.ground[c] = t.wall; });
+        // With the kept entry shut, every floor cell outside the goal room must still be reachable from the arrival
+        // (orphaned corridor stubs are walled up); with it open, the goal room must be reachable.
+        var shutWalk = function (i) { return i !== keep && (flagOf(pal, fl.ground[i]) & 1) === 1; };
+        var d2 = bfs(w, h, [arrival], shutWalk), ok = true, stubs = [];
+        for (var q = 0; q < n && ok; q++) {
+          if (!isFloor(q) || d2[q] >= 0 || q === keep || inRoom(r, q, w)) continue;
+          if (fl.rooms.some(function (rr, kk) { return inRoom(rr, q, w); })) ok = false; else stubs.push(q);
+        }
+        if (ok && d2[keep] < 0 && !nb4(keep, w, h).some(function (q4) { return d2[q4] >= 0; })) ok = false;
+        if (!ok || order[gi] === arrRoom) { sealed.forEach(function (c, k2) { fl.ground[c] = saved[k2]; }); continue; }
+        stubs.forEach(function (c) { fl.ground[c] = t.wall; });
+        goal = order[gi]; lock = keep;
+      }
+      if (goal == null) return { fl: fl, problems: [{ code: 'goal', message: 'No room on the last floor of ' + spec.key + ' can be locked.' }] };
+      fl.ground[lock] = t.door; setDeco(fl, lock, t.arch);
+      used[lock] = 1;
+      fl.features.push({ kind: 'lock', at: lock, requires: [lockKey], room: goal });
+      var gr = fl.rooms[goal];
+      // The key chest: the farthest room reachable while the lock is shut.
+      var dShut = reachFrom(pal, fl, arrival, null);
+      var keyRooms = order.filter(function (k) { return k !== goal && dShut[roomCenter(fl.rooms[k], w)] >= 0; }).concat([arrRoom]);
+      var keyChest = null;
+      for (var kr = 0; kr < keyRooms.length && !keyChest; kr++) keyChest = placeChest(fl.rooms[keyRooms[kr]], null, { item: lockKey, opens: lock });
+      if (!keyChest) return { fl: fl, problems: [{ code: 'key', message: 'No place for the key chest in ' + spec.key + '.' }] };
+      var held = {};
+      held[lockKey] = true;
+      if (spec.role === 'boss' || spec.kind === 'castle') {
+        var bc = roomCenter(gr, w);
+        used[bc] = 1;
+        var bossF = { kind: 'boss', at: bc, troop: spec.troop || null, grants: (spec.grants || []).slice(), finale: !!spec.finale };
+        fl.features.push(bossF);
+      } else {
+        var prize = placeChest(gr, held, { item: spec.prize || null, prize: true });
+        if (!prize) return { fl: fl, problems: [{ code: 'prize', message: 'No place for the prize chest in ' + spec.key + '.' }] };
+      }
+      var de2 = deadEnds().filter(function (k) { return k !== goal && fl.rooms[k] && !fl.features.some(function (ft2) { return ft2.kind === 'chest' && inRoom(fl.rooms[k], ft2.at, w); }); });
+      if (de2.length) placeChest(fl.rooms[de2[0]], held, { item: null, treasure: true });
+    }
+    // Torches on north walls, and pillars in the inset corners of large castle rooms; each kept only if nothing is cut off.
+    var walkAll = function () { var hh = {}; hh['item:key:' + spec.key] = true; return reachFrom(pal, fl, arrival, hh); };
+    var base = 0, d5 = walkAll(), q5;
+    for (q5 = 0; q5 < n; q5++) if (d5[q5] >= 0) base++;
+    fl.rooms.forEach(function (r2) {
+      if (t.torch) for (var x = r2.x + 1; x < r2.x + r2.w - 1; x += 3) { var c = (r2.y - 1) * w + x; if (r2.y > 0 && fl.ground[c] === t.wall && !fl.deco[c]) fl.deco[c] = t.torch; }
+      if (style === 'castle' && t.pillar && r2.w >= 5 && r2.h >= 5) {
+        [[1, 1], [r2.w - 2, 1], [1, r2.h - 2], [r2.w - 2, r2.h - 2]].forEach(function (o) {
+          var c = (r2.y + o[1]) * w + r2.x + o[0];
+          if (used[c] || fl.ground[c] !== t.floor || fl.deco[c] || fl.features.some(function (ft3) { return ft3.at === c || nb4(ft3.at, w, h).indexOf(c) >= 0; })) return;
+          fl.ground[c] = t.pillar;
+          var d6 = walkAll(), cnt = 0;
+          for (var q6 = 0; q6 < n; q6++) if (d6[q6] >= 0) cnt++;
+          if (cnt !== base - 1) fl.ground[c] = t.floor; else base--;
+        });
+      }
+    });
+    fl.stats = { rooms: fl.rooms.length, links: links, leaves: tree.leaves.map(function (lf) { return [lf.w, lf.h]; }) };
+    fl.arrival = arrival;
+    return { fl: fl, problems: P };
+  }
+
+  // ---------------------------------------------------------------- caves
+  // Random fill near 45 percent inside a wall border, then the 4-5 rule (a cell becomes wall when five or more of the nine
+  // cells around and including it are wall) for a few steps. The largest open region is the cave; each stranded pocket of
+  // three or more cells is tunneled to its nearest main region cell, pockets taken in order of their first cell; smaller
+  // pockets are filled. Stairs lead in near the bottom; the farthest corner holds a treasure chest.
+  function genCaveFloor(spec, S, pal, R, attempt, fi, nFloors, prevStairs) {
+    var C = S.cave, set = pal.sets.cave || pal.sets.dungeon, t = set.refs, w = C.w + attempt * 2, h = C.h + attempt * 2, n = w * h, x, y, i;
+    var fl = { w: w, h: h, ground: grid(w, h, t.wall), deco: grid(w, h, null), exits: [], features: [], npcList: [], buildings: [], rooms: [], stats: {} };
+    var wall = new Uint8Array(n), seeded = 0, interior = (w - 2) * (h - 2);
+    for (y = 0; y < h; y++) for (x = 0; x < w; x++) { i = y * w + x; wall[i] = x === 0 || y === 0 || x === w - 1 || y === h - 1 || R.chance(C.fill) ? 1 : 0; if (wall[i] && x > 0 && y > 0 && x < w - 1 && y < h - 1) seeded++; }
+    for (var step = 0; step < C.steps; step++) {
+      var nx = new Uint8Array(n);
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+        i = y * w + x;
+        if (x === 0 || y === 0 || x === w - 1 || y === h - 1) { nx[i] = 1; continue; }
+        var c = 0;
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) c += wall[i + dy * w + dx];
+        nx[i] = c >= 5 ? 1 : 0;
+      }
+      wall = nx;
+    }
+    var comp = components(w, h, function (q) { return !wall[q]; }), best = -1, bs = 0;
+    comp.sizes.forEach(function (s2, k) { if (s2 > bs) { bs = s2; best = k; } });
+    if (best < 0 || bs < interior * 0.2) return { fl: fl, problems: [{ code: 'cave-small', message: 'The cave of ' + spec.key + ' came out too small.' }] };
+    var main = new Uint8Array(n), first = [], tunnels = 0, filled = 0;
+    for (i = 0; i < n; i++) { var lb = comp.label[i]; if (lb === best) main[i] = 1; else if (lb >= 0 && first[lb] == null) first[lb] = i; }
+    first.forEach(function (start, k) {
+      if (start == null || k === best) return;
+      if (comp.sizes[k] < 3) { for (var q = 0; q < n; q++) if (comp.label[q] === k) wall[q] = 1; filled++; return; }
+      var src = [];
+      for (var q2 = 0; q2 < n; q2++) if (comp.label[q2] === k) src.push(q2);
+      var d = bfs(w, h, src, function (j) { var jx = j % w, jy = (j - jx) / w; return jx > 0 && jy > 0 && jx < w - 1 && jy < h - 1; }), target = -1, td = Infinity;
+      for (var q3 = 0; q3 < n; q3++) if (main[q3] && d[q3] >= 0 && d[q3] < td) { td = d[q3]; target = q3; }
+      if (target < 0) return;
+      var c2 = target;
+      while (d[c2] > 0) { wall[c2] = 0; main[c2] = 1; c2 = nb4(c2, w, h).filter(function (j) { return d[j] === d[c2] - 1; })[0]; }
+      src.forEach(function (j) { main[j] = 1; });
+      tunnels++;
+    });
+    for (i = 0; i < n; i++) if (!wall[i] && main[i]) fl.ground[i] = t.floor; else fl.ground[i] = t.wall;
+    var isF = function (q) { return fl.ground[q] === t.floor; };
+    // Stairs in: floor 1 near the bottom middle, deeper floors near where the stairs above stood.
+    var tx = fi === 1 ? w >> 1 : prevStairs % w, ty = fi === 1 ? h - 1 : Math.floor(prevStairs / w), sIn = -1, sd = Infinity;
+    for (i = 0; i < n; i++) {
+      if (!isF(i)) continue;
+      var ix = i % w, iy = (i - ix) / w, dd = Math.abs(ix - tx) * 2 + Math.abs(iy - ty) * 3;
+      if (dd < sd && nb4(i, w, h).filter(isF).length >= 2) { sd = dd; sIn = i; }
+    }
+    if (sIn < 0) return { fl: fl, problems: [{ code: 'cave-stairs', message: 'No place for the stairs in ' + spec.key + '.' }] };
+    var arr = nb4(sIn, w, h).filter(isF).sort(function (a, b) { return (b - sIn === -w ? 1 : 0) - (a - sIn === -w ? 1 : 0) || a - b; })[0];
+    fl.ground[sIn] = t.stairs;
+    fl.exits.push(fi === 1 ? { kind: 'overworld', at: sIn, arrive: arr, toFloor: null } : { kind: 'up', at: sIn, arrive: arr, toFloor: fi - 1 });
+    fl.features.push({ kind: 'stairs', at: sIn, dir: fi === 1 ? 'out' : 'up' });
+    var dist = reachFrom(pal, fl, arr, null), far = [];
+    for (i = 0; i < n; i++) if (dist[i] > 0 && i !== sIn) far.push(i);
+    far.sort(function (a, b) { return dist[b] - dist[a] || a - b; });
+    if (fi < nFloors) {
+      var down = -1;
+      for (var k3 = 0; k3 < far.length && down < 0; k3++) { var cd = far[k3]; var o = nb4(cd, w, h).filter(function (q) { return isF(q) && q !== sIn; }); if (o.length >= 1) down = cd; }
+      if (down < 0) return { fl: fl, problems: [{ code: 'cave-stairs', message: 'No place for the stairs down in ' + spec.key + '.' }] };
+      var darr = nb4(down, w, h).filter(isF)[0];
+      fl.ground[down] = t.stairs;
+      fl.exits.push({ kind: 'down', at: down, arrive: darr, toFloor: fi + 1 });
+      fl.features.push({ kind: 'stairs', at: down, dir: 'down' });
+    }
+    // The treasure chest: the farthest cell whose chest cuts nothing off.
+    var walk = inWalk(pal, fl, null), total = 0, d0 = bfs(w, h, [arr], walk);
+    for (i = 0; i < n; i++) if (d0[i] >= 0) total++;
+    var stairsAt = {};
+    fl.exits.forEach(function (ex) { stairsAt[ex.at] = 1; stairsAt[ex.arrive] = 1; });
+    for (var k4 = 0; k4 < far.length && k4 < 200; k4++) {
+      var c3 = far[k4];
+      if (stairsAt[c3] || !isF(c3)) continue;
+      fl.deco[c3] = t.chest;
+      var d1 = bfs(w, h, [arr], inWalk(pal, fl, null)), cnt = 0;
+      for (i = 0; i < n; i++) if (d1[i] >= 0) cnt++;
+      if (cnt === total - 1) { fl.features.push({ kind: 'chest', at: c3, item: null, treasure: true }); break; }
+      fl.deco[c3] = null;
+    }
+    var open = 0;
+    for (i = 0; i < n; i++) if (isF(i)) open++;
+    fl.stats = { seededFill: seeded / interior, open: open / interior, pockets: comp.sizes.length - 1, tunnels: tunnels, filled: filled };
+    fl.arrival = arr;
+    return { fl: fl, problems: [] };
+  }
+
+  // ---------------------------------------------------------------- build, check
+  function siteFloors(spec, S) {
+    if (spec.kind === 'town') return 1;
+    if (spec.kind === 'castle') return S.castle.floors;
+    if (spec.kind === 'cave') return S.cave.floors;
+    return spec.role === 'boss' ? S.dungeon.bossFloors : S.dungeon.keyFloors;
+  }
+  function inAttempt(spec, S, pal, attempt) {
+    var P = [], floors = [];
+    function R(fi) { return rng(hashStr((spec.seed >>> 0) + '|' + attempt + '|' + fi)); }
+    if (spec.kind === 'town') {
+      var tr = genTown(spec, S, pal, R(1), attempt);
+      floors = tr.floors; P = tr.problems;
+    } else {
+      var nF = siteFloors(spec, S), prev = null;
+      for (var fi = 1; fi <= nF && !P.length; fi++) {
+        var r = spec.kind === 'cave' ? genCaveFloor(spec, S, pal, R(fi), attempt, fi, nF, prev) : genBuiltFloor(spec, S, pal, R(fi), attempt, fi, nF, prev);
+        r.problems.forEach(function (p) { P.push(p); });
+        floors.push(r.fl);
+        var dn = r.fl.exits.filter(function (ex) { return ex.kind === 'down'; })[0];
+        prev = dn ? dn.at : null;
+      }
+    }
+    floors.forEach(function (fl, k) { fl.floor = k + 1; });
+    var site = { key: spec.key, kind: spec.kind, role: spec.role || null, style: spec.kind, attempt: attempt, floors: floors, problems: P };
+    site.npcs = [];
+    floors.forEach(function (fl) { fl.npcList.forEach(function (p) { site.npcs.push({ slot: p.slot, archetype: p.archetype, role: p.role, floor: fl.floor, at: p.at, facing: p.facing, wander: p.wander, building: p.building, counter: p.counter == null ? null : p.counter }); }); fl.npcs = fl.npcList.map(function (p) { return p.slot; }); delete fl.npcList; });
+    if (!P.length) inCheck(site, pal).forEach(function (p) { P.push(p); });
+    site.ok = !P.length;
+    floors.forEach(function (fl) { fl.digest = floorDigest(fl); });
+    site.digest = digest(floors.map(function (fl) { return fl.digest; }).concat(site.npcs.map(function (p) { return p.slot + '@' + p.floor + ':' + p.at + ':' + p.archetype; })));
+    return site;
+  }
+  function inBuild(spec) {
+    var S = inSettings(spec.settings), pal = spec.palette, last = null;
+    if (!pal || !pal.sets || !pal.sets.dungeon) throw new Error('interiors.build needs interiors.palette(art) with at least one interior tileset.');
+    if (['town', 'dungeon', 'castle', 'cave'].indexOf(spec.kind) < 0) throw new Error('Unknown interior kind: ' + spec.kind);
+    for (var a = 0; a < S.attempts; a++) { last = inAttempt(spec, S, pal, a); if (last.ok) break; }
+    last.attempts = last.attempt + 1;
+    return last;
+  }
+  // The walking check of one site. For each floor: every exit's arrival is reachable from the floor's first arrival
+  // (holding every key); stairs pair up between floors; on a locked floor the key chest and the lock's near side are
+  // reachable while the lock is shut, the goal is not, and with the key it is; every chest has a reachable side; every
+  // other floor cell is reachable with the key (nothing walled off by accident). Towns: every door, counter front, and
+  // the plaza are reachable from the gate, and every fixed NPC post stands on a floor or behind its counter.
+  function inCheck(site, pal) {
+    var out = [];
+    site.floors.forEach(function (fl, k) {
+      var w = fl.w, h = fl.h, n = w * h, first = fl.exits[0];
+      if (!first) { out.push({ code: 'no-exit', message: site.key + ' floor ' + fl.floor + ' has no way in.' }); return; }
+      var all = {}, lock = fl.features.filter(function (ft) { return ft.kind === 'lock'; })[0];
+      if (lock) all[lock.requires[0]] = true;
+      var dAll = reachFrom(pal, fl, first.arrive, all);
+      fl.exits.forEach(function (ex) {
+        if (dAll[ex.arrive] < 0) out.push({ code: 'exit', message: site.key + ' floor ' + fl.floor + ': the ' + ex.kind + ' exit cannot be reached.' });
+        if (ex.toFloor != null) {
+          var other = site.floors[ex.toFloor - 1];
+          if (!other || !other.exits.some(function (e2) { return e2.toFloor === fl.floor && e2.kind === (ex.kind === 'down' ? 'up' : 'down'); })) out.push({ code: 'stairs', message: site.key + ' floor ' + fl.floor + ': its ' + ex.kind + ' stairs have no partner.' });
+        }
+      });
+      function sideReach(d, c) { return nb4(c, w, h).some(function (q) { return d[q] >= 0; }); }
+      fl.features.forEach(function (ft) { if (ft.kind === 'chest' && !sideReach(dAll, ft.at)) out.push({ code: 'chest', message: site.key + ' floor ' + fl.floor + ': a chest cannot be reached.' }); });
+      var built = (site.kind === 'dungeon' || site.kind === 'castle') && k === site.floors.length - 1;
+      if (built && !lock) out.push({ code: 'no-lock', message: site.key + ': the last floor has no locked door.' });
+      if (lock) {
+        var dShut = reachFrom(pal, fl, first.arrive, null), kc = fl.features.filter(function (ft) { return ft.kind === 'chest' && ft.item === lock.requires[0]; })[0];
+        var goal = fl.features.filter(function (ft) { return ft.kind === 'boss' || ft.kind === 'chest' && ft.prize; })[0];
+        if (!kc || !sideReach(dShut, kc.at)) out.push({ code: 'key-after-lock', message: site.key + ': the key chest cannot be reached before the lock.' });
+        if (!sideReach(dShut, lock.at)) out.push({ code: 'lock', message: site.key + ': the locked door cannot be reached.' });
+        if (!goal) out.push({ code: 'goal', message: site.key + ': the last floor has no goal.' });
+        else {
+          var gAt = goal.at;
+          if (goal.kind === 'boss' ? dShut[gAt] >= 0 : sideReach(dShut, gAt)) out.push({ code: 'lock-open', message: site.key + ': the goal can be reached without the key.' });
+          if (goal.kind === 'boss' ? dAll[gAt] < 0 : !sideReach(dAll, gAt)) out.push({ code: 'goal', message: site.key + ': the goal cannot be reached even with the key.' });
+        }
+      }
+      if (site.kind === 'town') {
+        (fl.buildings || []).forEach(function (bd) {
+          if (dAll[bd.front] < 0 || dAll[bd.door] < 0 || dAll[bd.door - w] < 0) out.push({ code: 'door', message: site.key + ': the ' + bd.slot + ' cannot be entered.' });
+          (bd.counters || []).forEach(function (c) { if (dAll[c + w] < 0) out.push({ code: 'counter', message: site.key + ': a counter in the ' + bd.slot + ' cannot be reached.' }); });
+        });
+        var pz = fl.plaza;
+        if (pz && dAll[(pz[1] + 1) * w + pz[0] + 1] < 0) out.push({ code: 'plaza', message: site.key + ': the plaza cannot be reached from the gate.' });
+      } else {
+        for (var i = 0; i < n; i++) if ((flagOf(pal, fl.ground[i]) & 1) && !fl.deco[i] && dAll[i] < 0) { out.push({ code: 'orphan', message: site.key + ' floor ' + fl.floor + ' has floor that cannot be reached.' }); break; }
+      }
+    });
+    site.npcs.forEach(function (p) {
+      var fl = site.floors[p.floor - 1], f = fl ? cellFlags(pal, fl, p.at) : 0;
+      if (!(f & 1)) out.push({ code: 'npc', message: site.key + ': ' + p.slot + ' stands on a wall.' });
+    });
+    return out;
+  }
+  // The NPC slots a site will have, from its kind, role, and settings alone (never the seed), so callers can name records
+  // before building.
+  function inSlots(spec) {
+    if (spec.kind !== 'town') return [];
+    var S = inSettings(spec.settings), small = spec.role !== 'start', out = ['inn'].concat((small ? ['item'] : SHOP_KINDS).map(function (k) { return 'shop:' + k; }), ['church', 'guard1', 'guard2']);
+    for (var r = 1; r <= (small ? S.town.smallResidents : S.town.residents); r++) out.push('resident' + r);
+    return out;
+  }
+  W.interiors = { DEFAULTS: IN_DEFAULTS, ARCHETYPES: ARCHETYPES, RESIDENT_WEIGHTS: RESIDENT_WEIGHTS, BUILDINGS: BUILDINGS, KEYS: IN_KEYS,
+    settings: inSettings, palette: inPalette, floors: function (spec) { return siteFloors(spec, inSettings(spec.settings)); }, slots: inSlots,
+    build: inBuild, check: inCheck, walk: function (pal, fl, held) { return inWalk(pal, fl, held); }, reach: reachFrom };
+
   // ---------------------------------------------------------------- later phases insert sections above this line
   function freeze(o) { Object.freeze(o); keys(o).forEach(function (k) { var v = o[k]; if (v && (typeof v === 'object' || typeof v === 'function') && !Object.isFrozen(v)) freeze(v); }); return o; }
   return freeze(W);
@@ -4848,6 +5583,175 @@ var ENGINE_WORLD = (function () {
     (rec.regions || []).forEach(function (r) { if (r.region && !WORLD.records.get(r.region, b)) ctx.add({ recordId: rec.id, fieldPath: 'regions', message: 'Region ' + r.region + ' on the overworld is missing from the world records.', level: 'error' }); });
   });
 
+  // ---------------------------------------------------------------- interiors (Phase 4)
+  // Every site on the overworld gets its interior: one map_ per floor (key map|<site key>|<floor>) and one npc_ per person
+  // (key npc|<site key>|<slot>). Like the overworld, no tile array is stored; each floor regenerates from its sub seed
+  // (hash.seed(master seed, 'interior|' + site key)), the settings, the art, and the biome in front of the site, whose hash
+  // the record keeps. Exits link both ways: each floor 1 exit names the overworld map and the cell in front of the site,
+  // the overworld record's site entry gains enter {map, at}, stairs name the partner floor and its arrival cell, and the
+  // twn_ or dgn_ record lists its maps, its people, and both ends of its entrance.
+  var INE = ENGINE_WORLD.interiors, inMemo = {};
+  var NPC_NAMES = { inn: 'Innkeeper', 'shop:item': 'Item merchant', 'shop:weapon': 'Weapon merchant', 'shop:armor': 'Armor merchant', church: 'Priest', guard1: 'Gate guard', guard2: 'Gate guard' };
+  function inPalette(b) { return INE.palette(b.art); }
+  // NPC archetypes the art has field sprites for (Day 147 role npc:<archetype>), and the sprite for each.
+  function npcSprites(b) {
+    var out = {};
+    WORLD.art.list(b, 'spr_').forEach(function (sp) { if (sp.subject && sp.subject.kind === 'role' && /^npc:/.test(sp.subject.ref || '') && !out[sp.subject.ref.slice(4)]) out[sp.subject.ref.slice(4)] = sp.id; });
+    return out;
+  }
+  function inHash(b, sp) {
+    return ENGINE_WORLD.util.digest([ENGINE_WORLD.version, sp.seed, canon(b.world.settings && b.world.settings.interiors || {}), sp.key, sp.kind, sp.role, sp.outdoor || '-', sp.palette.digest,
+      canon(sp.archetypes), sp.prize || '-', sp.troop || '-', canon(sp.grants || []), !!sp.finale]);
+  }
+  // The plain spec for every site on the current overworld, in map order.
+  function inSpecs(b) {
+    var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+    if (!ow || !g) return [];
+    var pal = inPalette(b), arch = Object.keys(npcSprites(b)).sort(), byKey = {};
+    g.nodes.forEach(function (nd) { byKey[nd.key] = nd; });
+    return ow.sites.map(function (s2) {
+      var nd = byKey[s2.key] || {}, gr = ow.ground[s2.front], biome = gr && String(gr).indexOf(':') < 0 ? gr : null;
+      var sp = { seed: ENGINE_WORLD.hash.seed(b.world.seed, 'interior|' + s2.key), key: s2.key, kind: s2.interior || (s2.kind === 'twn' ? 'town' : 'dungeon'), role: s2.role,
+        settings: b.world.settings, palette: pal, outdoor: biome, archetypes: arch.length ? arch : INE.ARCHETYPES.slice(),
+        prize: s2.role === 'key' ? (nd.grants || [])[0] || null : null, troop: nd.troop || null, grants: (nd.grants || []).slice(), finale: !!nd.finale };
+      sp.hash = inHash(b, sp);
+      sp.site = s2;
+      return sp;
+    });
+  }
+  function inGenerate(sp) {
+    var m = inMemo[sp.key];
+    if (m && m.hash === sp.hash) return m.site;
+    var t0 = Date.now(), site = INE.build(sp);
+    site.ms = Date.now() - t0;
+    inMemo[sp.key] = { hash: sp.hash, site: site };
+    return site;
+  }
+  function mapKey(siteKey, floor) { return 'map|' + siteKey + '|' + floor; }
+  function npcKey(siteKey, slot) { return 'npc|' + siteKey + '|' + slot; }
+  function npcName(p) {
+    if (NPC_NAMES[p.slot]) return NPC_NAMES[p.slot];
+    return p.archetype.charAt(0).toUpperCase() + p.archetype.slice(1);
+  }
+  function interiorMaps(b) { return WORLD.records.list('map_', b).filter(function (m) { return m.kind && m.kind !== 'overworld'; }); }
+
+  WORLD.interiors = {
+    palette: inPalette,
+    sprites: npcSprites,
+    specs: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b); },
+    // The built site for one structural site key (memoized by its parameter hash), or null.
+    site: function (key, b) { b = b || cur(); var sp = inSpecs(b).filter(function (x) { return x.key === key; })[0]; return sp ? inGenerate(sp) : null; },
+    mapKey: mapKey, npcKey: npcKey,
+    maps: interiorMaps,
+    generated: function (b) { b = b || cur(); return interiorMaps(b).length > 0; },
+    // True when some site's interior was made from something other than what the bundle holds now, or the overworld
+    // was generated again since (its site entries lost their links).
+    stale: function (b) {
+      b = b || cur();
+      if (!WORLD.interiors.generated(b)) return false;
+      var rec = WORLD.overworld.record(b);
+      if (!rec || WORLD.overworld.stale(b)) return true;
+      if ((rec.sites || []).some(function (s2) { return !s2.enter || !WORLD.records.get(s2.enter.map, b); })) return true;
+      return inSpecs(b).some(function (sp) { var r = WORLD.records.get(ENGINE_WORLD.ids.structural('map_', mapKey(sp.key, 1)), b); return !r || r.paramHash !== sp.hash; });
+    },
+    // Generates the overworld first when it is missing or stale, then every interior, and writes map_ and npc_ records.
+    // Refuses when any site fails its own walking check. User made records are kept; generated map_ (other than the
+    // overworld) and npc_ records that no site makes any more are removed.
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      if (!WORLD.overworld.record(b) || WORLD.overworld.stale(b)) WORLD.overworld.apply(b);
+      var ow = WORLD.overworld.generate(b), owRec = WORLD.overworld.record(b), specs = inSpecs(b), t0 = Date.now();
+      var built = specs.map(function (sp) { return { sp: sp, site: inGenerate(sp) }; });
+      var bad = built.filter(function (x) { return !x.site.ok; })[0];
+      if (bad) throw new Error('The interior of ' + bad.sp.key + ' could not be generated after ' + bad.site.attempts + ' attempts: ' + bad.site.problems[0].message);
+      var sprites = npcSprites(b), made = {}, kept = [], written = 0, removed = 0, people = 0, floors = 0;
+      function put(rec) {
+        made[rec.id] = 1;
+        var old = WORLD.records.get(rec.id, b);
+        if (old && old.origin === 'user') { kept.push(rec.id); return old; }
+        WORLD.records.put(rec, b); written++;
+        return rec;
+      }
+      WORLD.batching = true;
+      try {
+        built.forEach(function (x) {
+          var sp = x.sp, site = x.site, s2 = sp.site, siteRec = WORLD.records.get(s2.record, b), base = siteRec ? siteRec.name : s2.key;
+          var ids = site.floors.map(function (fl) { return ENGINE_WORLD.ids.structural('map_', mapKey(sp.key, fl.floor)); });
+          var npcIds = site.npcs.map(function (p) { return ENGINE_WORLD.ids.structural('npc_', npcKey(sp.key, p.slot)); });
+          site.floors.forEach(function (fl, k) {
+            var w = fl.w, P = function (i) { return xy(i, w); };
+            var exits = fl.exits.map(function (ex) {
+              var to;
+              if (ex.kind === 'overworld') to = { map: owRec.id, at: xy(s2.front, ow.w) };
+              else {
+                var other = site.floors[ex.toFloor - 1], partner = other.exits.filter(function (e2) { return e2.toFloor === fl.floor; })[0];
+                to = { map: ids[ex.toFloor - 1], at: xy(partner.arrive, other.w) };
+              }
+              return { kind: ex.kind, at: P(ex.at), arrive: P(ex.arrive), to: to };
+            });
+            var features = fl.features.map(function (ft) {
+              var o = {};
+              Object.keys(ft).sort().forEach(function (f) { o[f] = f === 'at' || f === 'opens' ? P(ft[f]) : Array.isArray(ft[f]) ? ft[f].slice() : ft[f]; });
+              return o;
+            });
+            var body = {
+              kind: sp.kind, site: s2.record, chapter: s2.chapter, floor: fl.floor, floors: site.floors.length, w: fl.w, h: fl.h, seed: sp.seed,
+              generatorVersion: ENGINE_WORLD.version, paramHash: sp.hash, digest: fl.digest, attempts: site.attempts,
+              tileset: (sp.palette.sets[sp.kind] || sp.palette.sets.dungeon).til, exits: exits, features: features,
+              people: site.npcs.filter(function (p) { return p.floor === fl.floor; }).map(function (p) { return ENGINE_WORLD.ids.structural('npc_', npcKey(sp.key, p.slot)); }),
+              stats: JSON.parse(JSON.stringify(fl.stats || {}))
+            };
+            if (sp.kind === 'town') body.buildings = fl.buildings.map(function (bd) { return { kind: bd.kind, slot: bd.slot, rect: [bd.x, bd.y, bd.w, bd.h], door: P(bd.door) }; });
+            else body.rooms = fl.rooms.length;
+            if (sp.kind === 'town') { body.outdoor = fl.stats.outdoor; body.path = fl.stats.path; }
+            put(WORLD.envelope('map_', mapKey(sp.key, fl.floor), base + (site.floors.length > 1 ? ', floor ' + fl.floor : ''), body));
+            floors++;
+          });
+          site.npcs.forEach(function (p, k) {
+            var fl = site.floors[p.floor - 1], w = fl.w;
+            put(WORLD.envelope('npc_', npcKey(sp.key, p.slot), base + ': ' + npcName(p), {
+              chapter: s2.chapter, site: s2.record, map: ids[p.floor - 1], at: xy(p.at, w), slot: p.slot, archetype: p.archetype, role: p.role,
+              sprite: sprites[p.archetype] || null, facing: p.facing, wander: !!p.wander, building: p.building || null, counter: p.counter == null ? null : xy(p.counter, w)
+            }));
+            people++;
+          });
+          var f1 = site.floors[0], ent = f1.exits.filter(function (ex) { return ex.kind === 'overworld'; })[0];
+          if (siteRec && siteRec.origin !== 'user') {
+            siteRec.maps = ids.slice();
+            siteRec.people = npcIds.slice();
+            siteRec.entrance = { map: ids[0], at: xy(ent.arrive, f1.w) };
+            siteRec.overworld = { map: owRec.id, at: xy(s2.front, ow.w) };
+            siteRec.interiorHash = sp.hash;
+          }
+          var oe = (owRec.sites || []).filter(function (o) { return o.key === sp.key; })[0];
+          if (oe && owRec.origin !== 'user') oe.enter = { map: ids[0], at: xy(ent.arrive, f1.w) };
+        });
+        WORLD.records.list('map_', b).forEach(function (rec) { if (rec.kind !== 'overworld' && !made[rec.id] && rec.origin !== 'user') { WORLD.records.del(rec.id, b); removed++; } });
+        WORLD.records.list('npc_', b).forEach(function (rec) { if (!made[rec.id] && rec.origin !== 'user') { WORLD.records.del(rec.id, b); removed++; } });
+      } finally { WORLD.batching = false; }
+      if (b === cur()) { Kit.index.invalidate(); Kit.bundle.touch('interiors'); }
+      return { sites: built.length, floors: floors, people: people, written: written, removed: removed, kept: kept, ms: Date.now() - t0 };
+    }
+  };
+
+  Kit.validate.register('world.interiors', function (b, ctx) {
+    var owRec = WORLD.overworld.record(b);
+    if (!owRec || !owRec.paramHash) return;
+    var maps = interiorMaps(b);
+    if (!maps.length) { ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab.', level: 'warning' }); return; }
+    if (WORLD.interiors.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The overworld, seed, settings, or art changed after the interiors were generated. Generate them again on the Sites tab.', level: 'warning' });
+    maps.forEach(function (m) {
+      (m.exits || []).forEach(function (ex) { if (!ex.to || !WORLD.records.get(ex.to.map, b)) ctx.add({ recordId: m.id, fieldPath: 'exits', message: 'An exit of ' + m.name + ' leads to a map that does not exist.', level: 'error' }); });
+      (m.people || []).forEach(function (p) { if (!WORLD.records.get(p, b)) ctx.add({ recordId: m.id, fieldPath: 'people', message: 'Person ' + p + ' on ' + m.name + ' is missing from the world records.', level: 'error' }); });
+      if (m.site && !WORLD.records.get(m.site, b)) ctx.add({ recordId: m.id, fieldPath: 'site', message: 'The site of ' + m.name + ' is missing from the world records.', level: 'error' });
+    });
+    WORLD.records.list('npc_', b).forEach(function (p) {
+      if (p.map && !WORLD.records.get(p.map, b)) ctx.add({ recordId: p.id, fieldPath: 'map', message: p.name + ' stands on a map that does not exist.', level: 'error' });
+      if (!p.sprite) ctx.add({ recordId: p.id, fieldPath: 'sprite', message: 'The art has no field sprite for the ' + p.archetype + ' archetype, so ' + p.name + ' has nothing to be drawn with. Add an npc:' + p.archetype + ' sprite in Art and Audio Forge (Day 147).', level: 'warning' });
+    });
+  });
+
   // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);
@@ -4883,7 +5787,9 @@ var ENGINE_WORLD = (function () {
   function generate(b, reroll) {
     try {
       if (reroll) { b.world.seed = (Math.random() * 4294967295) >>> 0; Kit.bundle.touch('seed'); }
-      var r = WORLD.overworld.apply(b);
+      var had = WORLD.interiors && WORLD.interiors.generated(b), r = WORLD.overworld.apply(b);
+      // Interiors hang off the overworld's sites, so once they exist they are generated again with it.
+      if (had && !r.kept) WORLD.interiors.apply(b);
       Kit.rerender();
       Kit.ui.toast(r.kept ? 'The overworld record is marked as user made, so it was kept.' : 'Overworld generated: ' + r.ow.w + ' by ' + r.ow.h + ', ' + r.ow.sites.length + ' sites, ' + r.ow.gates.length + ' gates, in ' + r.ow.ms + ' ms.', r.kept ? 'warn' : 'ok');
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
@@ -5029,6 +5935,179 @@ var ENGINE_WORLD = (function () {
   WORLD.worldUi = ui;
 })();
 // === WS:WORLD END ===
+// === WS:SITES BEGIN ===
+(function () {
+  'use strict';
+  // The Sites tab. Phase 4: generate every interior, list the towns, dungeons, castles, and caves by chapter, and preview
+  // any floor one cell to a pixel with its exits, chests, locks, bosses, and people marked. Phase 7 adds the tile
+  // preview (tiles.drawMap) and the exits overlay on top of the real tiles.
+  var U = Kit.util, el = U.el, esc = U.esc;
+  var ui = { site: null, floor: 1 };
+  var KIND_LABEL = { town: 'Town', dungeon: 'Dungeon', castle: 'Castle', cave: 'Cave' };
+  var TILE_C = { wall: '#3a332e', floor: null, door: '#9a6a34', stairs: '#e8d48a', counter: '#b0643a', table: '#7a5636', barrel: '#6e4a2a', bed: '#b25a6a',
+    shelf: '#5e4630', rug: '#a8473f', plant: '#3f8a4a', lintel: '#9a6a34', arch: '#9a6a34', pillar: '#8c8c94', torch: '#f0983c', chest: '#f5c542', channel: '#3a78c8', spikes: '#c0c0c8' };
+  var FLOOR_C = { town: '#c8a46c', dungeon: '#6c7079', castle: '#7d7a86', cave: '#6a5f55' };
+  var MARK = { lock: '#e04ad0', boss: '#e0443a', exit: '#3fd0e0', npc: '#ffffff' };
+  var ROLE_LABEL = { start: 'Start town', town: 'Second town', key: 'Key dungeon', boss: 'Boss dungeon' };
+  function cur() { return Kit.bundle.current(); }
+  function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id; }
+  function placeLabel(slot) {
+    var m = /^shop:(.*)$/.exec(slot), h = /^house(\d+)$/.exec(slot);
+    return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1) + ' shop' : h ? 'House ' + h[1] : slot.charAt(0).toUpperCase() + slot.slice(1);
+  }
+  function roleLabel(s) { return s.role === 'boss' && s.interior === 'castle' ? 'Castle' : ROLE_LABEL[s.role] || (/^cave/.test(s.role) ? 'Cave' : s.role); }
+
+  function generate(b) {
+    try {
+      var r = WORLD.interiors.apply(b);
+      Kit.rerender();
+      Kit.ui.toast('Interiors generated: ' + r.sites + ' sites, ' + r.floors + ' floors, ' + r.people + ' people, in ' + r.ms + ' ms.' + (r.kept.length ? ' ' + r.kept.length + ' user records kept.' : ''), r.kept.length ? 'warn' : 'ok');
+    } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+  }
+
+  function colorAt(fl, i, kind, b) {
+    var d = fl.deco[i], g = String(fl.ground[i] || ''), k;
+    if (d) { k = String(d).split(':')[1]; if (TILE_C[k]) return TILE_C[k]; }
+    if (g.indexOf(':') < 0) return WORLD.biomeColor(g, (b.art.records.til_[g] || {}).key);
+    k = g.split(':')[1];
+    if (k === 'floor') return FLOOR_C[kind] || '#888';
+    return TILE_C[k] || '#888';
+  }
+  function draw(cv, fl, site, b) {
+    var ctx = cv.getContext && cv.getContext('2d');
+    if (!ctx) return false;
+    ctx.imageSmoothingEnabled = false;
+    for (var y = 0; y < fl.h; y++) {
+      var run = 0, col = null;
+      for (var x = 0; x <= fl.w; x++) {
+        var c = x < fl.w ? colorAt(fl, y * fl.w + x, site.kind, b) : null;
+        if (c !== col) { if (col) { ctx.fillStyle = col; ctx.fillRect(x - run, y, run, 1); } col = c; run = 0; }
+        run++;
+      }
+    }
+    function dot(i, c) { ctx.fillStyle = c; ctx.fillRect(i % fl.w, Math.floor(i / fl.w), 1, 1); }
+    fl.features.forEach(function (ft) { if (MARK[ft.kind]) dot(ft.at, MARK[ft.kind]); });
+    fl.exits.forEach(function (ex) { dot(ex.at, MARK.exit); });
+    site.npcs.forEach(function (p) { if (p.floor === fl.floor) dot(p.at, MARK.npc); });
+    return true;
+  }
+  function legend(site) {
+    var items = [[FLOOR_C[site.kind], 'Floor'], [TILE_C.wall, 'Wall'], [TILE_C.door, 'Door'], [MARK.exit, 'Exit']];
+    if (site.kind === 'town') items.push([TILE_C.counter, 'Counter'], [TILE_C.bed, 'Bed'], [MARK.npc, 'Person']);
+    else items.push([TILE_C.stairs, 'Stairs'], [TILE_C.chest, 'Chest']);
+    if (site.floors.some(function (fl) { return fl.features.some(function (ft) { return ft.kind === 'lock'; }); })) items.push([MARK.lock, 'Locked door'], [MARK.boss, 'Boss']);
+    return el('div', 'w8-legend', items.map(function (it) { return '<span><i style="background:' + it[0] + '"></i>' + esc(it[1]) + '</span>'; }).join(''));
+  }
+
+  function preview(b, spec, site, host) {
+    var card = el('section', 'panel w8-site'), s2 = spec.site, rec = WORLD.records.get(s2.record, b);
+    card.id = 'site-preview';
+    var nF = site.floors.length;
+    if (ui.floor > nF) ui.floor = 1;
+    var fl = site.floors[ui.floor - 1];
+    card.appendChild(el('h3', 'section-h', esc(rec ? rec.name : s2.key)));
+    card.appendChild(el('p', 'w8-chips', '<span class="chip chip-accent">' + esc(KIND_LABEL[site.kind] || site.kind) + '</span>' +
+      '<span class="chip chip-muted">' + fl.w + ' by ' + fl.h + '</span>' +
+      (nF > 1 ? '<span class="chip chip-muted">' + nF + ' floors</span>' : '') +
+      (site.npcs.length ? '<span class="chip chip-muted">' + site.npcs.length + ' people</span>' : '') +
+      '<span class="chip ' + (site.ok ? 'chip-ok' : 'chip-broken') + '">' + (site.ok ? 'Walks clean' : 'Problems') + '</span>'));
+    if (nF > 1) {
+      var seg = el('div', 'w8-seg');
+      seg.setAttribute('role', 'radiogroup'); seg.setAttribute('aria-label', 'Floor');
+      site.floors.forEach(function (f) {
+        var bt = el('button', 'btn w8-seg-btn', 'Floor ' + f.floor);
+        bt.type = 'button'; bt.setAttribute('role', 'radio'); bt.setAttribute('aria-checked', f.floor === ui.floor ? 'true' : 'false');
+        bt.addEventListener('click', function () { ui.floor = f.floor; Kit.rerender(); });
+        seg.appendChild(bt);
+      });
+      var bar = el('div', 'w8-owbar'); bar.appendChild(seg); card.appendChild(bar);
+    }
+    var fig = el('figure', 'w8-imap'), cv = el('canvas');
+    cv.width = fl.w; cv.height = fl.h;
+    cv.style.aspectRatio = fl.w + ' / ' + fl.h;
+    cv.setAttribute('role', 'img');
+    cv.setAttribute('aria-label', (rec ? rec.name : s2.key) + ', floor ' + fl.floor + ', ' + fl.w + ' by ' + fl.h + ' cells');
+    cv.dataset.site = s2.key; cv.dataset.floor = String(fl.floor);
+    cv.dataset.drawn = draw(cv, fl, site, b) ? '1' : '0';
+    fig.appendChild(cv);
+    card.appendChild(fig);
+    card.appendChild(legend(site));
+    // Exits and features in words.
+    var outs = fl.exits.filter(function (ex) { return ex.kind === 'overworld'; }).map(function (ex) { return WORLD.overworld.xy(ex.at, fl.w).join(','); });
+    var lines = outs.length ? ['Way out at ' + outs.join(' and ') + ', back to the overworld in front of the site'] : [];
+    fl.exits.forEach(function (ex) { if (ex.kind !== 'overworld') lines.push('Stairs ' + ex.kind + ' at ' + WORLD.overworld.xy(ex.at, fl.w).join(',') + ' to floor ' + ex.toFloor); });
+    fl.features.forEach(function (ft) {
+      var at = WORLD.overworld.xy(ft.at, fl.w).join(',');
+      if (ft.kind === 'lock') lines.push('Locked door at ' + at + ', opened by the key chest');
+      else if (ft.kind === 'chest') lines.push((ft.prize ? 'Prize chest' : ft.item ? 'Key chest' : 'Treasure chest') + ' at ' + at + (ft.prize && ft.item ? ' holding ' + ft.item.replace(/^item:seal:(chp_.*)$/, function (m, id) { return 'the seal of ' + chName(b, id); }) : ''));
+      else if (ft.kind === 'boss') lines.push('Boss at ' + at + (ft.troop ? ', troop ' + ft.troop : ', troop slot empty for Day 149'));
+    });
+    if (lines.length) card.appendChild(el('ul', 'w8-lines', lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('')));
+    if (site.npcs.length) {
+      var t = el('table', 'tbl');
+      t.innerHTML = '<thead><tr><th scope="col">Person</th><th scope="col">Archetype</th><th scope="col">Where</th></tr></thead><tbody>' +
+        site.npcs.map(function (p) {
+          var r = WORLD.records.get(ENGINE_WORLD.ids.structural('npc_', WORLD.interiors.npcKey(s2.key, p.slot)), b);
+          return '<tr><th scope="row">' + esc(r ? r.name.replace(/^.*: /, '') : p.slot) + '</th><td>' + esc(p.archetype) + '</td><td>' + esc(p.building ? placeLabel(p.building) : p.role === 'guard' ? 'At the gate' : 'Outdoors') + '</td></tr>';
+        }).join('') + '</tbody>';
+      var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); card.appendChild(wrap);
+    }
+    host.appendChild(card);
+  }
+
+  function render(host) {
+    var b = cur();
+    WORLD.ensure(b);
+    var head = el('section', 'panel');
+    head.innerHTML = '<h2 class="panel-title">Sites</h2><p class="muted">Every town, dungeon, castle, and cave on the overworld gets its interior from the seed. Towns are single map cutaways with an inn, shops, a church, and houses around a plaza; dungeons and castles are rooms split by binary space partitioning with a key chest before the locked door to the boss; caves are grown by cellular automaton and tunneled together. Exits lead back to the cell in front of each site.</p>';
+    var row = el('div', 'btn-row'), owRec = WORLD.overworld.record(b), gen = WORLD.interiors.generated(b), stale = gen && WORLD.interiors.stale(b);
+    if (!owRec || !owRec.paramHash) head.appendChild(el('p', 'muted', 'The overworld has not been generated yet. Generating the interiors generates it first.'));
+    if (gen) {
+      var maps = WORLD.interiors.maps(b), npcs = WORLD.records.list('npc_', b).length, kinds = {};
+      maps.forEach(function (m) { if (m.floor === 1) kinds[m.kind] = (kinds[m.kind] || 0) + 1; });
+      head.appendChild(el('p', 'w8-chips', (stale ? '<span class="chip chip-warning">Out of date</span>' : '<span class="chip chip-ok">Every interior walks clean</span>') +
+        Object.keys(kinds).sort().map(function (k) { return '<span class="chip chip-accent">' + kinds[k] + ' ' + esc((KIND_LABEL[k] || k).toLowerCase() + (kinds[k] === 1 ? '' : 's')) + '</span>'; }).join('') +
+        '<span class="chip chip-muted">' + maps.length + ' maps</span><span class="chip chip-muted">' + npcs + ' people</span>'));
+      if (stale) head.appendChild(el('p', 'msg msg-warning', 'The overworld, seed, settings, or art changed since the interiors were made. Generate them again to store the new ones.'));
+    }
+    row.appendChild(btn(gen ? 'Generate again' : 'Generate every interior', 'spark', !gen || stale ? 'btn-primary' : '', function () { generate(b); }));
+    head.appendChild(row);
+    host.appendChild(head);
+    if (!gen) return;
+    var specs = WORLD.interiors.specs(b);
+    if (!specs.length) return;
+    if (!ui.site || !specs.some(function (sp) { return sp.key === ui.site; })) { ui.site = specs[0].key; ui.floor = 1; }
+    var sel = specs.filter(function (sp) { return sp.key === ui.site; })[0];
+    preview(b, sel, WORLD.interiors.site(sel.key, b), host);
+    // Sites by chapter.
+    var list = el('section', 'panel');
+    list.appendChild(el('h3', 'section-h', 'Sites by chapter'));
+    var t = el('table', 'tbl w8-sites');
+    var rows = [];
+    WORLD.chapters(b).forEach(function (c) {
+      specs.filter(function (sp) { return sp.site.chapter === c.id; }).forEach(function (sp, k) {
+        var rec = WORLD.records.get(sp.site.record, b), nF = (rec && rec.maps || []).length, np = (rec && rec.people || []).length;
+        rows.push('<tr' + (sp.key === ui.site ? ' aria-current="true"' : '') + '><th scope="row">' + esc(roleLabel(sp.site)) + '<small class="w8-sub">' + esc(chName(b, c.id)) + '</small></th><td>' + esc(KIND_LABEL[sp.kind] || sp.kind) + '</td><td class="num">' + nF + '</td><td class="num">' + np + '</td><td><button class="btn w8-pick" type="button" data-site="' + esc(sp.key) + '"' + (sp.key === ui.site ? ' aria-pressed="true"' : ' aria-pressed="false"') + '>Preview</button></td></tr>');
+      });
+    });
+    t.innerHTML = '<thead><tr><th scope="col">Site</th><th scope="col">Kind</th><th scope="col" class="num">Floors</th><th scope="col" class="num">People</th><th scope="col"><span class="sr-only">Preview</span></th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+    Array.prototype.forEach.call(t.querySelectorAll('.w8-pick'), function (bt) {
+      bt.addEventListener('click', function () {
+        ui.site = bt.dataset.site; ui.floor = 1; Kit.rerender();
+        var pv = document.getElementById('site-preview');
+        if (pv && pv.scrollIntoView) pv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    });
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); list.appendChild(wrap);
+    host.appendChild(list);
+  }
+
+  WORLD.WS = WORLD.WS || {};
+  WORLD.WS.sites = { render: render };
+  WORLD.sitesUi = ui;
+})();
+// === WS:SITES END ===
 // === WS:WORLD148 BEGIN ===
 (function () {
   'use strict';

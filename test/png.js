@@ -22,4 +22,24 @@ function write(file, ow, pal, scale) {
   const ih = Buffer.alloc(13); ih.writeUInt32BE(W, 0); ih.writeUInt32BE(H, 4); ih[8] = 8; ih[9] = 2;
   fs.writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 }
-module.exports = { write };
+// Writes one interior floor (tile keys colored, chests, locks, bosses, exits marked) for the build log.
+const KEYC = { wall: '3a332e', door: '9a6a34', stairs: 'e8d48a', counter: 'b0643a', table: '7a5636', barrel: '6e4a2a', bed: 'b25a6a', shelf: '5e4630', rug: 'a8473f', plant: '3f8a4a', lintel: '9a6a34', arch: '9a6a34', pillar: '8c8c94', torch: 'f0983c', chest: 'f5c542' };
+function writeGrid(file, fl, scale) {
+  scale = scale || 6;
+  const mark = {};
+  fl.features.forEach((f) => { mark[f.at] = f.kind === 'lock' ? [224, 74, 208] : f.kind === 'boss' ? [224, 68, 58] : null; });
+  fl.exits.forEach((e) => { mark[e.at] = [63, 208, 224]; });
+  const px = fl.ground.map((g, i) => {
+    if (mark[i]) return mark[i];
+    const d = fl.deco[i], dk = d ? String(d).split(':')[1] : null, k = String(g).split(':')[1];
+    if (dk && KEYC[dk]) return hex(KEYC[dk]);
+    if (String(g).indexOf(':') < 0) return /desert/.test(g) ? hex('e0c070') : hex('6aa84f');
+    if (k === 'floor') return /town/.test(g) ? hex('c8a46c') : hex('6c7079');
+    return hex(KEYC[k] || '888888');
+  });
+  const W = fl.w * scale, H = fl.h * scale, raw = Buffer.alloc((W * 3 + 1) * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = px[Math.floor(y / scale) * fl.w + Math.floor(x / scale)], o = y * (W * 3 + 1) + 1 + x * 3; raw[o] = c[0]; raw[o + 1] = c[1]; raw[o + 2] = c[2]; }
+  const ih = Buffer.alloc(13); ih.writeUInt32BE(W, 0); ih.writeUInt32BE(H, 4); ih[8] = 8; ih[9] = 2;
+  fs.writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ih), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
+}
+module.exports = { write, writeGrid };

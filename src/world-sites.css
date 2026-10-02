@@ -1,0 +1,11 @@
+/* === WORLD:SITES CSS BEGIN === */
+.w8-site .section-h { margin-top: 0; }
+.w8-imap { margin: 0; background: #14110f; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; line-height: 0; }
+.w8-imap canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+@media (min-width: 900px) { .w8-imap { max-width: 760px; } }
+.w8-lines { margin: 10px 0 12px; padding-left: 20px; color: var(--ink2); }
+.w8-lines li { margin: 3px 0; }
+.w8-pick { min-height: 44px; min-width: 44px; padding: 0 14px; }
+.w8-pick[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.w8-sites tr[aria-current="true"] th { color: var(--accent2); }
+/* === WORLD:SITES CSS END === */

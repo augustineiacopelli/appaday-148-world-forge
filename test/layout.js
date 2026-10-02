@@ -35,6 +35,16 @@ const ROOT = require('path').join(__dirname, '..');
     await pg.evaluate(() => { const b = document.querySelectorAll('.w8-seg-btn')[4]; if (b) b.click(); }); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('world (regions overlay)')));
     await (await pg.$('.w8-ow')).screenshot({ path: ROOT + '/test/out/phase3-world-' + w + '.png' });
+    // The Sites tab once the interiors exist (Phase 4): the preview, a two floor dungeon, and a town with its people.
+    await pg.evaluate(() => { window.WORLD.interiors.apply(); window.Kit.go('sites'); }); await pg.waitForTimeout(250);
+    report.push(Object.assign({ w }, await audit('sites (generated)')));
+    await pg.evaluate(() => { const b = Array.prototype.find.call(document.querySelectorAll('.w8-pick'), (x) => /boss/.test(x.dataset.site)); if (b) b.click(); }); await pg.waitForTimeout(200);
+    await pg.evaluate(() => { const b = document.querySelectorAll('.w8-seg-btn')[1]; if (b) b.click(); }); await pg.waitForTimeout(200);
+    report.push(Object.assign({ w }, await audit('sites (boss dungeon, floor 2)')));
+    await (await pg.$('.w8-site')).screenshot({ path: ROOT + '/test/out/phase4-sites-dungeon-' + w + '.png' });
+    await pg.evaluate(() => { const b = Array.prototype.find.call(document.querySelectorAll('.w8-pick'), (x) => /start/.test(x.dataset.site)); if (b) b.click(); }); await pg.waitForTimeout(200);
+    report.push(Object.assign({ w }, await audit('sites (town)')));
+    await (await pg.$('.w8-site')).screenshot({ path: ROOT + '/test/out/phase4-sites-town-' + w + '.png' });
     await pg.evaluate(() => window.Kit.openExport()); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('export dialog')));
     await pg.evaluate(() => window.Kit.ui.closeTop()); await pg.waitForTimeout(100);

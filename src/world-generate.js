@@ -176,6 +176,175 @@
     (rec.regions || []).forEach(function (r) { if (r.region && !WORLD.records.get(r.region, b)) ctx.add({ recordId: rec.id, fieldPath: 'regions', message: 'Region ' + r.region + ' on the overworld is missing from the world records.', level: 'error' }); });
   });
 
+  // ---------------------------------------------------------------- interiors (Phase 4)
+  // Every site on the overworld gets its interior: one map_ per floor (key map|<site key>|<floor>) and one npc_ per person
+  // (key npc|<site key>|<slot>). Like the overworld, no tile array is stored; each floor regenerates from its sub seed
+  // (hash.seed(master seed, 'interior|' + site key)), the settings, the art, and the biome in front of the site, whose hash
+  // the record keeps. Exits link both ways: each floor 1 exit names the overworld map and the cell in front of the site,
+  // the overworld record's site entry gains enter {map, at}, stairs name the partner floor and its arrival cell, and the
+  // twn_ or dgn_ record lists its maps, its people, and both ends of its entrance.
+  var INE = ENGINE_WORLD.interiors, inMemo = {};
+  var NPC_NAMES = { inn: 'Innkeeper', 'shop:item': 'Item merchant', 'shop:weapon': 'Weapon merchant', 'shop:armor': 'Armor merchant', church: 'Priest', guard1: 'Gate guard', guard2: 'Gate guard' };
+  function inPalette(b) { return INE.palette(b.art); }
+  // NPC archetypes the art has field sprites for (Day 147 role npc:<archetype>), and the sprite for each.
+  function npcSprites(b) {
+    var out = {};
+    WORLD.art.list(b, 'spr_').forEach(function (sp) { if (sp.subject && sp.subject.kind === 'role' && /^npc:/.test(sp.subject.ref || '') && !out[sp.subject.ref.slice(4)]) out[sp.subject.ref.slice(4)] = sp.id; });
+    return out;
+  }
+  function inHash(b, sp) {
+    return ENGINE_WORLD.util.digest([ENGINE_WORLD.version, sp.seed, canon(b.world.settings && b.world.settings.interiors || {}), sp.key, sp.kind, sp.role, sp.outdoor || '-', sp.palette.digest,
+      canon(sp.archetypes), sp.prize || '-', sp.troop || '-', canon(sp.grants || []), !!sp.finale]);
+  }
+  // The plain spec for every site on the current overworld, in map order.
+  function inSpecs(b) {
+    var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+    if (!ow || !g) return [];
+    var pal = inPalette(b), arch = Object.keys(npcSprites(b)).sort(), byKey = {};
+    g.nodes.forEach(function (nd) { byKey[nd.key] = nd; });
+    return ow.sites.map(function (s2) {
+      var nd = byKey[s2.key] || {}, gr = ow.ground[s2.front], biome = gr && String(gr).indexOf(':') < 0 ? gr : null;
+      var sp = { seed: ENGINE_WORLD.hash.seed(b.world.seed, 'interior|' + s2.key), key: s2.key, kind: s2.interior || (s2.kind === 'twn' ? 'town' : 'dungeon'), role: s2.role,
+        settings: b.world.settings, palette: pal, outdoor: biome, archetypes: arch.length ? arch : INE.ARCHETYPES.slice(),
+        prize: s2.role === 'key' ? (nd.grants || [])[0] || null : null, troop: nd.troop || null, grants: (nd.grants || []).slice(), finale: !!nd.finale };
+      sp.hash = inHash(b, sp);
+      sp.site = s2;
+      return sp;
+    });
+  }
+  function inGenerate(sp) {
+    var m = inMemo[sp.key];
+    if (m && m.hash === sp.hash) return m.site;
+    var t0 = Date.now(), site = INE.build(sp);
+    site.ms = Date.now() - t0;
+    inMemo[sp.key] = { hash: sp.hash, site: site };
+    return site;
+  }
+  function mapKey(siteKey, floor) { return 'map|' + siteKey + '|' + floor; }
+  function npcKey(siteKey, slot) { return 'npc|' + siteKey + '|' + slot; }
+  function npcName(p) {
+    if (NPC_NAMES[p.slot]) return NPC_NAMES[p.slot];
+    return p.archetype.charAt(0).toUpperCase() + p.archetype.slice(1);
+  }
+  function interiorMaps(b) { return WORLD.records.list('map_', b).filter(function (m) { return m.kind && m.kind !== 'overworld'; }); }
+
+  WORLD.interiors = {
+    palette: inPalette,
+    sprites: npcSprites,
+    specs: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b); },
+    // The built site for one structural site key (memoized by its parameter hash), or null.
+    site: function (key, b) { b = b || cur(); var sp = inSpecs(b).filter(function (x) { return x.key === key; })[0]; return sp ? inGenerate(sp) : null; },
+    mapKey: mapKey, npcKey: npcKey,
+    maps: interiorMaps,
+    generated: function (b) { b = b || cur(); return interiorMaps(b).length > 0; },
+    // True when some site's interior was made from something other than what the bundle holds now, or the overworld
+    // was generated again since (its site entries lost their links).
+    stale: function (b) {
+      b = b || cur();
+      if (!WORLD.interiors.generated(b)) return false;
+      var rec = WORLD.overworld.record(b);
+      if (!rec || WORLD.overworld.stale(b)) return true;
+      if ((rec.sites || []).some(function (s2) { return !s2.enter || !WORLD.records.get(s2.enter.map, b); })) return true;
+      return inSpecs(b).some(function (sp) { var r = WORLD.records.get(ENGINE_WORLD.ids.structural('map_', mapKey(sp.key, 1)), b); return !r || r.paramHash !== sp.hash; });
+    },
+    // Generates the overworld first when it is missing or stale, then every interior, and writes map_ and npc_ records.
+    // Refuses when any site fails its own walking check. User made records are kept; generated map_ (other than the
+    // overworld) and npc_ records that no site makes any more are removed.
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      if (!WORLD.overworld.record(b) || WORLD.overworld.stale(b)) WORLD.overworld.apply(b);
+      var ow = WORLD.overworld.generate(b), owRec = WORLD.overworld.record(b), specs = inSpecs(b), t0 = Date.now();
+      var built = specs.map(function (sp) { return { sp: sp, site: inGenerate(sp) }; });
+      var bad = built.filter(function (x) { return !x.site.ok; })[0];
+      if (bad) throw new Error('The interior of ' + bad.sp.key + ' could not be generated after ' + bad.site.attempts + ' attempts: ' + bad.site.problems[0].message);
+      var sprites = npcSprites(b), made = {}, kept = [], written = 0, removed = 0, people = 0, floors = 0;
+      function put(rec) {
+        made[rec.id] = 1;
+        var old = WORLD.records.get(rec.id, b);
+        if (old && old.origin === 'user') { kept.push(rec.id); return old; }
+        WORLD.records.put(rec, b); written++;
+        return rec;
+      }
+      WORLD.batching = true;
+      try {
+        built.forEach(function (x) {
+          var sp = x.sp, site = x.site, s2 = sp.site, siteRec = WORLD.records.get(s2.record, b), base = siteRec ? siteRec.name : s2.key;
+          var ids = site.floors.map(function (fl) { return ENGINE_WORLD.ids.structural('map_', mapKey(sp.key, fl.floor)); });
+          var npcIds = site.npcs.map(function (p) { return ENGINE_WORLD.ids.structural('npc_', npcKey(sp.key, p.slot)); });
+          site.floors.forEach(function (fl, k) {
+            var w = fl.w, P = function (i) { return xy(i, w); };
+            var exits = fl.exits.map(function (ex) {
+              var to;
+              if (ex.kind === 'overworld') to = { map: owRec.id, at: xy(s2.front, ow.w) };
+              else {
+                var other = site.floors[ex.toFloor - 1], partner = other.exits.filter(function (e2) { return e2.toFloor === fl.floor; })[0];
+                to = { map: ids[ex.toFloor - 1], at: xy(partner.arrive, other.w) };
+              }
+              return { kind: ex.kind, at: P(ex.at), arrive: P(ex.arrive), to: to };
+            });
+            var features = fl.features.map(function (ft) {
+              var o = {};
+              Object.keys(ft).sort().forEach(function (f) { o[f] = f === 'at' || f === 'opens' ? P(ft[f]) : Array.isArray(ft[f]) ? ft[f].slice() : ft[f]; });
+              return o;
+            });
+            var body = {
+              kind: sp.kind, site: s2.record, chapter: s2.chapter, floor: fl.floor, floors: site.floors.length, w: fl.w, h: fl.h, seed: sp.seed,
+              generatorVersion: ENGINE_WORLD.version, paramHash: sp.hash, digest: fl.digest, attempts: site.attempts,
+              tileset: (sp.palette.sets[sp.kind] || sp.palette.sets.dungeon).til, exits: exits, features: features,
+              people: site.npcs.filter(function (p) { return p.floor === fl.floor; }).map(function (p) { return ENGINE_WORLD.ids.structural('npc_', npcKey(sp.key, p.slot)); }),
+              stats: JSON.parse(JSON.stringify(fl.stats || {}))
+            };
+            if (sp.kind === 'town') body.buildings = fl.buildings.map(function (bd) { return { kind: bd.kind, slot: bd.slot, rect: [bd.x, bd.y, bd.w, bd.h], door: P(bd.door) }; });
+            else body.rooms = fl.rooms.length;
+            if (sp.kind === 'town') { body.outdoor = fl.stats.outdoor; body.path = fl.stats.path; }
+            put(WORLD.envelope('map_', mapKey(sp.key, fl.floor), base + (site.floors.length > 1 ? ', floor ' + fl.floor : ''), body));
+            floors++;
+          });
+          site.npcs.forEach(function (p, k) {
+            var fl = site.floors[p.floor - 1], w = fl.w;
+            put(WORLD.envelope('npc_', npcKey(sp.key, p.slot), base + ': ' + npcName(p), {
+              chapter: s2.chapter, site: s2.record, map: ids[p.floor - 1], at: xy(p.at, w), slot: p.slot, archetype: p.archetype, role: p.role,
+              sprite: sprites[p.archetype] || null, facing: p.facing, wander: !!p.wander, building: p.building || null, counter: p.counter == null ? null : xy(p.counter, w)
+            }));
+            people++;
+          });
+          var f1 = site.floors[0], ent = f1.exits.filter(function (ex) { return ex.kind === 'overworld'; })[0];
+          if (siteRec && siteRec.origin !== 'user') {
+            siteRec.maps = ids.slice();
+            siteRec.people = npcIds.slice();
+            siteRec.entrance = { map: ids[0], at: xy(ent.arrive, f1.w) };
+            siteRec.overworld = { map: owRec.id, at: xy(s2.front, ow.w) };
+            siteRec.interiorHash = sp.hash;
+          }
+          var oe = (owRec.sites || []).filter(function (o) { return o.key === sp.key; })[0];
+          if (oe && owRec.origin !== 'user') oe.enter = { map: ids[0], at: xy(ent.arrive, f1.w) };
+        });
+        WORLD.records.list('map_', b).forEach(function (rec) { if (rec.kind !== 'overworld' && !made[rec.id] && rec.origin !== 'user') { WORLD.records.del(rec.id, b); removed++; } });
+        WORLD.records.list('npc_', b).forEach(function (rec) { if (!made[rec.id] && rec.origin !== 'user') { WORLD.records.del(rec.id, b); removed++; } });
+      } finally { WORLD.batching = false; }
+      if (b === cur()) { Kit.index.invalidate(); Kit.bundle.touch('interiors'); }
+      return { sites: built.length, floors: floors, people: people, written: written, removed: removed, kept: kept, ms: Date.now() - t0 };
+    }
+  };
+
+  Kit.validate.register('world.interiors', function (b, ctx) {
+    var owRec = WORLD.overworld.record(b);
+    if (!owRec || !owRec.paramHash) return;
+    var maps = interiorMaps(b);
+    if (!maps.length) { ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab.', level: 'warning' }); return; }
+    if (WORLD.interiors.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The overworld, seed, settings, or art changed after the interiors were generated. Generate them again on the Sites tab.', level: 'warning' });
+    maps.forEach(function (m) {
+      (m.exits || []).forEach(function (ex) { if (!ex.to || !WORLD.records.get(ex.to.map, b)) ctx.add({ recordId: m.id, fieldPath: 'exits', message: 'An exit of ' + m.name + ' leads to a map that does not exist.', level: 'error' }); });
+      (m.people || []).forEach(function (p) { if (!WORLD.records.get(p, b)) ctx.add({ recordId: m.id, fieldPath: 'people', message: 'Person ' + p + ' on ' + m.name + ' is missing from the world records.', level: 'error' }); });
+      if (m.site && !WORLD.records.get(m.site, b)) ctx.add({ recordId: m.id, fieldPath: 'site', message: 'The site of ' + m.name + ' is missing from the world records.', level: 'error' });
+    });
+    WORLD.records.list('npc_', b).forEach(function (p) {
+      if (p.map && !WORLD.records.get(p.map, b)) ctx.add({ recordId: p.id, fieldPath: 'map', message: p.name + ' stands on a map that does not exist.', level: 'error' });
+      if (!p.sprite) ctx.add({ recordId: p.id, fieldPath: 'sprite', message: 'The art has no field sprite for the ' + p.archetype + ' archetype, so ' + p.name + ' has nothing to be drawn with. Add an npc:' + p.archetype + ' sprite in Art and Audio Forge (Day 147).', level: 'warning' });
+    });
+  });
+
   // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);

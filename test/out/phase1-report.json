@@ -234,8 +234,8 @@
       "name": "a 256 by 256 five octave field takes under 400 ms here; the climate table under 20 ms",
       "ok": true,
       "detail": {
-        "fieldMs": "232.5",
-        "tableMs": "2.61"
+        "fieldMs": "152.9",
+        "tableMs": "2.24"
       }
     }
   ],
@@ -257,8 +257,8 @@
     "forest@433",
     "swamp@443"
   ],
-  "fieldMs": 232.503177,
-  "tableMs": 2.6126321,
+  "fieldMs": 152.934388,
+  "tableMs": 2.2441021,
   "digests42": {
     "rng": "73c77abc:2000",
     "helpers": "bbf93afb:16",
