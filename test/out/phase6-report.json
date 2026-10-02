@@ -1,9 +1,9 @@
 {
-  "when": "2026-10-02T15:40:45.701Z",
+  "when": "2026-10-02T21:19:17.142Z",
   "pass": 75,
   "total": 75,
-  "walkMs": 20,
-  "flagMs": 19,
+  "walkMs": 21,
+  "flagMs": 22,
   "results": [
     {
       "name": "the progression and flag proofs are identical in two vm contexts and the plain context (four, seed 42)",
@@ -19,11 +19,11 @@
       "detail": []
     },
     {
-      "name": "the proofs take 20 ms (walk) and 19 ms (flags) per world in the plain context",
+      "name": "the proofs take 21 ms (walk) and 22 ms (flags) per world in the plain context",
       "ok": true,
       "detail": {
-        "tP": 317,
-        "tF": 308
+        "tP": 339,
+        "tF": 350
       }
     },
     {

@@ -560,6 +560,52 @@ SESSION 7 / PHASE 7 (2026-10-02, Opus): THE INTERFACE. COMPLETE.
     palette, used only when generator version and parameter hash match), the final definition of done suite, the README,
     and the six item shipping checklist.
 === END SESSION 7 ===
+SESSION 8 / PHASE 8 (2026-10-02, Opus): EXPORT AND SHIP. COMPLETE.
+  Read first: Phases 0 to 7 already export the bundle, <slug>-world-manifest.json, and engine-world.js (Phase 0) and gate
+    Final on every check (Phase 6). Phase 8 adds the optional bake, the definition of done suite, the README, and ships.
+  Engine (new section src/engine-bake.js, spliced into ENGINE:WORLD above the freeze line; engine version stays 1.0.0
+    because no generator changed): ENGINE_WORLD.bake {FORMAT 'rle1', encode, decode, why, load, cells}. encode(maps,
+    version) takes [{id, w, h, ground, deco, paramHash}] and returns {format, generatorVersion, palette, maps {id: {w, h,
+    paramHash, cells, ground, deco}}}: one sorted palette of every tile ref used, each layer a run length string over
+    palette codes (0 empty, n is palette[n - 1]; runs 'c' or 'c*len' in base 36 joined by '.'), and cells, the digest of
+    both layers as refs. decode(baked, id, want) returns {w, h, ground, deco} only when the format is rle1, the generator
+    version equals want.generatorVersion (default this engine's), the entry's paramHash equals want.paramHash, both layers
+    decode to w * h cells, and the cells digest agrees; why() names the first refusal. load(bundle, mapId) reads
+    bundle.world.baked against the map_ record's paramHash, so Day 150 calls it and regenerates from the seed on null.
+    The section keeps the determinism rules (util.keys and each only, no Math.random, no host global).
+  Page (new fence src/world-bake.js WORLD:BAKE): WORLD.bake {on, data, set, collect, apply, clear, map, status, forExport,
+    estimate} and Kit.validate 'world.bake'. collect gathers the overworld (painted cells included) and every interior floor
+    whose map_ record's paramHash equals what the seed builds now; a stale overworld collects nothing. set(b, false) clears
+    world.baked at once. Kit.buildExport calls WORLD.bake.forExport before the hash is taken: baking on bakes, off removes
+    any bake. The manifest gains bake {on, format, generatorVersion, maps, fresh, stale, palette, bytes}.
+  DECISION: the overworld is baked along with the interiors the plan named, since it is the slow build on a phone (Phase 7
+    measured 190 to 780 ms at a 4x slowdown) and the same rule protects it.
+  DECISION: bake stays out of every paramHash (settingsForHash already dropped it), so toggling it never stales a map.
+  DECISION: the page never reads its own bake; it always regenerates, and the bake exists for Day 150. A bake that no
+    longer matches (another generator version or other parameters) is a warning, never an error, because every reader
+    ignores it; the next export with baking on bakes again. A bake left with baking off is a warning the next export clears.
+  Export tab and dialog: a Bake the maps into the bundle switch under Include engine-world.js, with a note giving the
+    size baking adds (estimate) and when Day 150 uses a baked map; the manifest preview has a Baked row.
+  Measured (test/out/phase8-report.json): demo 12 maps, bake 21.5 KB over a 543 KB Final; four continents 32 maps, bake
+    51 KB over 786 KB. Both far under the 4.5 MB storage budget. Exporting twice bakes byte identical worlds.
+  Tests: test/phase8.js 64 of 64, the definition of done for both fixtures: the bake engine (round trip in two vm contexts,
+    identical bytes, sorted palette, every refusal, a caller pinned version, load); the fixture imports cleanly; one seed
+    grows an identical world in two separate pages; every check passes with no Final block; every map record has layers and
+    every ground and decoration cell resolves through tiles.resolve; prior namespaces unchanged (givers aside); toggling the
+    bake stales nothing; Final with baking on carries a current bake of every map that reads back equal to the generated
+    layers; the manifest (forge, hash, generator, created, 0 unresolved, clean validation, world opened, bake); forge stamps;
+    the exported engine-world.js is the repository file plus its hash line; a fresh vm with only the exported engines and the
+    Final bundle regenerates the overworld and every floor with their records' digests and bake.load returns every map; a
+    changed map refuses its bake; Days 146 and 147 open the baked Final with every namespace identical, 0 errors, 0 broken,
+    0 forward; baking off exports no bake; a stale bake warns without blocking and the next export rebakes; the Export tab
+    switch, note, and Baked row. phase0 63, phase1 37, phase2 40, phase3 61, phase4 53, phase5 58, phase6 75, phase7 68,
+    phase8 64: 519 of 519. layout.js 42 views pass (adds Export with baking on; pictures test/out/phase8-export-*.png).
+  Shipped: README rewritten for the finished forge. Portal entry 148 (cat C, no AI, 2026-10-02) and the portal README
+    count and category table delivered with the shipping checklist.
+  Next: Day 149, the story forge. It reads world records by structural ID (twn_, dgn_, npc_, map_, reg_), binds the world
+    local gate keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) to its own flg_ and itm_ records, and may
+    fill boss slots left empty. Day 150 loads engine-world.js beside engine-render.js and calls ENGINE_WORLD.bake.load first.
+=== END SESSION 8 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

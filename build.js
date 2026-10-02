@@ -37,14 +37,14 @@ const demoSrc = R('src/world-demo.js').replace('/*DEMO_JSON*/null', () => embed(
 const buildLog = R('src/build-log.txt');
 // ENGINE:WORLD is one fence in the output. Later phases keep their engine sections in their own source files, spliced in
 // order above the freeze line, so each phase's engine code stays readable on its own.
-const ENGINE_SECTIONS = ['src/engine-progression.js', 'src/engine-overworld.js', 'src/engine-interiors.js', 'src/engine-zones.js', 'src/engine-checks.js'].filter(exists);
+const ENGINE_SECTIONS = ['src/engine-progression.js', 'src/engine-overworld.js', 'src/engine-interiors.js', 'src/engine-zones.js', 'src/engine-checks.js', 'src/engine-bake.js'].filter(exists);
 const FREEZE = '  // ---------------------------------------------------------------- later phases insert sections above this line';
 const engineBase = R('src/engine-world.js');
 if (engineBase.split(FREEZE).length !== 2) throw new Error('ENGINE:WORLD freeze marker not found exactly once.');
 const engineWorld = engineBase.replace(FREEZE, () => ENGINE_SECTIONS.map((f) => R(f).replace(/\s+$/, '') + '\n\n').join('') + FREEZE).trim();
 // Workspace fences arrive with later phases; each is optional until its phase.
 const CSS_FENCES = ['src/world-viewer.css', 'src/world-map.css', 'src/world-sites.css', 'src/world-encounters.css', 'src/world-validation.css'].filter(exists);
-const JS_FENCES = ['src/world-generate.js', 'src/world-checks.js', 'src/world-viewer.js', 'src/world-audio.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
+const JS_FENCES = ['src/world-generate.js', 'src/world-checks.js', 'src/world-bake.js', 'src/world-viewer.js', 'src/world-audio.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
 
 const html = `<!--
 ${buildLog.trim()}

@@ -561,6 +561,52 @@ SESSION 7 / PHASE 7 (2026-10-02, Opus): THE INTERFACE. COMPLETE.
     palette, used only when generator version and parameter hash match), the final definition of done suite, the README,
     and the six item shipping checklist.
 === END SESSION 7 ===
+SESSION 8 / PHASE 8 (2026-10-02, Opus): EXPORT AND SHIP. COMPLETE.
+  Read first: Phases 0 to 7 already export the bundle, <slug>-world-manifest.json, and engine-world.js (Phase 0) and gate
+    Final on every check (Phase 6). Phase 8 adds the optional bake, the definition of done suite, the README, and ships.
+  Engine (new section src/engine-bake.js, spliced into ENGINE:WORLD above the freeze line; engine version stays 1.0.0
+    because no generator changed): ENGINE_WORLD.bake {FORMAT 'rle1', encode, decode, why, load, cells}. encode(maps,
+    version) takes [{id, w, h, ground, deco, paramHash}] and returns {format, generatorVersion, palette, maps {id: {w, h,
+    paramHash, cells, ground, deco}}}: one sorted palette of every tile ref used, each layer a run length string over
+    palette codes (0 empty, n is palette[n - 1]; runs 'c' or 'c*len' in base 36 joined by '.'), and cells, the digest of
+    both layers as refs. decode(baked, id, want) returns {w, h, ground, deco} only when the format is rle1, the generator
+    version equals want.generatorVersion (default this engine's), the entry's paramHash equals want.paramHash, both layers
+    decode to w * h cells, and the cells digest agrees; why() names the first refusal. load(bundle, mapId) reads
+    bundle.world.baked against the map_ record's paramHash, so Day 150 calls it and regenerates from the seed on null.
+    The section keeps the determinism rules (util.keys and each only, no Math.random, no host global).
+  Page (new fence src/world-bake.js WORLD:BAKE): WORLD.bake {on, data, set, collect, apply, clear, map, status, forExport,
+    estimate} and Kit.validate 'world.bake'. collect gathers the overworld (painted cells included) and every interior floor
+    whose map_ record's paramHash equals what the seed builds now; a stale overworld collects nothing. set(b, false) clears
+    world.baked at once. Kit.buildExport calls WORLD.bake.forExport before the hash is taken: baking on bakes, off removes
+    any bake. The manifest gains bake {on, format, generatorVersion, maps, fresh, stale, palette, bytes}.
+  DECISION: the overworld is baked along with the interiors the plan named, since it is the slow build on a phone (Phase 7
+    measured 190 to 780 ms at a 4x slowdown) and the same rule protects it.
+  DECISION: bake stays out of every paramHash (settingsForHash already dropped it), so toggling it never stales a map.
+  DECISION: the page never reads its own bake; it always regenerates, and the bake exists for Day 150. A bake that no
+    longer matches (another generator version or other parameters) is a warning, never an error, because every reader
+    ignores it; the next export with baking on bakes again. A bake left with baking off is a warning the next export clears.
+  Export tab and dialog: a Bake the maps into the bundle switch under Include engine-world.js, with a note giving the
+    size baking adds (estimate) and when Day 150 uses a baked map; the manifest preview has a Baked row.
+  Measured (test/out/phase8-report.json): demo 12 maps, bake 21.5 KB over a 543 KB Final; four continents 32 maps, bake
+    51 KB over 786 KB. Both far under the 4.5 MB storage budget. Exporting twice bakes byte identical worlds.
+  Tests: test/phase8.js 64 of 64, the definition of done for both fixtures: the bake engine (round trip in two vm contexts,
+    identical bytes, sorted palette, every refusal, a caller pinned version, load); the fixture imports cleanly; one seed
+    grows an identical world in two separate pages; every check passes with no Final block; every map record has layers and
+    every ground and decoration cell resolves through tiles.resolve; prior namespaces unchanged (givers aside); toggling the
+    bake stales nothing; Final with baking on carries a current bake of every map that reads back equal to the generated
+    layers; the manifest (forge, hash, generator, created, 0 unresolved, clean validation, world opened, bake); forge stamps;
+    the exported engine-world.js is the repository file plus its hash line; a fresh vm with only the exported engines and the
+    Final bundle regenerates the overworld and every floor with their records' digests and bake.load returns every map; a
+    changed map refuses its bake; Days 146 and 147 open the baked Final with every namespace identical, 0 errors, 0 broken,
+    0 forward; baking off exports no bake; a stale bake warns without blocking and the next export rebakes; the Export tab
+    switch, note, and Baked row. phase0 63, phase1 37, phase2 40, phase3 61, phase4 53, phase5 58, phase6 75, phase7 68,
+    phase8 64: 519 of 519. layout.js 42 views pass (adds Export with baking on; pictures test/out/phase8-export-*.png).
+  Shipped: README rewritten for the finished forge. Portal entry 148 (cat C, no AI, 2026-10-02) and the portal README
+    count and category table delivered with the shipping checklist.
+  Next: Day 149, the story forge. It reads world records by structural ID (twn_, dgn_, npc_, map_, reg_), binds the world
+    local gate keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) to its own flg_ and itm_ records, and may
+    fill boss slots left empty. Day 150 loads engine-world.js beside engine-render.js and calls ENGINE_WORLD.bake.load first.
+=== END SESSION 8 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -6349,6 +6395,87 @@ var ENGINE_WORLD = (function () {
 
   W.checks = { progression: ckProgression, flags: ckFlags, refs: ckRefs, reach: ckReach, landable: ckLandable };
 
+  // ---------------------------------------------------------------- bake (Phase 8)
+  // An optional cache of built tile layers, so Day 150 can draw a map without generating it. Every map stays the product
+  // of its seed: the bake is only ever a copy, and it is used only when it provably is one.
+  //
+  // bake.encode(maps, version) -> baked. maps: [{id, w, h, ground, deco, paramHash}] (any order; they are stored by ID).
+  //   baked = {format: 'rle1', generatorVersion, palette [ref], maps {id: {w, h, paramHash, cells, ground, deco}}}.
+  //   The palette lists every tile ref the maps use, sorted, once; a layer is a run length string over palette codes,
+  //   code 0 for an empty cell and n for palette[n - 1], each run 'c' or 'c*len' in base 36 joined by '.'. cells is the
+  //   digest of both layers as refs, so a decoded map is checked against what was baked, cell by cell.
+  // bake.decode(baked, id, want) -> {w, h, ground, deco} or null. want = {paramHash, generatorVersion}. Null unless the
+  //   format is known, the generator version equals want.generatorVersion (default this engine's version), the entry's
+  //   paramHash equals want.paramHash, both layers decode to w * h cells, and the cells digest agrees. bake.why(...) takes
+  //   the same arguments and names the first reason a decode would refuse, or null.
+  // bake.load(bundle, mapId) -> the decoded map or null: reads bundle.world.baked and the map_ record's paramHash, so the
+  //   caller (Day 150) regenerates from the seed whenever this returns null.
+  var BAKE_FORMAT = 'rle1';
+  function bakeCells(ground, deco) {
+    var parts = [], n = ground.length;
+    for (var i = 0; i < n; i++) parts.push((ground[i] || '-') + '|' + (deco[i] || '-'));
+    return digest(parts);
+  }
+  function rleEncode(layer, code) {
+    var out = [], n = layer.length, i = 0;
+    while (i < n) {
+      var c = layer[i] ? code[layer[i]] : 0, j = i + 1;
+      while (j < n && (layer[j] ? code[layer[j]] : 0) === c) j++;
+      out.push(c.toString(36) + (j - i > 1 ? '*' + (j - i).toString(36) : ''));
+      i = j;
+    }
+    return out.join('.');
+  }
+  function rleDecode(text, palette, n) {
+    var out = [], runs = text ? String(text).split('.') : [];
+    for (var r = 0; r < runs.length; r++) {
+      var p = runs[r].split('*'), c = parseInt(p[0], 36), len = p.length > 1 ? parseInt(p[1], 36) : 1;
+      if (!(c >= 0) || !(len >= 1) || c > palette.length || out.length + len > n) return null;
+      var v = c ? palette[c - 1] : null;
+      for (var q = 0; q < len; q++) out.push(v);
+    }
+    return out.length === n ? out : null;
+  }
+  function bakeEncode(maps, version) {
+    var seen = {}, byId = {};
+    (maps || []).forEach(function (m) {
+      byId[m.id] = m;
+      for (var i = 0; i < m.ground.length; i++) { if (m.ground[i]) seen[m.ground[i]] = 1; if (m.deco[i]) seen[m.deco[i]] = 1; }
+    });
+    var palette = keys(seen), code = {}, out = {};
+    palette.forEach(function (ref, k) { code[ref] = k + 1; });
+    each(byId, function (m, id) {
+      out[id] = { w: m.w, h: m.h, paramHash: m.paramHash, cells: bakeCells(m.ground, m.deco), ground: rleEncode(m.ground, code), deco: rleEncode(m.deco, code) };
+    });
+    return { format: BAKE_FORMAT, generatorVersion: version || W.version, palette: palette, maps: out };
+  }
+  function bakeWhy(baked, id, want) {
+    want = want || {};
+    if (!baked || typeof baked !== 'object' || !baked.maps) return 'Nothing is baked.';
+    if (baked.format !== BAKE_FORMAT) return 'The bake format ' + baked.format + ' is not ' + BAKE_FORMAT + '.';
+    var ver = want.generatorVersion || W.version;
+    if (baked.generatorVersion !== ver) return 'The bake was made by generator ' + baked.generatorVersion + ', not ' + ver + '.';
+    var e = baked.maps[id];
+    if (!e) return 'Map ' + id + ' is not baked.';
+    if (!want.paramHash || e.paramHash !== want.paramHash) return 'Map ' + id + ' was baked from other parameters than it has now.';
+    var n = (e.w | 0) * (e.h | 0), pal = Array.isArray(baked.palette) ? baked.palette : [];
+    var g = rleDecode(e.ground, pal, n), d = g && rleDecode(e.deco, pal, n);
+    if (!g || !d) return 'Map ' + id + ' does not decode to ' + e.w + ' by ' + e.h + ' cells.';
+    if (bakeCells(g, d) !== e.cells) return 'Map ' + id + ' does not decode to the cells that were baked.';
+    return null;
+  }
+  function bakeDecode(baked, id, want) {
+    if (bakeWhy(baked, id, want)) return null;
+    var e = baked.maps[id], n = e.w * e.h;
+    return { id: id, w: e.w, h: e.h, paramHash: e.paramHash, ground: rleDecode(e.ground, baked.palette, n), deco: rleDecode(e.deco, baked.palette, n), baked: true };
+  }
+  function bakeLoad(bundle, mapId) {
+    var w = bundle && bundle.world, rec = w && w.records && w.records.map_ && w.records.map_[mapId];
+    if (!rec) return null;
+    return bakeDecode(w.baked, mapId, { paramHash: rec.paramHash, generatorVersion: W.version });
+  }
+  W.bake = { FORMAT: BAKE_FORMAT, encode: bakeEncode, decode: bakeDecode, why: bakeWhy, load: bakeLoad, cells: bakeCells };
+
   // ---------------------------------------------------------------- later phases insert sections above this line
   function freeze(o) { Object.freeze(o); keys(o).forEach(function (k) { var v = o[k]; if (v && (typeof v === 'object' || typeof v === 'function') && !Object.isFrozen(v)) freeze(v); }); return o; }
   return freeze(W);
@@ -7180,6 +7307,105 @@ var ENGINE_WORLD = (function () {
   });
 })();
 // === WORLD:CHECKS END ===
+// === WORLD:BAKE BEGIN ===
+(function () {
+  'use strict';
+  // The optional bake (Phase 8). world.settings.bake on means every export stores the tile layers of each map the records
+  // still agree with (the overworld, painted cells included, and every interior floor) in world.baked, run length encoded
+  // over one reference palette by ENGINE_WORLD.bake. Off means an export carries no bake. The bake never feeds the
+  // generators or the checks here: the page always regenerates. It is for Day 150, which calls ENGINE_WORLD.bake.load and
+  // gets a map only when the generator version and the map's paramHash both match, and regenerates otherwise.
+  // DECISION: the plan named interiors; the overworld is baked too, because it is the one map whose build is slow enough
+  // to matter on a phone (Phase 7 measured 190 to 780 ms at a 4x slowdown), and it costs the same rule to check.
+  // DECISION: bake is not part of any paramHash (settingsForHash drops it), so turning it on or off never makes a map stale.
+  var U = Kit.util, EB = ENGINE_WORLD.bake;
+  function cur() { return Kit.bundle.current(); }
+  function on(b) { return !!(b && b.world && b.world.settings && b.world.settings.bake); }
+  function data(b) { var k = b && b.world && b.world.baked; return U.isObj(k) && U.isObj(k.maps) ? k : null; }
+
+  // Every map whose record matches what the seed builds now, as {id, w, h, ground, deco, paramHash}, in record order.
+  function collect(b) {
+    var out = [], owRec = WORLD.overworld.record(b);
+    if (!owRec || !owRec.paramHash || WORLD.overworld.stale(b)) return out;
+    var ow = WORLD.overworld.generate(b);
+    if (ow && ow.ok && ow.paramHash === owRec.paramHash) out.push({ id: owRec.id, w: ow.w, h: ow.h, ground: ow.ground, deco: ow.deco, paramHash: owRec.paramHash });
+    if (!WORLD.interiors.generated(b)) return out;
+    WORLD.interiors.built(b).forEach(function (x) {
+      if (!x.site.ok) return;
+      x.site.floors.forEach(function (fl) {
+        var id = ENGINE_WORLD.ids.structural('map_', WORLD.interiors.mapKey(x.sp.key, fl.floor)), rec = WORLD.records.get(id, b);
+        if (rec && rec.paramHash === x.sp.hash) out.push({ id: id, w: fl.w, h: fl.h, ground: fl.ground, deco: fl.deco, paramHash: rec.paramHash });
+      });
+    });
+    return out;
+  }
+  function size(k) { return k ? JSON.stringify(k).length : 0; }
+
+  WORLD.bake = {
+    on: on,
+    data: function (b) { return data(b || cur()); },
+    // Turns the setting on or off. Off clears world.baked at once, so a bundle never carries a bake nobody asked for.
+    set: function (b, v) {
+      b = b || cur();
+      WORLD.ensure(b);
+      if (!!v === on(b)) return false;
+      b.world.settings.bake = !!v;
+      if (!v) b.world.baked = {};
+      if (b === cur()) Kit.bundle.touch('bake');
+      return true;
+    },
+    collect: function (b) { b = b || cur(); WORLD.ensure(b); return collect(b); },
+    // Bakes every current map (an empty bake when nothing is current). Deterministic: the same world bakes the same bytes.
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var maps = collect(b), k = maps.length ? EB.encode(maps, ENGINE_WORLD.version) : {};
+      var changed = JSON.stringify(k) !== JSON.stringify(b.world.baked || {});
+      b.world.baked = k;
+      if (changed && b === cur()) Kit.bundle.touch('bake');
+      return { maps: maps.length, bytes: size(k), changed: changed };
+    },
+    clear: function (b) { b = b || cur(); WORLD.ensure(b); var had = !!data(b); b.world.baked = {}; if (had && b === cur()) Kit.bundle.touch('bake'); return had; },
+    // What a reader of the bundle would get for one map: the decoded layers, or null with the reason.
+    map: function (id, b) {
+      b = b || cur();
+      var rec = WORLD.records.get(id, b), k = data(b);
+      var why = !rec ? 'No map record ' + id + '.' : EB.why(k, id, { paramHash: rec.paramHash, generatorVersion: ENGINE_WORLD.version });
+      if (!why && WORLD.overworld.stale(b)) why = 'The world changed after it was generated, so the bake would be out of date.';
+      return why ? { map: null, why: why } : { map: EB.decode(k, id, { paramHash: rec.paramHash }), why: null };
+    },
+    // Counts for the manifest and the Export tab: baked maps, how many still match their records, the bytes they add.
+    status: function (b) {
+      b = b || cur();
+      var k = data(b), ids = k ? Object.keys(k.maps).sort() : [], fresh = 0, stale = [];
+      ids.forEach(function (id) { var rec = WORLD.records.get(id, b); if (rec && !EB.why(k, id, { paramHash: rec.paramHash })) fresh++; else stale.push(id); });
+      return { on: on(b), format: k ? k.format : null, generatorVersion: k ? k.generatorVersion : null, maps: ids.length, fresh: fresh, stale: stale, palette: k ? k.palette.length : 0, bytes: size(k) };
+    },
+    // Called by the export: bake when the setting is on, clear when it is off. Returns the status after.
+    forExport: function (b) {
+      b = b || cur();
+      if (on(b)) WORLD.bake.apply(b); else if (data(b)) WORLD.bake.clear(b);
+      return WORLD.bake.status(b);
+    },
+    // The bytes a bake of the current world would add, for the toggle's label (null before the world is generated).
+    estimate: function (b) {
+      b = b || cur();
+      var maps = collect(b);
+      return maps.length ? { maps: maps.length, bytes: size(EB.encode(maps, ENGINE_WORLD.version)) } : null;
+    }
+  };
+
+  // A bake that no longer matches its maps is ignored by every reader, so it is a warning, never an error; the next
+  // export with the setting on bakes again. A bake left behind with the setting off is named too.
+  Kit.validate.register('world.bake', function (b, ctx) {
+    var k = data(b);
+    if (!k) return;
+    var s = WORLD.bake.status(b);
+    if (!s.on) ctx.add({ recordId: 'world', fieldPath: 'baked', message: 'The bundle carries baked maps but baking is off. The next export removes them.', level: 'warning' });
+    else if (s.stale.length) ctx.add({ recordId: 'world', fieldPath: 'baked', message: s.stale.length + ' baked map' + (s.stale.length === 1 ? ' no longer matches its' : 's no longer match their') + ' generator version or parameters, so readers ignore ' + (s.stale.length === 1 ? 'it' : 'them') + '. The next export bakes again.', level: 'warning' });
+  });
+})();
+// === WORLD:BAKE END ===
 // === WORLD:VIEWER BEGIN ===
 (function () {
   'use strict';
@@ -8620,7 +8846,7 @@ var ENGINE_WORLD = (function () {
       forge: WORLD.FORGE, bundleHash: hash || '', worldVersion: b.world.version, generator: U.clone(b.world.generator), seed: b.world.seed,
       charterVersion: b.charter.version || 0, artVersion: b.art && b.art.version || null, exportedAt: U.now(),
       created: created, referenced: referenced, unresolved: unresolved.sort(), forward: fw, worldOpened: Kit.codex.isOpened('world', b), counts: counts,
-      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
+      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, bake: WORLD.bake ? WORLD.bake.status(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
     };
   };
 
@@ -8651,6 +8877,8 @@ var ENGINE_WORLD = (function () {
       if (!WORLD.canOpen(b)) Kit.bundle.close('world');
     }
     b.world.generator = { name: WORLD.GENERATOR, version: ENGINE_WORLD.version };
+    // Phase 8: bake the current maps when baking is on, and drop any bake when it is off, before the hash is taken.
+    if (WORLD.bake) WORLD.bake.forExport(b);
     b.kit.forges['148'] = { status: status, exportedAt: U.now(), worldVersion: b.world.version, generatorVersion: ENGINE_WORLD.version, charterVersion: b.charter.version || 0 };
     var out = Kit.bundle.exportFile({ download: false });
     var files = [
@@ -8685,7 +8913,17 @@ var ENGINE_WORLD = (function () {
     host.appendChild(rc);
     var tg = el('div', 'w8-opts');
     tg.appendChild(toggle('Include engine-world.js', st.engines, function (on) { st.engines = on; if (onChange) onChange(); }));
+    tg.appendChild(toggle('Bake the maps into the bundle', WORLD.bake.on(b), function (on) { WORLD.bake.set(b, on); paintBake(); if (onChange) onChange(); }));
     host.appendChild(tg);
+    var note = el('p', 'muted w8-bake-note');
+    function paintBake() {
+      var est = WORLD.isGenerated(b) ? WORLD.bake.estimate(b) : null;
+      note.textContent = WORLD.bake.on(b)
+        ? 'Baking is on: each export stores the tile layers of every current map' + (est ? ' (' + est.maps + ' maps, about ' + U.fmtSize(est.bytes) + ')' : '') + ', so Day 150 can draw them without generating. A baked map is used only while its generator version and parameters match; otherwise Day 150 regenerates it from the seed.'
+        : 'Baking is off: Day 150 regenerates every map from the seed' + (est ? '. Baking would add about ' + U.fmtSize(est.bytes) + ' for ' + est.maps + ' maps.' : '.');
+    }
+    paintBake();
+    host.appendChild(note);
   }
   function exportState() { return { status: 'draft', engines: true }; }
   Kit.openExport = function () {
@@ -8893,7 +9131,8 @@ var ENGINE_WORLD = (function () {
     m.appendChild(el('h3', 'section-h', 'Manifest preview'));
     m.appendChild(el('div', null, kv([['Created', man.created.length + ' world IDs'], ['Referenced', man.referenced.length + ' IDs'],
       ['Unresolved', man.unresolved.length ? '<span class="chip chip-broken">' + man.unresolved.length + '</span>' : '<span class="chip chip-ok">0</span>'],
-      ['Engine', esc(ENG.FILE + ' ' + ENGINE_WORLD.version)]])));
+      ['Engine', esc(ENG.FILE + ' ' + ENGINE_WORLD.version)],
+      ['Baked', man.bake && man.bake.maps ? esc(man.bake.fresh + ' of ' + man.bake.maps + ' maps current, ' + U.fmtSize(man.bake.bytes)) : esc(man.bake && man.bake.on ? 'On; bakes at export' : 'Off')]])));
     host.appendChild(m);
     var z = el('section', 'panel');
     z.appendChild(el('h3', 'section-h', 'Size'));

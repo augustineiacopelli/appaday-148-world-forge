@@ -1,8 +1,8 @@
 {
-  "when": "2026-10-02T15:40:25.961Z",
+  "when": "2026-10-02T21:18:55.049Z",
   "pass": 58,
   "total": 58,
-  "zoneMs": 0.8,
+  "zoneMs": 0.6,
   "results": [
     {
       "name": "one seed gives identical zones, bosses, and digests in two vm contexts and the plain context (58 field, 24 interior)",
@@ -144,7 +144,7 @@
       "ok": true
     },
     {
-      "name": "zone tables for the four fixture build in 0.8 ms in the plain context",
+      "name": "zone tables for the four fixture build in 0.6 ms in the plain context",
       "ok": true
     },
     {

@@ -1,0 +1,505 @@
+{
+  "when": "2026-10-02T21:20:10.694Z",
+  "pass": 64,
+  "total": 64,
+  "sizes": {
+    "demo": {
+      "maps": 12,
+      "bakeBytes": 21525,
+      "bundleBytes": 566435,
+      "unbakedBytes": 543482,
+      "palette": 32,
+      "size": {
+        "total": 278960,
+        "ns": {
+          "kit": 628,
+          "charter": 9206,
+          "codex": 27747,
+          "rules": 11842,
+          "art": 133807,
+          "world": 95666,
+          "story": 2
+        },
+        "other": 40,
+        "room": 4499960,
+        "level": "ok",
+        "where": "local"
+      }
+    },
+    "four": {
+      "maps": 32,
+      "bakeBytes": 51345,
+      "bundleBytes": 840156,
+      "unbakedBytes": 785563,
+      "palette": 32,
+      "size": {
+        "total": 438050,
+        "ns": {
+          "kit": 636,
+          "charter": 3700,
+          "codex": 27747,
+          "rules": 17037,
+          "art": 134649,
+          "world": 254217,
+          "story": 2
+        },
+        "other": 40,
+        "room": 4499960,
+        "level": "ok",
+        "where": "local"
+      }
+    }
+  },
+  "timings": {
+    "demo-generate-ms": 401,
+    "demo-regenerate-ms": 439,
+    "demo-bake-load-ms": 141,
+    "four-generate-ms": 883,
+    "four-regenerate-ms": 900,
+    "four-bake-load-ms": 319
+  },
+  "results": [
+    {
+      "name": "ENGINE_WORLD.bake is exported, frozen, and format rle1",
+      "ok": true
+    },
+    {
+      "name": "the same world bakes the same bytes in two vm contexts",
+      "ok": true,
+      "detail": 21651
+    },
+    {
+      "name": "one palette, sorted, each ref once, holding every ref the maps use",
+      "ok": true
+    },
+    {
+      "name": "every map decodes cell for cell (decoded in the other context)",
+      "ok": true,
+      "detail": {
+        "rt": 12,
+        "of": 12
+      }
+    },
+    {
+      "name": "run length encoding is compact: the overworld's two layers take far fewer runs than cells",
+      "ok": true,
+      "detail": {
+        "runs": 2566,
+        "cells": 51200
+      }
+    },
+    {
+      "name": "decode refuses an unknown format, another generator version, other parameters, a wrong size, a cells digest that disagrees, and a corrupted run",
+      "ok": true,
+      "detail": [
+        "The bake format rle0 is not rle1.",
+        "The bake was made by generator 0.9.0, not 1.0.0.",
+        "Map map_ow does not decode to the cells that were baked."
+      ]
+    },
+    {
+      "name": "a version named by the caller is honored (Day 150 can pin the version it ships)",
+      "ok": true
+    },
+    {
+      "name": "bake.load reads a bundle: the map when the record's paramHash matches, null when it does not or the record is gone",
+      "ok": true
+    },
+    {
+      "name": "the bake section keeps the determinism rules: no Math.random, no for in, no Object.keys, no host global",
+      "ok": true
+    },
+    {
+      "name": "demo: the fixture imports cleanly (ready, no errors before generation)",
+      "ok": true
+    },
+    {
+      "name": "demo: one seed grows an identical world in two separate pages (records, progression, zones)",
+      "ok": true
+    },
+    {
+      "name": "demo: every check passes (0 errors, 0 broken, progression and flags proven, no Final block)",
+      "ok": true,
+      "detail": {
+        "e": [],
+        "why": null
+      }
+    },
+    {
+      "name": "demo: every map record has its layers, and every ground and decoration cell resolves to a tile",
+      "ok": true,
+      "detail": {
+        "maps": 12,
+        "recs": 12,
+        "unres": 0
+      }
+    },
+    {
+      "name": "demo: prior namespaces are unchanged, the side quest givers aside",
+      "ok": true
+    },
+    {
+      "name": "demo: turning baking off and on never makes the progression, overworld, interiors, or zones stale",
+      "ok": true
+    },
+    {
+      "name": "demo: Final exports with baking on (bundle, manifest, engine-world.js)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "demo: the bake holds every map, every one current, and the manifest says so",
+      "ok": true,
+      "detail": {
+        "on": true,
+        "format": "rle1",
+        "generatorVersion": "1.0.0",
+        "maps": 12,
+        "fresh": 12,
+        "stale": [],
+        "palette": 32,
+        "bytes": 21525
+      }
+    },
+    {
+      "name": "demo: every baked map reads back through WORLD.bake.map equal to the generated layers",
+      "ok": true,
+      "detail": {
+        "same": 12,
+        "of": 12
+      }
+    },
+    {
+      "name": "demo: the manifest: forge 148, the bundle hash, generator version, created IDs, nothing unresolved, validation clean, world opened",
+      "ok": true,
+      "detail": {
+        "unresolved": [],
+        "v": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "demo: forge stamps: 148 final, 146 and 147 untouched; world opened",
+      "ok": true
+    },
+    {
+      "name": "demo: the exported engine-world.js is the repository file plus its bundle hash line",
+      "ok": true
+    },
+    {
+      "name": "demo: exporting again bakes the same bytes and the same world",
+      "ok": true
+    },
+    {
+      "name": "demo: a fresh context with only the exported engines regenerates the overworld from the bundle with the record's digest",
+      "ok": true,
+      "detail": [
+        "f0cfe49a-ea5eb248:34",
+        "f0cfe49a-ea5eb248:34"
+      ]
+    },
+    {
+      "name": "demo: and every interior floor with its record's digest",
+      "ok": true,
+      "detail": {
+        "flOk": 11,
+        "flN": 11
+      }
+    },
+    {
+      "name": "demo: bake.load returns every map there, and the baked overworld equals the regenerated one",
+      "ok": true
+    },
+    {
+      "name": "demo: a bake whose map no longer matches is refused, so Day 150 regenerates",
+      "ok": true
+    },
+    {
+      "name": "demo: Day 146 opens the baked Final with every namespace identical, 0 errors, 0 broken, 0 forward",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "fwd": 0,
+        "diff": []
+      }
+    },
+    {
+      "name": "demo: Day 147 opens the baked Final with every namespace identical, 0 errors, 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "demo: with baking off the Final carries no bake and the manifest says off",
+      "ok": true
+    },
+    {
+      "name": "demo: Day 146 opens the unbaked Final with 0 errors, 0 broken, 0 forward",
+      "ok": true
+    },
+    {
+      "name": "demo: a bake from another generator version is a warning that never blocks Final",
+      "ok": true
+    },
+    {
+      "name": "demo: the next export bakes again and the warning is gone",
+      "ok": true
+    },
+    {
+      "name": "demo: the baked bundle stays under the storage budget",
+      "ok": true,
+      "detail": {
+        "maps": 12,
+        "bakeBytes": 21525,
+        "bundleBytes": 566435,
+        "unbakedBytes": 543482,
+        "palette": 32,
+        "size": {
+          "total": 278960,
+          "ns": {
+            "kit": 628,
+            "charter": 9206,
+            "codex": 27747,
+            "rules": 11842,
+            "art": 133807,
+            "world": 95666,
+            "story": 2
+          },
+          "other": 40,
+          "room": 4499960,
+          "level": "ok",
+          "where": "local"
+        }
+      }
+    },
+    {
+      "name": "demo: no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "four: the fixture imports cleanly (ready, no errors before generation)",
+      "ok": true
+    },
+    {
+      "name": "four: one seed grows an identical world in two separate pages (records, progression, zones)",
+      "ok": true
+    },
+    {
+      "name": "four: every check passes (0 errors, 0 broken, progression and flags proven, no Final block)",
+      "ok": true,
+      "detail": {
+        "e": [],
+        "why": null
+      }
+    },
+    {
+      "name": "four: every map record has its layers, and every ground and decoration cell resolves to a tile",
+      "ok": true,
+      "detail": {
+        "maps": 32,
+        "recs": 32,
+        "unres": 0
+      }
+    },
+    {
+      "name": "four: prior namespaces are unchanged, the side quest givers aside",
+      "ok": true
+    },
+    {
+      "name": "four: turning baking off and on never makes the progression, overworld, interiors, or zones stale",
+      "ok": true
+    },
+    {
+      "name": "four: Final exports with baking on (bundle, manifest, engine-world.js)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "four: the bake holds every map, every one current, and the manifest says so",
+      "ok": true,
+      "detail": {
+        "on": true,
+        "format": "rle1",
+        "generatorVersion": "1.0.0",
+        "maps": 32,
+        "fresh": 32,
+        "stale": [],
+        "palette": 32,
+        "bytes": 51345
+      }
+    },
+    {
+      "name": "four: every baked map reads back through WORLD.bake.map equal to the generated layers",
+      "ok": true,
+      "detail": {
+        "same": 32,
+        "of": 32
+      }
+    },
+    {
+      "name": "four: the manifest: forge 148, the bundle hash, generator version, created IDs, nothing unresolved, validation clean, world opened",
+      "ok": true,
+      "detail": {
+        "unresolved": [],
+        "v": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "four: forge stamps: 148 final, 146 and 147 untouched; world opened",
+      "ok": true
+    },
+    {
+      "name": "four: the exported engine-world.js is the repository file plus its bundle hash line",
+      "ok": true
+    },
+    {
+      "name": "four: exporting again bakes the same bytes and the same world",
+      "ok": true
+    },
+    {
+      "name": "four: a fresh context with only the exported engines regenerates the overworld from the bundle with the record's digest",
+      "ok": true,
+      "detail": [
+        "7b62a757-68ed8998:59",
+        "7b62a757-68ed8998:59"
+      ]
+    },
+    {
+      "name": "four: and every interior floor with its record's digest",
+      "ok": true,
+      "detail": {
+        "flOk": 31,
+        "flN": 31
+      }
+    },
+    {
+      "name": "four: bake.load returns every map there, and the baked overworld equals the regenerated one",
+      "ok": true
+    },
+    {
+      "name": "four: a bake whose map no longer matches is refused, so Day 150 regenerates",
+      "ok": true
+    },
+    {
+      "name": "four: Day 146 opens the baked Final with every namespace identical, 0 errors, 0 broken, 0 forward",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "fwd": 0,
+        "diff": []
+      }
+    },
+    {
+      "name": "four: Day 147 opens the baked Final with every namespace identical, 0 errors, 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "four: with baking off the Final carries no bake and the manifest says off",
+      "ok": true
+    },
+    {
+      "name": "four: Day 146 opens the unbaked Final with 0 errors, 0 broken, 0 forward",
+      "ok": true
+    },
+    {
+      "name": "four: a bake from another generator version is a warning that never blocks Final",
+      "ok": true
+    },
+    {
+      "name": "four: the next export bakes again and the warning is gone",
+      "ok": true
+    },
+    {
+      "name": "four: the baked bundle stays under the storage budget",
+      "ok": true,
+      "detail": {
+        "maps": 32,
+        "bakeBytes": 51345,
+        "bundleBytes": 840156,
+        "unbakedBytes": 785563,
+        "palette": 32,
+        "size": {
+          "total": 438050,
+          "ns": {
+            "kit": 636,
+            "charter": 3700,
+            "codex": 27747,
+            "rules": 17037,
+            "art": 134649,
+            "world": 254217,
+            "story": 2
+          },
+          "other": 40,
+          "room": 4499960,
+          "level": "ok",
+          "where": "local"
+        }
+      }
+    },
+    {
+      "name": "four: no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Export tab: a Bake the maps switch, off by default, whose note gives the size baking would add",
+      "ok": true,
+      "detail": "Baking is off: Day 150 regenerates every map from the seed. Baking would add about 22 KB for 12 maps."
+    },
+    {
+      "name": "turning it on writes world.settings.bake and the note explains when Day 150 uses a baked map",
+      "ok": true
+    },
+    {
+      "name": "the manifest preview has a Baked row",
+      "ok": true
+    },
+    {
+      "name": "Download (Final) bakes, and the preview then counts every map current",
+      "ok": true
+    },
+    {
+      "name": "no page errors on the Export tab (jsdom cannot follow a download link, which is not a page error)",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

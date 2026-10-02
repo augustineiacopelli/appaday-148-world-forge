@@ -99,7 +99,7 @@
       forge: WORLD.FORGE, bundleHash: hash || '', worldVersion: b.world.version, generator: U.clone(b.world.generator), seed: b.world.seed,
       charterVersion: b.charter.version || 0, artVersion: b.art && b.art.version || null, exportedAt: U.now(),
       created: created, referenced: referenced, unresolved: unresolved.sort(), forward: fw, worldOpened: Kit.codex.isOpened('world', b), counts: counts,
-      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
+      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, bake: WORLD.bake ? WORLD.bake.status(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
     };
   };
 
@@ -130,6 +130,8 @@
       if (!WORLD.canOpen(b)) Kit.bundle.close('world');
     }
     b.world.generator = { name: WORLD.GENERATOR, version: ENGINE_WORLD.version };
+    // Phase 8: bake the current maps when baking is on, and drop any bake when it is off, before the hash is taken.
+    if (WORLD.bake) WORLD.bake.forExport(b);
     b.kit.forges['148'] = { status: status, exportedAt: U.now(), worldVersion: b.world.version, generatorVersion: ENGINE_WORLD.version, charterVersion: b.charter.version || 0 };
     var out = Kit.bundle.exportFile({ download: false });
     var files = [
@@ -164,7 +166,17 @@
     host.appendChild(rc);
     var tg = el('div', 'w8-opts');
     tg.appendChild(toggle('Include engine-world.js', st.engines, function (on) { st.engines = on; if (onChange) onChange(); }));
+    tg.appendChild(toggle('Bake the maps into the bundle', WORLD.bake.on(b), function (on) { WORLD.bake.set(b, on); paintBake(); if (onChange) onChange(); }));
     host.appendChild(tg);
+    var note = el('p', 'muted w8-bake-note');
+    function paintBake() {
+      var est = WORLD.isGenerated(b) ? WORLD.bake.estimate(b) : null;
+      note.textContent = WORLD.bake.on(b)
+        ? 'Baking is on: each export stores the tile layers of every current map' + (est ? ' (' + est.maps + ' maps, about ' + U.fmtSize(est.bytes) + ')' : '') + ', so Day 150 can draw them without generating. A baked map is used only while its generator version and parameters match; otherwise Day 150 regenerates it from the seed.'
+        : 'Baking is off: Day 150 regenerates every map from the seed' + (est ? '. Baking would add about ' + U.fmtSize(est.bytes) + ' for ' + est.maps + ' maps.' : '.');
+    }
+    paintBake();
+    host.appendChild(note);
   }
   function exportState() { return { status: 'draft', engines: true }; }
   Kit.openExport = function () {
@@ -372,7 +384,8 @@
     m.appendChild(el('h3', 'section-h', 'Manifest preview'));
     m.appendChild(el('div', null, kv([['Created', man.created.length + ' world IDs'], ['Referenced', man.referenced.length + ' IDs'],
       ['Unresolved', man.unresolved.length ? '<span class="chip chip-broken">' + man.unresolved.length + '</span>' : '<span class="chip chip-ok">0</span>'],
-      ['Engine', esc(ENG.FILE + ' ' + ENGINE_WORLD.version)]])));
+      ['Engine', esc(ENG.FILE + ' ' + ENGINE_WORLD.version)],
+      ['Baked', man.bake && man.bake.maps ? esc(man.bake.fresh + ' of ' + man.bake.maps + ' maps current, ' + U.fmtSize(man.bake.bytes)) : esc(man.bake && man.bake.on ? 'On; bakes at export' : 'Off')]])));
     host.appendChild(m);
     var z = el('section', 'panel');
     z.appendChild(el('h3', 'section-h', 'Size'));

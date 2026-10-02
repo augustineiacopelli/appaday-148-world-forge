@@ -18,8 +18,8 @@
         139593,
         162529,
         530522,
-        845905,
-        875315
+        857254,
+        887977
       ]
     },
     {
@@ -92,7 +92,7 @@
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 27902125,
+        "seed": 3348944740,
         "settings": {
           "mapSize": {
             "base": 96,
@@ -268,7 +268,7 @@
         },
         "148": {
           "status": "draft",
-          "exportedAt": "2026-10-02T15:39:26.649Z",
+          "exportedAt": "2026-10-02T21:17:47.537Z",
           "worldVersion": "1.0.0",
           "generatorVersion": "1.0.0",
           "charterVersion": 1
@@ -289,16 +289,16 @@
       "ok": true,
       "detail": {
         "forge": 148,
-        "bundleHash": "40698e463a9d22ed02c01212c238ef9cf5ca5e8144b24eed1b29e0f6a300ab37",
+        "bundleHash": "53bea50defe753328b088f30aa0436a8b4760b33d85ee4888183d877ee9526ef",
         "worldVersion": "1.0.0",
         "generator": {
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 296976829,
+        "seed": 1656976801,
         "charterVersion": 1,
         "artVersion": "1.0.0",
-        "exportedAt": "2026-10-02T15:39:26.671Z",
+        "exportedAt": "2026-10-02T21:17:47.566Z",
         "created": [
           "npc_npc_chp_the_lowlands_auem_start_innkeepe_kos2",
           "twn_twn_chp_the_lowlands_auem_start_c7hb"
@@ -344,6 +344,16 @@
           "progression": null,
           "flags": null,
           "finalBlock": null
+        },
+        "bake": {
+          "on": false,
+          "format": null,
+          "generatorVersion": null,
+          "maps": 0,
+          "fresh": 0,
+          "stale": [],
+          "palette": 0,
+          "bytes": 0
         },
         "engines": [
           {

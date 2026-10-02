@@ -78,6 +78,10 @@ const ROOT = require('path').join(__dirname, '..');
     report.push(Object.assign({ w }, await audit('validation (generated)')));
     await pg.screenshot({ path: ROOT + '/test/out/phase6-validation-' + w + '.png', fullPage: true });
     await pg.screenshot({ path: ROOT + '/test/out/phase7-validation-' + w + '.png', fullPage: false });
+    // Phase 8: the Export tab with baking on (the switch, its note, and the manifest preview's Baked row).
+    await pg.evaluate(() => { window.WORLD.bake.set(null, true); window.Kit.go('export'); window.Kit.rerender(); }); await pg.waitForTimeout(250);
+    report.push(Object.assign({ w }, await audit('export (generated, baking on)')));
+    await pg.screenshot({ path: ROOT + '/test/out/phase8-export-' + w + '.png', fullPage: true });
     await pg.evaluate(() => window.Kit.openExport()); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('export dialog')));
     await pg.evaluate(() => window.Kit.ui.closeTop()); await pg.waitForTimeout(100);
