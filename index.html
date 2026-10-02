@@ -478,6 +478,89 @@ SESSION 6 / PHASE 6 (2026-10-02, Opus): VALIDATION. COMPLETE.
     controls, the tap inspector writing sparse overrides, editable zone weights and rates (world.overrides.zones), field
     music audition, and polish of the Validation tab; measure generation on a phone before adding the Worker.
 === END SESSION 6 ===
+SESSION 7 / PHASE 7 (2026-10-02, Opus): THE INTERFACE. COMPLETE.
+  Session start: the repo built byte identical and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53,
+    phase5 58/58, phase6 75/75; layout.js 32 views.
+  Measured first (Chromium, headless, 4x CPU slowdown as the mobile profile): the overworld takes 190 to 330 ms for the
+    demo and 550 to 780 ms for the four fixture (interiors 126 and 235, zones 30 and 98, a validation pass 229 and 498).
+    Over the 100 ms bar, so the Worker went in.
+  Worker (WORLD:GENERATE): DECISION, a Blob of this page's own ENGINE:WORLD fence (WORLD.engines.source(), the very bytes
+    the export writes as engine-world.js) plus a few lines that call overworld.build, not importScripts of the file: it
+    works offline and from file://, and can never drift from the page's engine. Only the overworld build moves off the
+    main thread; it fills the same memo the synchronous generate reads, so validators and apply are unchanged and stay
+    the one authority. WORLD.overworld {ready, async, worker, prefetch}: a newer request terminates the running build
+    (the old promise resolves null); no Worker (jsdom, a strict CSP, a worker error) falls back to the main thread.
+    Validators never trigger a build after a change (they short circuit on a stale overworld), so only the World tab and
+    the Generate buttons wait. Proven in Chromium: about 390 ms in the worker from a file page, digest equal to the main
+    thread's. Interiors and zones still run on the main thread (well under half the overworld).
+  Painted cells (engine, src/engine-overworld.js): overworld.paint(ow, cells, graph) and spec.paint in build.
+    world.overrides.cells {'x,y': biome til_ ID}, sparse, applied after the map is built, sorted key order. Refused, each
+    with a code and message: paint-key, paint-bounds, paint-biome (not a biome of this art), paint-water (sea or lake),
+    paint-structure (ridge, ring, gate, stamp, door, decoration), paint-swim (water onto land), paint-front (DECISION:
+    the start, every site front, and every boss approach take only walkable ground, because the walk seeds from the
+    start and treats fronts as goals, so a wall there would not show as a broken walk), paint-blocks (the painted map
+    fails overworld.check: cells are then tried one by one and kept while the check passes). The copy shares every layer
+    but ground, carries painted, skipped, unpainted, and a new digest. Build with paint equals paint after build; a map
+    that failed its own checks is never painted. Determinism rules hold (no Object.keys, Date, random).
+  WORLD side: the paramHash gains the painted cells only when there are any, so unpainted worlds keep their hashes and
+    every earlier fixture and test is unchanged. WORLD.overworld.paint(b, x, y, biome or null) refuses when the new cell,
+    or any cell that applied before, would not apply (sorted order means the refused one may be an older cell; a paint
+    never silently undoes another), else stores it and updates the memo in place. unpaint clears all. The map_ record
+    gains paint {cells, skipped [{at, biome, code, message}]} only when painted; world.overworld warns per skipped cell.
+    DECISION: New seed clears painted cells (they are coordinates on one map) and says how many; Generate again keeps them.
+  Zones: WORLD.zones.cellKeys(ow) (every cell's field zone, memoized by digest), base (the tables before overrides), and
+    edit(b, key, {rate, weights}) storing only what differs from base in world.overrides.zones (an empty difference
+    removes it) and applying the zones at once. world.zones now also warns when a zone with troops has every weight 0 and
+    a rate above 0, and when an edit names a zone the world no longer has. Neither blocks Final.
+  Viewer (new fence src/world-viewer.js WORLD:VIEWER, CSS src/world-viewer.css): shared by the World and Sites tabs. Draws
+    through tiles.drawMap (below layer, sprites, above layer) at logical size with a whole number scale and smoothing off,
+    or one color per cell (cached by key) for overlays and whenever a cell is smaller than a tile. Zoom ladder in device
+    pixels a cell: 1, 2, 3, 4, 6, 8, 12 below the tile size, then 1x to 8x of it. Drag pans, two pointers pinch about
+    their midpoint, the wheel and the plus, minus, and Fit buttons zoom, arrows pan, 0 fits, Enter picks the middle cell,
+    a press that moved under 6 px picks a cell. Camera state lives with the caller, so a rerender keeps the view; the tile
+    bake cache is per art and tile size (Day 147's tileSize and master palette entries, read the same way). Animated
+    tiles redraw about seven times a second while visible; reduced motion turns that off. Device pixel ratio capped at 3.
+  Audio (new fence src/world-audio.js WORLD:AUDIO): on the first Play press, inside the click, an AudioContext,
+    ENGINE_AUDIO.create, load(bundle.art), unlock, then playRole('field:<slug>'). One player; leaving the World tab or
+    loading a bundle stops it (Kit.mount now passes a workspace's onLeave). No Web Audio gives a message, never a throw.
+  World tab (rewritten): overlays Tiles (default), Biome, Elevation, Temperature, Moisture, Regions, Zones; Sites and Gates
+    toggles redraw without a rebuild; markers drawn in device pixels (gates, site outlines in gold for the golden path,
+    the start, painted cells). A changed map shows the last one dimmed under Growing the map while the worker builds; the
+    button reads Store changes while the shown map is newer than the record. Inspector: cell, ground (and what is over
+    it), continent and chapter, climate bands, how it walks (gate requirements in words), site (Open in Sites), zone with
+    rate and troops (Edit this zone), and Paint with any non water biome, Clear paint, Clear all. Continents card: radius
+    (0.4 to 1.8), ruggedness, mountain share sliders writing settings.overworld.continents[slug] on release, Reset, and
+    Play field music when a track has that role. Regions and Gates tables have Show buttons that center the map in place.
+    WORLD.showAt(map, at) opens a cell from anywhere: 'overworld' or no map opens the World tab, '<site key>|<floor>' (the
+    form the checks use) or an interior map_ ID opens Sites on that floor; the cell is centered, picked, and read.
+  Sites tab: the viewer on each floor with Tiles and Exits and marks toggles, people drawn as their npc:<archetype> sprites
+    (a white marker when a sprite is missing or in the plan view), exits outlined in cyan with an arrow on the way out,
+    stairs, the locked door, the boss, chests; a readout of the tapped cell (tile, walk flags, exit, feature, person).
+    data-site, data-floor, and the floor radio group are kept.
+  Encounters tab: an Edit button per zone opens a form under its row (rate in 256 with steps per battle, one weight per
+    troop with its share of battles, the generated value beside each, the total), Save, Back to generated, Cancel; edited
+    zones wear an Edited chip.
+  Validation tab polish: six jump links naming each check's state; failing, then warned cards first; Show all in place;
+    Show on map on any flag or progression item with a cell (items now carry at); a Show button per chapter of the walk
+    and the reasons a chapter failed in its row; Go to Export when ready. Region jumps (reg_) center the World tab on the
+    region's anchor.
+  Layout fixes found on the way: the visually hidden column headers escaped the tables' scroll boxes and widened the
+    page at 390, so .tbl-wrap is positioned; the old Sites frame swallowed the viewer's toolbar.
+  Tests: test/phase7.js 68 of 68 (paint identical in two vm contexts and the plain context; build with paint equals paint
+    after build; every refusal code; walling in a key dungeon refused at the last open cell with the others kept, in the
+    engine and through the page; the page: no worker in jsdom, empty paint keeps the hash, paint, refusals, record.paint,
+    skipped warning, clear and unpaint, hash restored; cellKeys; zone edits as sparse diffs, base, 0 weight and orphan
+    warnings, Back to generated; continent settings; the zoom ladder; tile size and palette; field tracks; no Web Audio;
+    the four tabs' new structure and every button path; Show on map for overworld and interior faults; a Final with a
+    painted cell and a zone edit opens in Days 146 and 147 with every namespace identical, 0 broken, 0 forward; the
+    exported engine carries paint). phase3 (two World tab checks now read the viewer and seven overlays) and phase5
+    (Store changes) were updated for the new interface. phase0 63, phase1 37, phase2 40, phase3 61, phase4 53, phase5 58,
+    phase6 75: 455 of 455. layout.js 40 views pass (390 now at 3x pixels; World tiles with the inspector, the Zones
+    overlay, the town in tiles, a zone editor open). Pictures: test/out/phase7-*.png.
+  Next: Phase 8, export and ship: the optional bake (run length encoded ground and deco per interior with a reference
+    palette, used only when generator version and parameter hash match), the final definition of done suite, the README,
+    and the six item shipping checklist.
+=== END SESSION 7 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -823,24 +906,65 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .brand-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 520px) { .brand-title { font-size: 1.02rem; letter-spacing: .03em; } .brand-num { display: none; } .w8-climate { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 /* === WORLD:SHELL CSS END === */
+/* === WORLD:VIEWER CSS BEGIN === */
+.w8-view { margin: 0; }
+.w8-view-stage { position: relative; width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: clamp(300px, 70vh, 760px); background: #0c1424; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; }
+.w8-view-site .w8-view-stage { aspect-ratio: 5 / 4; max-height: clamp(260px, 60vh, 640px); background: #0a0908; }
+.w8-view-cv { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; image-rendering: pixelated; image-rendering: crisp-edges; -webkit-user-select: none; user-select: none; }
+.w8-view-cv:active { cursor: grabbing; }
+.w8-view-cv:focus-visible { outline: 2px solid var(--accent2); outline-offset: -3px; }
+.w8-view-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.w8-zoom { min-width: 44px; min-height: 44px; padding: 0 12px; font-weight: 700; font-size: 1.05rem; justify-content: center; }
+.w8-view-read { font-variant-numeric: tabular-nums; color: var(--ink2); font-size: .9rem; }
+.w8-view-hint { flex: 1 1 14em; min-width: 0; color: var(--muted); font-size: .85rem; }
+.w8-view-busy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.w8-busy { background: rgba(12, 16, 26, .82); color: #f4ecd6; padding: 10px 16px; border-radius: 999px; font-weight: 600; letter-spacing: .01em; }
+.w8-busy::after { content: ''; display: inline-block; width: 1.4em; text-align: left; animation: w8dots 1.2s steps(4, end) infinite; }
+@keyframes w8dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.w8-dim .w8-view-cv { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .w8-busy::after { animation: none; content: '...'; } }
+@media (min-width: 900px) { .w8-view { max-width: 900px; } }
+/* === WORLD:VIEWER CSS END === */
 /* === WORLD:MAP CSS BEGIN === */
 .w8-ow .section-h { margin-top: 0; }
 .w8-owbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0 10px; }
 .w8-seg { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line2); border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; flex: 1 1 100%; }
-.w8-seg-btn { flex: 1 1 96px; min-height: 44px; border: 0; border-radius: 0; background: var(--panel); color: var(--ink2); padding: 0 10px; font-weight: 600; }
+.w8-seg-btn { flex: 1 1 96px; min-height: 44px; border: 0; border-radius: 0; background: var(--panel); color: var(--ink2); padding: 0 10px; font-weight: 600; justify-content: center; }
 @media (min-width: 720px) { .w8-seg { flex: 0 1 auto; } .w8-seg-btn { flex: 0 0 auto; } }
 .w8-seg-btn[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
 .w8-seg-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
-.w8-map { margin: 0; background: #1d3557; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; line-height: 0; }
-.w8-map canvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; image-rendering: crisp-edges; }
+.w8-map { margin: 0; line-height: normal; }
+.w8-view-empty { display: block; }
 .w8-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; border: 1px solid var(--line2); }
-@media (min-width: 900px) { .w8-map { max-width: 760px; } }
+.w8-small { font-size: .85rem; }
+.w8-inspect .section-h { margin-top: 0; }
+.w8-insp .kv { margin: 0 0 10px; }
+.w8-insp dd { min-width: 0; overflow-wrap: anywhere; }
+.w8-insp .w8-sub { display: block; }
+.w8-paint { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.w8-paint-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.w8-paint-lab { font-weight: 600; color: var(--ink2); }
+.w8-paint-row .inp { flex: 1 1 12em; min-width: 0; min-height: 44px; }
+.w8-paint .msg { margin: 10px 0 0; }
+.w8-paint .btn-row { margin-top: 10px; }
+.w8-conts { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 760px) { .w8-conts { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+.w8-cont { min-width: 0; }
+.w8-cont-h { margin: 0 0 6px; font-size: 1.02rem; }
+.w8-cont-h .w8-sub { display: block; font-weight: 400; }
+.w8-slider { margin: 6px 0 2px; }
+.w8-slider-top { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; }
+.w8-slider-top label { font-weight: 600; color: var(--ink2); }
+.w8-slider-val { font-variant-numeric: tabular-nums; color: var(--ink); }
+.w8-range { display: block; width: 100%; min-height: 44px; margin: 0; accent-color: var(--accent); background: transparent; cursor: pointer; }
+.w8-range:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; border-radius: 6px; }
+.w8-cont-btns { margin-top: 8px; }
+.w8-music[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 /* === WORLD:MAP CSS END === */
 /* === WORLD:SITES CSS BEGIN === */
 .w8-site .section-h { margin-top: 0; }
-.w8-imap { margin: 0; background: #14110f; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; line-height: 0; }
-.w8-imap canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
-@media (min-width: 900px) { .w8-imap { max-width: 760px; } }
+.w8-imap { margin: 0; }
+.w8-cellread { margin: 8px 0 10px; min-height: 1.5em; }
 .w8-lines { margin: 10px 0 12px; padding-left: 20px; color: var(--ink2); }
 .w8-lines li { margin: 3px 0; }
 .w8-pick { min-height: 44px; min-width: 44px; padding: 0 14px; }
@@ -855,6 +979,17 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-troop b { font-weight: 700; color: var(--ink2); }
 .w8-troop.w8-rare { border-color: var(--accent2); }
 .w8-troop.w8-rare b { color: var(--accent2); }
+.w8-zcell { width: 1%; white-space: nowrap; }
+.w8-zedit[aria-expanded="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.w8-zrow > td { background: var(--panel2); padding: 12px; }
+.w8-zform { position: sticky; left: 12px; width: min(100%, calc(100vw - 72px)); min-width: 0; white-space: normal; }
+.w8-zform-h { margin: 0 0 8px; font-size: 1rem; }
+.w8-zfield { display: grid; grid-template-columns: 1fr; gap: 4px 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.w8-zfield label { font-weight: 600; color: var(--ink2); overflow-wrap: anywhere; }
+.w8-znum { width: 7.5em; min-height: 44px; font-variant-numeric: tabular-nums; }
+.w8-zhint { font-size: .88rem; }
+@media (min-width: 720px) { .w8-zfield { grid-template-columns: minmax(10em, 1.4fr) 8em 1.6fr; } }
+.w8-ztotal { margin: 8px 0 10px; font-size: .9rem; }
 /* === WORLD:ENCOUNTERS CSS END === */
 /* === WORLD:VALIDATION CSS BEGIN === */
 .w8-msg-ok { color: var(--ok); }
@@ -869,6 +1004,27 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-tight { margin-top: 0; }
 .w8-walk-tbl td { vertical-align: top; }
 .w8-flagstats { margin-top: 8px; }
+.w8-vnav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; }
+@media (min-width: 760px) { .w8-vnav { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.w8-vpill { display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 6px 10px; border: 1px solid var(--line2); border-left-width: 4px; border-radius: 10px; background: var(--panel); color: var(--ink); text-decoration: none; min-width: 0; }
+.w8-vpill:hover { background: var(--panel2); }
+.w8-vpill:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.w8-vpill-t { font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+.w8-vpill-s { font-size: .82rem; color: var(--ink2); }
+.w8-vpill.w8-v-fail { border-left-color: var(--danger); } .w8-vpill.w8-v-fail .w8-vpill-s { color: var(--danger); }
+.w8-vpill.w8-v-warn { border-left-color: var(--warn); }
+.w8-vpill.w8-v-pass { border-left-color: var(--ok); } .w8-vpill.w8-v-pass .w8-vpill-s { color: var(--ok); }
+.w8-vpill.w8-v-wait { border-left-color: var(--line2); }
+.w8-vcard.w8-v-fail { border-color: var(--danger); }
+.w8-vcard:focus { outline: none; }
+.w8-vcard:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.w8-vmore { margin-top: 8px; align-self: flex-start; }
+.w8-onmap { margin-left: auto; }
+.w8-onmap + .w8-jump { margin-left: 0; }
+.w8-why { display: block; margin-top: 4px; color: var(--danger); max-width: 28em; }
+/* A visually hidden column header is absolutely positioned; without a positioned wrapper it escapes the table's
+   horizontal scroll box and widens the page on a phone. */
+.tbl-wrap { position: relative; }
 /* === WORLD:VALIDATION CSS END === */
 </style>
 </head>
@@ -4317,7 +4473,8 @@ var ENGINE_WORLD = (function () {
   // ---------------------------------------------------------------- overworld (Phase 3)
   // Continents, climate, regions, gates, and site stamps, drawn around a progression graph already proven solvable.
   // build(spec) -> overworld. spec: {seed, settings (world.settings), graph (Phase 2), minutes {chp: target minutes},
-  // palette (palette(art, table) below)}. Pure: the art arrives as plain data and nothing outside the spec is read.
+  // palette (palette(art, table) below), paint (optional painted cells, see paint below)}. Pure: the art arrives as
+  // plain data and nothing outside the spec is read.
   //
   // Movement is four way. A cell's walkability comes from its tile flags (bit 1 passable, bit 4 swim), except that a
   // gate cell (overlay) is walkable exactly when every key it requires is held, and a site's entrance is never walked
@@ -4872,7 +5029,60 @@ var ENGINE_WORLD = (function () {
       if (last.ok) break;
     }
     last.attempts = last.attempt + 1;
-    return last;
+    return spec.paint && last.ok ? owPaint(last, spec.paint, spec.graph) : last;
+  }
+
+  // ---------------------------------------------------------------- painted cells (Phase 7)
+  // paint(ow, cells, graph) -> a copy of a built map with sparse ground overrides: cells {'x,y': biome tileset ID}, the
+  // shape of world.overrides.cells. Only free land may be painted (owned by a continent, not a wall, gate, stamp, or
+  // door, no decoration), and only with a biome of the palette that is not water, because painting sea onto land
+  // would change what the sea and the lakes are. Cells apply in sorted key order. If the painted map fails the
+  // progression check, each cell is tried in that order and kept only while the check still passes, so a paint can
+  // never break sequence. The copy carries painted [cell index], skipped [{at [x, y], biome, code, message}], and
+  // unpainted (the map as built). A map with nothing to paint, or one that failed its own checks, is returned as is.
+  function owPaint(ow, cells, g) {
+    var ks = keys(cells || {});
+    if (!ks.length || !ow.ok) return ow;
+    // Where play stands still: the start, every site's front, and every boss approach. These may only take passable
+    // ground, because the walk seeds from the start and treats a front as a goal, so a wall there would not show up as
+    // a broken walk (Phase 6's flag check would catch it, later).
+    var stand = {};
+    if (ow.start != null) stand[ow.start] = 1;
+    ow.sites.forEach(function (s) { stand[s.front] = 1; if (s.approach != null) stand[s.approach] = 1; });
+    var good = [], skipped = [];
+    ks.forEach(function (k) {
+      var m = /^(\d+),(\d+)$/.exec(k), id = cells[k];
+      function skip(code, msg) { skipped.push({ at: m ? [Number(m[1]), Number(m[2])] : k, biome: id, code: code, message: msg }); }
+      if (!m) return skip('paint-key', 'Painted cell ' + k + ' is not written as x,y.');
+      var x = Number(m[1]), y = Number(m[2]), i = y * ow.w + x;
+      if (x >= ow.w || y >= ow.h) return skip('paint-bounds', 'Painted cell ' + k + ' lies outside the ' + ow.w + ' by ' + ow.h + ' map.');
+      if (typeof id !== 'string' || id.indexOf(':') >= 0 || ow.flags[id] === undefined) return skip('paint-biome', 'Cell ' + k + ' is painted with ' + id + ', which is not a biome tileset of this art.');
+      if (ow.owner[i] < 0) return skip('paint-water', 'Cell ' + k + ' is sea or lake; only land can be painted.');
+      if (ow.st[i] !== ST_FREE || ow.deco[i]) return skip('paint-structure', 'Cell ' + k + ' belongs to a ridge, sea ring, gate, or site, which the world needs as generated.');
+      if ((ow.flags[id] | 0) & 4) return skip('paint-swim', 'Cell ' + k + ' cannot be painted with ' + id + ': water cannot be painted onto land.');
+      if (stand[i] && !((ow.flags[id] | 0) & 1)) return skip('paint-front', 'Cell ' + k + ' is where play starts or stands before a site, so it can only take walkable ground.');
+      good.push({ k: k, i: i, id: id });
+    });
+    function make(list) {
+      var o = {}, gr = ow.ground.slice();
+      keys(ow).forEach(function (f) { o[f] = ow[f]; });
+      list.forEach(function (c) { gr[c.i] = c.id; });
+      o.ground = gr; o.painted = list.map(function (c) { return c.i; }); o.unpainted = ow;
+      return o;
+    }
+    var out = make(good), bad = good.length ? owCheck(out, g) : [];
+    if (bad.length) {
+      var kept = [];
+      good.forEach(function (c) {
+        var p = owCheck(make(kept.concat([c])), g);
+        if (p.length) skipped.push({ at: [c.i % ow.w, Math.floor(c.i / ow.w)], biome: c.id, code: 'paint-blocks', message: 'Painting cell ' + c.k + ' with ' + c.id + ' would break the walk: ' + p[0].message });
+        else kept.push(c);
+      });
+      out = make(kept);
+    }
+    out.skipped = skipped;
+    out.digest = mapDigest(out);
+    return out;
   }
 
   // ---------------------------------------------------------------- walking the map
@@ -4925,7 +5135,7 @@ var ENGINE_WORLD = (function () {
   }
   // Refs of a site stamp, for a caller that wants to draw a marker without rebuilding.
   W.overworld = { DEFAULTS: OW_DEFAULTS, ST: { FREE: ST_FREE, WALL: ST_WALL, GATE: ST_GATE, STAMP: ST_STAMP, DOOR: ST_DOOR }, CLS: { WATER: CLS_WATER, STRIP: CLS_STRIP, INNER: CLS_INNER },
-    settings: owSettings, size: owSize, palette: owPalette, build: owBuild, reach: owReach, walkable: owWalkable, check: owCheck,
+    settings: owSettings, size: owSize, palette: owPalette, build: owBuild, paint: owPaint, reach: owReach, walkable: owWalkable, check: owCheck,
     grid: { bfs: bfs, components: components, largest: largest, nb4: nb4 } };
 
   // ---------------------------------------------------------------- interiors (Phase 4)
@@ -6244,11 +6454,63 @@ var ENGINE_WORLD = (function () {
   function palette(b) { return OWE.palette(b.art, ENGINE_WORLD.climate.table(b.art, ENGINE_RENDER)); }
   function minutesOf(b) { var m = {}; WORLD.chapters(b).forEach(function (c) { m[c.id] = Number(c.targetMinutes) || 60; }); return m; }
   function settingsForHash(b) { var s = U.clone(b.world.settings || {}); delete s.bake; return s; }
+  // Painted cells (Phase 7): world.overrides.cells {'x,y': biome tileset ID}, sparse, applied by the engine after the
+  // map is built. They join the hash only when there are any, so a world nobody painted keeps the hash it always had.
+  function paintCells(b) { var o = b.world && b.world.overrides; return o && U.isObj(o.cells) ? o.cells : {}; }
   function paramHash(b, g, pal) {
-    return ENGINE_WORLD.util.digest([ENGINE_WORLD.version, b.world.seed, canon(settingsForHash(b)), g ? g.digest : '-', pal.digest, canon(minutesOf(b))]);
+    var parts = [ENGINE_WORLD.version, b.world.seed, canon(settingsForHash(b)), g ? g.digest : '-', pal.digest, canon(minutesOf(b))], pc = paintCells(b);
+    if (Object.keys(pc).length) parts.push('paint', canon(pc));
+    return ENGINE_WORLD.util.digest(parts);
   }
+  function owSpec(b, g, pal) { return { seed: b.world.seed, settings: b.world.settings, graph: g, minutes: minutesOf(b), palette: pal, paint: paintCells(b) }; }
   function xy(i, w) { return i == null || i < 0 ? null : [i % w, Math.floor(i / w)]; }
   function overworldRecord(b) { return WORLD.records.list('map_', b).filter(function (m) { return m.kind === 'overworld'; })[0] || null; }
+
+  // The Web Worker (Phase 7). Measured in Chromium at a 4x CPU slowdown, the overworld takes 190 to 330 ms for the demo
+  // and 550 to 780 ms for the four continent fixture, over the 100 ms bar, so interactive builds run off the main
+  // thread. DECISION: the worker is a Blob of this page's own ENGINE:WORLD fence (WORLD.engines.source(), the very bytes
+  // the export writes as engine-world.js) plus a few lines that call overworld.build, rather than importScripts of the
+  // file, so it works offline and from a file:// page and can never drift from the engine in the page. A newer request
+  // replaces a running one (the old promise resolves null). Where no worker can start (jsdom, a strict CSP) everything
+  // runs on the main thread as before, and the synchronous generate stays the one authority the validators use.
+  var WORKER_TAIL = '\nself.onmessage = function (e) { var d = e.data; try { var t0 = Date.now(), ow = ENGINE_WORLD.overworld.build(d.spec); ow.ms = Date.now() - t0; self.postMessage({ hash: d.hash, ow: ow }); }' +
+    ' catch (err) { self.postMessage({ hash: d.hash, error: String(err && err.message || err) }); } };\n';
+  var wk = { worker: null, broken: false, url: null, job: null, made: 0, served: 0 };
+  function killWorker() { if (wk.worker) { try { wk.worker.terminate(); } catch (e) { /* gone */ } } wk.worker = null; }
+  function startWorker() {
+    if (wk.worker || wk.broken) return wk.worker;
+    try {
+      if (typeof Worker !== 'function' || typeof Blob !== 'function' || typeof URL === 'undefined' || !URL.createObjectURL) throw new Error('No Web Worker here.');
+      var src = WORLD.engines && WORLD.engines.source();
+      if (!src) throw new Error('The ENGINE:WORLD fence was not found in the page.');
+      if (!wk.url) wk.url = URL.createObjectURL(new Blob([src + WORKER_TAIL], { type: 'text/javascript' }));
+      var w = new Worker(wk.url);
+      w.onmessage = function (e) {
+        var d = e.data || {}, job = wk.job;
+        if (!job || job.hash !== d.hash) return;
+        wk.job = null;
+        if (d.error || !d.ow) { job.done(syncFor(job)); return; }
+        var ow = d.ow;
+        ow.paramHash = job.hash; ow.palette = job.pal;
+        memo = { hash: job.hash, ow: ow };
+        wk.served++;
+        job.done(ow);
+      };
+      w.onerror = function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        wk.broken = true; killWorker();
+        var job = wk.job; wk.job = null;
+        if (job) job.done(syncFor(job));
+      };
+      wk.worker = w; wk.made++;
+    } catch (e) { wk.broken = true; wk.worker = null; }
+    return wk.worker;
+  }
+  // The main thread fallback for a job: only when its hash is still the bundle's, so a superseded job never builds.
+  function syncFor(job) {
+    var b = job.b;
+    try { return WORLD.overworld.paramHash(b) === job.hash ? WORLD.overworld.generate(b) : null; } catch (e) { return null; }
+  }
 
   WORLD.overworld = {
     record: overworldRecord,
@@ -6262,10 +6524,80 @@ var ENGINE_WORLD = (function () {
       if (!g) return null;
       var pal = palette(b), hash = paramHash(b, g, pal);
       if (memo && memo.hash === hash) return memo.ow;
-      var t0 = Date.now(), ow = OWE.build({ seed: b.world.seed, settings: b.world.settings, graph: g, minutes: minutesOf(b), palette: pal });
+      var t0 = Date.now(), ow = OWE.build(owSpec(b, g, pal));
       ow.ms = Date.now() - t0; ow.paramHash = hash; ow.palette = pal;
       memo = { hash: hash, ow: ow };
       return ow;
+    },
+    // True when generate would answer at once (the map for the current hash is already built).
+    ready: function (b) {
+      b = b || cur();
+      if (!memo || !WORLD.progression.graph(b)) return false;
+      return memo.hash === WORLD.overworld.paramHash(b);
+    },
+    // True when builds run in the Web Worker.
+    async: function () { return !!startWorker(); },
+    worker: function () { return { running: !!wk.worker, broken: wk.broken, made: wk.made, served: wk.served, busy: !!wk.job }; },
+    // Builds the current map off the main thread and fills the same cache generate reads. Resolves the map, or null when
+    // a newer request replaced this one. Without a worker it builds here.
+    prefetch: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var g = WORLD.progression.graph(b);
+      if (!g) return Promise.resolve(null);
+      var pal = palette(b), hash = paramHash(b, g, pal);
+      if (memo && memo.hash === hash) return Promise.resolve(memo.ow);
+      if (wk.job && wk.job.hash === hash) return wk.job.p;
+      var w = startWorker();
+      if (!w) { try { return Promise.resolve(WORLD.overworld.generate(b)); } catch (e) { return Promise.reject(e); } }
+      if (wk.job) {
+        // A newer map is wanted: stop the running build and start again.
+        var old = wk.job; wk.job = null; killWorker(); old.done(null);
+        w = startWorker();
+        if (!w) return Promise.resolve(WORLD.overworld.generate(b));
+      }
+      var job = { hash: hash, b: b, pal: pal };
+      job.p = new Promise(function (res) { job.done = res; });
+      wk.job = job;
+      w.postMessage({ hash: hash, spec: owSpec(b, g, pal) });
+      return job.p;
+    },
+    // Painted cells: world.overrides.cells. paint(b, x, y, biome) stores one (biome null clears it) when the engine
+    // accepts it on the current map, and refuses with the engine's reason otherwise (a ridge, gate, site, water, or a
+    // cell whose new ground would break the walk). The cached map is updated in place, so nothing is rebuilt.
+    paintCells: function (b) { return U.clone(paintCells(b || cur())); },
+    paint: function (b, x, y, biome) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+      if (!ow || !g) return { ok: false, message: 'Generate the overworld first.' };
+      var base = ow.unpainted || ow, cells = U.clone(paintCells(b)), k = x + ',' + y;
+      if (biome) cells[k] = biome; else if (cells[k]) delete cells[k]; else return { ok: true, ow: ow, changed: false };
+      // Cells apply in sorted order, so the cell refused may be an earlier one; any cell that applied before and would
+      // not now refuses the new paint, so a paint never silently undoes another.
+      var out = OWE.paint(base, cells, g), was = {};
+      (ow.skipped || []).forEach(function (s) { was[String(s.at)] = 1; });
+      var miss = biome && (out.skipped || []).filter(function (s) { return !was[String(s.at)]; })[0];
+      if (miss) {
+        var mine = Array.isArray(miss.at) && miss.at[0] === x && miss.at[1] === y;
+        return { ok: false, code: miss.code, message: mine ? miss.message : 'Painting cell ' + k + ' with ' + biome + ' would break the walk together with the cells already painted (cell ' + miss.at.join(',') + ' would no longer apply).' };
+      }
+      if (!base.ok) return { ok: false, code: 'not-ok', message: 'The overworld failed its own checks, so it cannot be painted.' };
+      b.world.overrides = U.isObj(b.world.overrides) ? b.world.overrides : {};
+      if (Object.keys(cells).length) b.world.overrides.cells = cells; else delete b.world.overrides.cells;
+      out.ms = base.ms; out.palette = ow.palette; out.paramHash = WORLD.overworld.paramHash(b);
+      memo = { hash: out.paramHash, ow: out };
+      if (b === cur()) Kit.bundle.touch('paint');
+      return { ok: true, ow: out, changed: true };
+    },
+    // Clears every painted cell.
+    unpaint: function (b) {
+      b = b || cur();
+      var n = Object.keys(paintCells(b)).length;
+      if (!n) return 0;
+      delete b.world.overrides.cells;
+      if (b === cur()) Kit.bundle.touch('paint');
+      return n;
     },
     // True when the stored map was made from something other than what the bundle holds now.
     stale: function (b) {
@@ -6303,6 +6635,8 @@ var ENGINE_WORLD = (function () {
         gates: ow.gates.map(function (gq) { return { key: gq.key, gate: gq.gate, kind: gq.kind, requires: gq.requires.slice(), region: regId[gq.region], from: gq.from ? regId[gq.from] : null, cells: gq.cells.map(function (c) { return xy(c, w); }) }; }),
         stats: { land: land, sea: seaN, lake: lake, biomes: Object.keys(counts).sort(function (a, c) { return counts[c] - counts[a] || (a < c ? -1 : 1); }).map(function (k) { return { biome: k, cells: counts[k] }; }) }
       });
+      // Painted cells (Phase 7) are named only when there are any, so an unpainted record is unchanged.
+      if (ow.painted || ow.skipped) rec.paint = { cells: (ow.painted || []).length, skipped: (ow.skipped || []).map(function (s) { return { at: s.at, biome: s.biome, code: s.code, message: s.message }; }) };
       var old = WORLD.records.get(rec.id, b);
       if (old && old.origin === 'user') return { ow: ow, record: old, kept: true };
       WORLD.records.put(rec, b);
@@ -6317,7 +6651,10 @@ var ENGINE_WORLD = (function () {
   Kit.validate.register('world.overworld', function (b, ctx) {
     var rec = overworldRecord(b);
     if (!rec || !rec.paramHash) return;
-    if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
+    if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, painted cells, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
+    else if (rec.paint && Array.isArray(rec.paint.skipped)) rec.paint.skipped.forEach(function (s) {
+      ctx.add({ recordId: rec.id, fieldPath: 'paint', message: 'A painted cell was not applied: ' + s.message + ' Clear it or paint it again on the World tab.', level: 'warning' });
+    });
     // Missing sites and regions are reported by world.refs (Phase 6), the one authority for references.
   });
 
@@ -6492,7 +6829,7 @@ var ENGINE_WORLD = (function () {
   // keeps the hash of what it was made from, so a stale table is caught. Sparse edits live in world.overrides.zones
   // {zone key: {rate, weights {trp_: n}}} and survive every regeneration. Filling sdq_.giver is the one write this forge
   // makes outside world; a giver someone else set (resolving, and not the one this forge last wrote) is kept.
-  var ZNE = ENGINE_WORLD.zones;
+  var ZNE = ENGINE_WORLD.zones, ckMemo = null;
   function zoneData(b) { var z = b && b.world && b.world.zones; return U.isObj(z) && Array.isArray(z.field) ? z : null; }
   function tilesets(b) { return (b.art && b.art.records && b.art.records.til_) || {}; }
   function biomeKeys(b) { var o = {}, t = tilesets(b); Object.keys(t).sort().forEach(function (id) { if (t[id] && t[id].kind === 'biome') o[id] = t[id].key || id; }); return o; }
@@ -6564,6 +6901,36 @@ var ENGINE_WORLD = (function () {
     spec: function (b) { b = b || cur(); WORLD.ensure(b); return znSpec(b); },
     // The field zone of an overworld cell index, by the engine's rule (null for water, walls, and stamps).
     cellKey: function (i, b) { b = b || cur(); var ow = WORLD.overworld.generate(b); return ow ? ZNE.cellKey(ow, i, biomeKeys(b)) : null; },
+    // Every cell's zone key for a map already built (the World tab's Zones overlay), memoized by the map's digest.
+    cellKeys: function (ow, b) {
+      b = b || cur();
+      if (!ow) return null;
+      if (ckMemo && ckMemo.digest === ow.digest && ckMemo.w === ow.w) return ckMemo.keys;
+      var bk = biomeKeys(b), out = new Array(ow.w * ow.h);
+      for (var i = 0; i < out.length; i++) out[i] = ZNE.cellKey(ow, i, bk);
+      ckMemo = { digest: ow.digest, w: ow.w, keys: out };
+      return out;
+    },
+    // The tables as generated, before any override (what an edit is compared with, so only real changes are stored).
+    base: function (b) { b = b || cur(); WORLD.ensure(b); var sp = znSpec(b); return sp ? ZNE.build(Object.assign({}, sp, { overrides: {} })) : null; },
+    // Sets one zone's rate and weights (the full values wanted). Only what differs from the generated table is stored in
+    // world.overrides.zones, an empty difference removes the override, and the zones are applied again at once.
+    edit: function (b, key, want) {
+      b = b || cur();
+      var base = WORLD.zones.base(b), z0 = base && base.field.concat(base.interior).filter(function (x) { return x.key === key; })[0];
+      if (!z0) return { ok: false, message: 'Zone ' + key + ' is not in the world.' };
+      var ov = {}, w = {};
+      function n(v) { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(0, Math.min(255, v)) : null; }
+      if (want && want.rate != null && n(want.rate) != null && n(want.rate) !== z0.rate) ov.rate = n(want.rate);
+      z0.troops.forEach(function (t) { var v = want && want.weights ? n(want.weights[t.troop]) : null; if (v != null && v !== t.weight) w[t.troop] = v; });
+      if (Object.keys(w).length) ov.weights = w;
+      b.world.overrides = U.isObj(b.world.overrides) ? b.world.overrides : {};
+      var all = U.isObj(b.world.overrides.zones) ? U.clone(b.world.overrides.zones) : {};
+      if (Object.keys(ov).length) all[key] = ov; else delete all[key];
+      if (Object.keys(all).length) b.world.overrides.zones = all; else delete b.world.overrides.zones;
+      var r = WORLD.zones.apply(b);
+      return { ok: true, override: Object.keys(ov).length ? ov : null, zone: WORLD.zones.zone(key, b), ms: r.ms };
+    },
     zone: function (key, b) { var z = zoneData(b || cur()); return z ? z.field.concat(z.interior).filter(function (x) { return x.key === key; })[0] || null : null; },
     stale: function (b) {
       b = b || cur();
@@ -6613,6 +6980,16 @@ var ENGINE_WORLD = (function () {
     // table stays a warning, because a zone with no troop never starts a battle; a missing battle background is left to
     // world.refs, which makes it an error exactly when that zone (or boss) can start a battle and passes it otherwise.
     (z.warnings || []).forEach(function (w) { if (w.code !== 'no-background') ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+    // Phase 7 edits: a table whose weights were all set to 0 never picks a troop, and an edit naming a zone the world no
+    // longer has does nothing. Both are warnings; neither blocks a Final export.
+    z.field.concat(z.interior).forEach(function (q) {
+      if (q.empty || !(q.rate > 0)) return;
+      if (!q.troops.some(function (t) { return t.weight > 0; })) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' has troops but every weight is 0, so it can never pick one. Raise a weight or set its rate to 0 on the Encounters tab.', level: 'warning' });
+    });
+    var ovz = b.world.overrides && U.isObj(b.world.overrides.zones) ? b.world.overrides.zones : {};
+    Object.keys(ovz).sort().forEach(function (k) {
+      if (!z.field.concat(z.interior).some(function (q) { return q.key === k; })) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'An encounter edit names zone ' + k + ', which the world no longer has, so it does nothing.', level: 'warning' });
+    });
   });
 
   // Graph level checks (Phase 6's world.progression adds the geometric ones). Only runs once a graph has been laid out.
@@ -6718,6 +7095,7 @@ var ENGINE_WORLD = (function () {
     if (p.id) o.id = p.id;
     if (p.chapter) o.chapter = p.chapter;
     if (p.map) o.map = p.map;
+    if (p.at != null) o.at = p.at;
     return o;
   }
 
@@ -6791,101 +7169,622 @@ var ENGINE_WORLD = (function () {
     go: function (id) {
       var b = cur(), rec = WORLD.records.get(id, b), key = siteKeyOf(b, rec);
       if (key && WORLD.sitesUi) { WORLD.sitesUi.site = key; WORLD.sitesUi.floor = rec && rec.floor ? rec.floor : 1; return Kit.go('sites'); }
+      // Phase 7: a region opens the World tab centered on where its chapter starts walking.
+      if (rec && Kit.ids.prefixOf(id) === 'reg_' && WORLD.worldUi) {
+        var ow = WORLD.overworld.record(b), r2 = ow && (ow.regions || []).filter(function (x) { return x.region === id; })[0];
+        if (r2 && r2.anchor) WORLD.worldUi.focus = r2.anchor.slice();
+      }
       if (rec) return Kit.go('world');
       return Kit.go('validation');
     }
   });
 })();
 // === WORLD:CHECKS END ===
-// === WS:WORLD BEGIN ===
+// === WORLD:VIEWER BEGIN ===
 (function () {
   'use strict';
-  // The World tab. Phase 3: generate the overworld, see it one cell to a pixel with overlays for biome, elevation,
-  // temperature, moisture, and regions, with sites and gates marked, and read its regions and gates. Phase 7 adds the
-  // tile preview (tiles.drawMap), pan and pinch, per continent controls, and the tap inspector.
-  var U = Kit.util, el = U.el, esc = U.esc;
-  var ui = { overlay: 'biome', sites: true, gates: true };
-  var OVERLAYS = [['biome', 'Biome'], ['elev', 'Elevation'], ['temp', 'Temperature'], ['moist', 'Moisture'], ['region', 'Regions']];
-  var ELEV_C = ['#2f5f9a', '#d9c48a', '#7fae5c', '#4f7a3a', '#7a7068'];
-  var TEMP_C = ['#3d6fb6', '#6fa3c8', '#b8c47a', '#e0a04a', '#c8502e'];
-  var MOIST_C = ['#c9a96a', '#b4b46a', '#7fae5c', '#3f8a6a', '#2d6a8a'];
-  var GATE_C = { pass: '#f5d142', landing: '#3fd0e0', seawall: '#f08a3c', lock: '#e04ad0' };
-  var GATE_LABEL = { pass: 'Pass', landing: 'Landing', seawall: 'Sea ring', lock: 'Lock' };
-  var GATE_PLURAL = { pass: 'passes', landing: 'landings', seawall: 'sea rings', lock: 'locks' };
-  var ENTRY_LABEL = { start: 'Start', pass: 'Over a pass', landing: 'By sea' };
-  function cur() { return Kit.bundle.current(); }
-  function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
-  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id; }
-  function regionHue(k) { return 'hsl(' + ((k * 137) % 360) + ', 55%, 55%)'; }
+  // The map viewer (Phase 7), shared by the World and Sites tabs. A map {w, h, ground, deco} is drawn the way the game
+  // will draw it, through ENGINE_RENDER.tiles.drawMap at logical size and scaled by a whole number with smoothing off
+  // (Day 147's preview pattern), or as one color per cell for the overlays and whenever a cell is smaller than a tile.
+  // Every scale is an integer number of device pixels per cell: the ladder runs 1, 2, 3, 4, 6, 8, 12 up to the tile
+  // size and then whole multiples of it, so tiles are only ever drawn at 1x, 2x, 3x of their logical pixels.
+  // Pan by dragging, zoom by pinching, the wheel, the buttons, or the keyboard (arrows, plus, minus, 0 to fit, Enter to
+  // pick the middle cell). A tap (a press that moved under 6 px) picks a cell. The camera lives in a state object the
+  // caller keeps, so a rerender of the tab puts the map back where it was.
+  var U = Kit.util, el = U.el, esc = U.esc, ER = ENGINE_RENDER, ET = ER.tiles;
+  var tc = { art: null, T: 0, cache: null }, cellMemo = [];
 
-  function generate(b, reroll) {
-    try {
-      if (reroll) { b.world.seed = (Math.random() * 4294967295) >>> 0; Kit.bundle.touch('seed'); }
-      var had = WORLD.interiors && WORLD.interiors.generated(b), r = WORLD.overworld.apply(b);
-      // Interiors hang off the overworld's sites, so once they exist they are generated again with it.
-      var hadZones = WORLD.zones && WORLD.zones.generated(b);
-      if (had && !r.kept) WORLD.interiors.apply(b);
-      if (had && hadZones && !r.kept) WORLD.zones.apply(b);
-      Kit.rerender();
-      Kit.ui.toast(r.kept ? 'The overworld record is marked as user made, so it was kept.' : 'Overworld generated: ' + r.ow.w + ' by ' + r.ow.h + ', ' + r.ow.sites.length + ' sites, ' + r.ow.gates.length + ' gates, in ' + r.ow.ms + ' ms.', r.kept ? 'warn' : 'ok');
-    } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+  // Day 147's rules, read the same way: tile size from the Charter's specs (4 to 128, default 16) and the colors from
+  // the master palette's entries.
+  function tileSize(b) { var n = b && b.charter && b.charter.specs ? Math.round(Number(b.charter.specs.tileSize)) : NaN; return isFinite(n) ? Math.max(4, Math.min(128, n)) : 16; }
+  function entries(b) { var m = WORLD.art.list(b, 'pal_').filter(function (r) { return r.kind === 'master'; })[0]; return m && Array.isArray(m.entries) ? m.entries : []; }
+  function makeCanvas(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+  // One bake cache per art and tile size, so moving between tabs reuses every baked tile.
+  function cache(b) {
+    var T = tileSize(b);
+    if (tc.cache && tc.art === b.art && tc.T === T) return tc.cache;
+    tc = { art: b.art, T: T, cache: ER.createCache(b.art, { size: T, entries: entries(b), budget: 48e6, makeCanvas: makeCanvas }) };
+    return tc.cache;
   }
+  function ladder(T) {
+    var s = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64].filter(function (v) { return v < T; });
+    [1, 2, 3, 4, 6, 8].forEach(function (k) { if (k * T <= 512) s.push(k * T); });
+    return s;
+  }
+  function snap(steps, z) { var s = steps[0]; for (var i = 0; i < steps.length; i++) if (steps[i] <= z + 1e-9) s = steps[i]; return s; }
+  function reduced() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
+  function raf(fn) { return typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame(fn) : setTimeout(fn, 16); }
 
-  // One canvas pixel per cell; colors run length encoded per row so any CSS color works.
-  function colorAt(ow, i, b) {
-    switch (ui.overlay) {
-      case 'elev': return ELEV_C[ow.elev[i]] || '#000';
-      case 'temp': return ow.owner[i] < 0 ? '#1d3557' : TEMP_C[ow.temp[i]];
-      case 'moist': return ow.owner[i] < 0 ? '#1d3557' : MOIST_C[ow.moist[i]];
-      case 'region': return ow.region[i] >= 0 ? (ow.st[i] === 1 ? '#5a524c' : regionHue(ow.region[i])) : ow.owner[i] >= 0 ? '#888' : '#1d3557';
-      default: {
-        var ref = String(ow.ground[i] || ''), id = ref.split(':')[0], bio = ow.palette.biomes[id];
-        if (ref.indexOf(':') >= 0) return '#2a2420';
-        return WORLD.biomeColor(id, bio && bio.key);
-      }
-    }
-  }
-  function draw(cv, ow, b) {
-    var ctx = cv.getContext && cv.getContext('2d');
-    if (!ctx) return false;
-    ctx.imageSmoothingEnabled = false;
-    for (var y = 0; y < ow.h; y++) {
+  // A canvas with one pixel per cell, colors run length encoded per row so any CSS color works. Kept for the last few
+  // keys, so switching tabs or toggling a marker never repaints it.
+  function cellCanvas(key, w, h, colorAt) {
+    for (var q = 0; q < cellMemo.length; q++) if (cellMemo[q].key === key) return cellMemo[q].cv;
+    var cv = makeCanvas(w, h), ctx = cv.getContext && cv.getContext('2d');
+    if (!ctx) return null;
+    for (var y = 0; y < h; y++) {
       var run = 0, col = null;
-      for (var x = 0; x <= ow.w; x++) {
-        var c = x < ow.w ? colorAt(ow, y * ow.w + x, b) : null;
+      for (var x = 0; x <= w; x++) {
+        var c = x < w ? colorAt(y * w + x) : null;
         if (c !== col) { if (col) { ctx.fillStyle = col; ctx.fillRect(x - run, y, run, 1); } col = c; run = 0; }
         run++;
       }
     }
-    if (ui.sites) ow.sites.forEach(function (s) {
-      ctx.fillStyle = s.golden ? '#14100c' : '#3a3430'; ctx.fillRect(s.x, s.y, s.w, s.h);
-      var e = s.entrance; ctx.fillStyle = '#fff6d8'; ctx.fillRect(e % ow.w, Math.floor(e / ow.w), 1, 1);
+    cellMemo.unshift({ key: key, cv: cv });
+    if (cellMemo.length > 6) cellMemo.length = 6;
+    return cv;
+  }
+
+  // viewer(o) -> {el, canvas, redraw, center(x, y, zoomTo), select(x, y), view()}.
+  // o: {state {z, cx, cy, sel, key} kept by the caller, key (a new key refits), map {w, h, ground, deco}, b (bundle),
+  //   tiles (draw tiles when a cell is at least a tile), cellsKey and cellColor(i) (the one color per cell layer),
+  //   sprites [{spr, at, dir}] (drawn between the two tile layers), overlay(ctx, view) (markers in device pixels),
+  //   onTap(x, y), label, busy (text over a dimmed map), bg, height (CSS class modifier), animate}.
+  function viewer(o) {
+    var st = o.state, map = o.map, W = map.w, H = map.h, b = o.b, T = tileSize(b), steps = ladder(T), last = null, alive = true;
+    if (st.key !== o.key) { st.key = o.key; st.z = null; st.sel = null; st.cx = W / 2; st.cy = H / 2; }
+    if (!isFinite(st.cx) || !isFinite(st.cy)) { st.cx = W / 2; st.cy = H / 2; }
+    var wrap = el('div', 'w8-view' + (o.busy ? ' w8-dim' : '') + (o.size ? ' w8-view-' + o.size : '')), stage = el('div', 'w8-view-stage'), cv = el('canvas', 'w8-view-cv');
+    cv.tabIndex = 0;
+    cv.setAttribute('role', 'img');
+    cv.setAttribute('aria-label', (o.label || 'Map') + '. Drag to pan, pinch or use plus and minus to zoom, tap or press Enter to pick a cell.');
+    cv.dataset.w = String(W); cv.dataset.h = String(H); cv.dataset.drawn = '0';
+    stage.appendChild(cv);
+    if (o.busy) stage.appendChild(el('div', 'w8-view-busy', '<span class="w8-busy">' + esc(o.busy) + '</span>'));
+    wrap.appendChild(stage);
+    var bar = el('div', 'w8-view-bar'), read = el('span', 'w8-view-read');
+    function zbtn(txt, aria, fn) { var x = el('button', 'btn w8-zoom', txt); x.type = 'button'; x.setAttribute('aria-label', aria); x.addEventListener('click', fn); return x; }
+    bar.appendChild(zbtn('-', 'Zoom out', function () { step(-1); }));
+    bar.appendChild(zbtn('+', 'Zoom in', function () { step(1); }));
+    bar.appendChild(zbtn('Fit', 'Fit the whole map', function () { fit(); draw(); }));
+    bar.appendChild(read);
+    bar.appendChild(el('span', 'w8-view-hint', 'Drag to pan, pinch or scroll to zoom, tap a cell to pick it.'));
+    wrap.appendChild(bar);
+
+    function dpr() { return Math.max(1, Math.min(3, window.devicePixelRatio || 1)); }
+    function size() {
+      var cw = stage.clientWidth || 320, ch = stage.clientHeight || 320, d = dpr(), wd = Math.max(1, Math.round(cw * d)), hd = Math.max(1, Math.round(ch * d));
+      if (cv.width !== wd) cv.width = wd;
+      if (cv.height !== hd) cv.height = hd;
+      return { wd: wd, hd: hd, d: d };
+    }
+    function fit() {
+      var sz = size(), want = Math.min(sz.wd / W, sz.hd / H);
+      st.z = snap(steps, want); st.cx = W / 2; st.cy = H / 2;
+    }
+    // The first fit waits until the stage is on the page, so it measures the real size rather than the fallback.
+    function scale() {
+      if (st.z == null) { if (!cv.isConnected) { var sz = size(); return snap(steps, Math.min(sz.wd / W, sz.hd / H)); } fit(); }
+      return snap(steps, st.z);
+    }
+    function clampCam() { st.cx = Math.max(0, Math.min(W, st.cx)); st.cy = Math.max(0, Math.min(H, st.cy)); }
+
+    function draw() {
+      if (!alive) return null;
+      var ctx = cv.getContext && cv.getContext('2d'), sz = size(), s = scale();
+      clampCam();
+      var ox = Math.round(sz.wd / 2 - st.cx * s), oy = Math.round(sz.hd / 2 - st.cy * s), tiles = !!o.tiles && s >= T;
+      cv.dataset.scale = String(s); cv.dataset.mode = tiles ? 'tiles' : 'cells';
+      read.textContent = tiles ? 'Tiles at ' + (s / T) + 'x' : (Math.round(s / sz.d * 10) / 10) + ' px a cell' + (o.tiles ? ', zoom in for tiles' : '');
+      if (!ctx) { cv.dataset.drawn = '0'; last = { s: s, ox: ox, oy: oy, d: sz.d, wd: sz.wd, hd: sz.hd, tiles: tiles }; return last; }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = o.bg || '#0c1424';
+      ctx.fillRect(0, 0, sz.wd, sz.hd);
+      var t = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      if (tiles) {
+        var k = s / T, c = cache(b);
+        ox = Math.round(ox / k) * k; oy = Math.round(oy / k) * k;
+        ctx.setTransform(k, 0, 0, k, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        var cam = { x: -ox / k, y: -oy / k, w: Math.ceil(sz.wd / k), h: Math.ceil(sz.hd / k) };
+        try {
+          ET.drawMap(ctx, c, map, cam, t);
+          (o.sprites || []).forEach(function (p) {
+            var px = (p.at % W) * T + T / 2 - cam.x, py = Math.floor(p.at / W) * T + T - cam.y, ok = null;
+            if (p.spr) { try { ok = ER.draw.sprite(ctx, c, p.spr, null, t, px, py, { dir: p.dir || 'down', pose: 'stand' }); } catch (e) { ok = null; } }
+            p.drawn = !!ok;
+          });
+          ET.drawMap(ctx, c, map, cam, t, { layer: 'above' });
+        } catch (e) { tiles = false; cv.dataset.mode = 'cells'; cv.dataset.error = e.message; }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+      if (!tiles) {
+        var cc = o.cellColor ? cellCanvas(o.cellsKey || 'x', W, H, o.cellColor) : null;
+        if (cc) ctx.drawImage(cc, ox, oy, W * s, H * s);
+      }
+      last = { s: s, ox: ox, oy: oy, d: sz.d, wd: sz.wd, hd: sz.hd, tiles: tiles, ctx: ctx,
+        at: function (x, y) { return [ox + x * s, oy + y * s]; } };
+      if (o.overlay) { try { o.overlay(ctx, last); } catch (e) { cv.dataset.error = e.message; } }
+      if (st.sel) {
+        var sx = ox + st.sel[0] * s, sy = oy + st.sel[1] * s, lw = Math.max(1, Math.round(sz.d)), pad = s < 6 ? 2 * lw : 0;
+        ctx.lineWidth = lw * 2; ctx.strokeStyle = '#000000'; ctx.strokeRect(sx - pad - lw, sy - pad - lw, s + 2 * pad + 2 * lw, s + 2 * pad + 2 * lw);
+        ctx.lineWidth = lw; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(sx - pad - lw / 2, sy - pad - lw / 2, s + 2 * pad + lw, s + 2 * pad + lw);
+      }
+      cv.dataset.drawn = '1';
+      return last;
+    }
+    var queued = false;
+    function soon() { if (queued) return; queued = true; raf(function () { queued = false; draw(); }); }
+
+    function zoomAt(px, py, z) {
+      var s0 = scale(), sz = size();
+      var ax = st.cx + (px - sz.wd / 2) / s0, ay = st.cy + (py - sz.hd / 2) / s0;
+      st.z = Math.max(steps[0], Math.min(steps[steps.length - 1], z));
+      var s1 = snap(steps, st.z);
+      st.cx = ax - (px - sz.wd / 2) / s1; st.cy = ay - (py - sz.hd / 2) / s1;
+      soon();
+    }
+    function step(dir, px, py) {
+      var sz = size(), s = scale(), i = steps.indexOf(s), j = Math.max(0, Math.min(steps.length - 1, i + dir));
+      zoomAt(px == null ? sz.wd / 2 : px, py == null ? sz.hd / 2 : py, steps[j]);
+    }
+    function devXY(e) { var r = cv.getBoundingClientRect(), d = dpr(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; }
+    function pick(px, py) {
+      var v = last || draw(); if (!v) return;
+      var x = Math.floor((px - v.ox) / v.s), y = Math.floor((py - v.oy) / v.s);
+      if (x < 0 || y < 0 || x >= W || y >= H) return;
+      st.sel = [x, y];
+      draw();
+      if (o.onTap) o.onTap(x, y);
+    }
+
+    // Pointers: one drags, two pinch (zoom about their midpoint and pan with it). A press that moved under 6 px picks.
+    var ptrs = {}, n = 0, press = null, pinch = null;
+    cv.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button > 0) return;
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* fine */ }
+      ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; n++;
+      if (n === 1) press = { x: e.clientX, y: e.clientY, moved: false };
+      else { if (press) press.moved = true; pinch = null; }
     });
-    if (ui.gates) ow.gates.forEach(function (g) { ctx.fillStyle = GATE_C[g.kind] || '#fff'; g.cells.forEach(function (c) { ctx.fillRect(c % ow.w, Math.floor(c / ow.w), 1, 1); }); });
-    if (ow.start != null) { ctx.fillStyle = '#ffffff'; ctx.fillRect(ow.start % ow.w - 1, Math.floor(ow.start / ow.w), 3, 1); ctx.fillRect(ow.start % ow.w, Math.floor(ow.start / ow.w) - 1, 1, 3); }
-    return true;
+    cv.addEventListener('pointermove', function (e) {
+      var p = ptrs[e.pointerId];
+      if (!p) return;
+      var d = dpr(), dx = e.clientX - p.x, dy = e.clientY - p.y;
+      if (n === 1) {
+        p.x = e.clientX; p.y = e.clientY;
+        if (press && (Math.abs(e.clientX - press.x) > 6 || Math.abs(e.clientY - press.y) > 6)) press.moved = true;
+        if (press && press.moved) { var s = scale(); st.cx -= dx * d / s; st.cy -= dy * d / s; soon(); }
+        return;
+      }
+      p.x = e.clientX; p.y = e.clientY;
+      var ids = Object.keys(ptrs);
+      if (ids.length < 2) return;
+      var a = ptrs[ids[0]], c = ptrs[ids[1]], dist = Math.sqrt((a.x - c.x) * (a.x - c.x) + (a.y - c.y) * (a.y - c.y)), mx = (a.x + c.x) / 2, my = (a.y + c.y) / 2;
+      if (pinch && pinch.dist > 0) {
+        var r = cv.getBoundingClientRect(), s2 = scale();
+        st.cx -= (mx - pinch.mx) * d / s2; st.cy -= (my - pinch.my) * d / s2;
+        zoomAt((mx - r.left) * d, (my - r.top) * d, (st.z || s2) * dist / pinch.dist);
+      }
+      pinch = { dist: dist, mx: mx, my: my };
+    });
+    function up(e) {
+      if (!ptrs[e.pointerId]) return;
+      delete ptrs[e.pointerId]; n = Math.max(0, n - 1); pinch = null;
+      if (n === 0) {
+        var pr = press; press = null;
+        if (pr && !pr.moved && e.type === 'pointerup') { var xy = devXY(e); pick(xy[0], xy[1]); }
+        // A pinch leaves z between steps; settle it on the step it shows.
+        if (st.z != null) st.z = snap(steps, st.z);
+      }
+    }
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var xy = devXY(e);
+      step(e.deltaY < 0 ? 1 : -1, xy[0], xy[1]);
+    }, { passive: false });
+    cv.addEventListener('keydown', function (e) {
+      var s = scale(), panBy = Math.max(1, Math.round(size().wd / s / 8)), k = e.key;
+      if (k === 'ArrowLeft') st.cx -= panBy; else if (k === 'ArrowRight') st.cx += panBy;
+      else if (k === 'ArrowUp') st.cy -= panBy; else if (k === 'ArrowDown') st.cy += panBy;
+      else if (k === '+' || k === '=') { step(1); e.preventDefault(); return; }
+      else if (k === '-' || k === '_') { step(-1); e.preventDefault(); return; }
+      else if (k === '0') { fit(); draw(); e.preventDefault(); return; }
+      else if (k === 'Enter' || k === ' ') { var sz = size(); pick(sz.wd / 2, sz.hd / 2); e.preventDefault(); return; }
+      else return;
+      e.preventDefault(); soon();
+    });
+
+    // Draw once attached and again on every resize; animated tiles step about seven times a second while visible. A
+    // viewer that was attached and then left the page (a rerender) stops; one never attached gives up after a while.
+    var seen = false, misses = 0;
+    function connected() { if (cv.isConnected) { seen = true; misses = 0; return true; } if (seen || ++misses > 40) alive = false; return false; }
+    if (typeof ResizeObserver === 'function') { var ro = new ResizeObserver(function () { if (!connected() && !alive) { ro.disconnect(); return; } soon(); }); ro.observe(stage); }
+    soon();
+    if (o.tiles && o.animate !== false && !reduced()) {
+      (function loop() {
+        setTimeout(function () {
+          if (connected() && last && last.tiles && !document.hidden) draw();
+          if (alive) loop();
+        }, 140);
+      })();
+    }
+    return {
+      el: wrap, canvas: cv, redraw: draw, view: function () { return last; }, steps: steps, tile: T,
+      // Centers the camera on a cell; zoomTo raises the zoom to at least that many device pixels a cell.
+      center: function (x, y, zoomTo) { st.cx = x + 0.5; st.cy = y + 0.5; if (zoomTo && (st.z == null || snap(steps, st.z) < zoomTo)) st.z = snap(steps, zoomTo); soon(); },
+      select: function (x, y) { st.sel = x == null ? null : [x, y]; soon(); },
+      zoom: step, fit: function () { fit(); soon(); }, pick: pick
+    };
+  }
+
+  WORLD.tiles = { size: tileSize, entries: entries, cache: cache, ladder: ladder, snap: snap };
+  WORLD.viewer = viewer;
+})();
+// === WORLD:VIEWER END ===
+// === WORLD:AUDIO BEGIN ===
+(function () {
+  'use strict';
+  // Field music audition (Phase 7). Day 147's player is created the first time someone presses Play, inside that click,
+  // the way Day 147 does it: an AudioContext, ENGINE_AUDIO.create, load(bundle.art), unlock, then playRole with the
+  // continent's role field:<slug>. One player for the page; loading another bundle stops it and reloads the art.
+  var host = { ctx: null, audio: null, art: null, error: null, slug: null };
+  function supported() { return typeof window.AudioContext === 'function' || typeof window.webkitAudioContext === 'function'; }
+  function coarse() { try { return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { return false; } }
+  // The track for a role, read from the art the way the player reads it (subject music:<role>, kind track, by ID).
+  function track(b, role) {
+    var m = (b && b.art && b.art.records && b.art.records.mus_) || {}, ids = Object.keys(m).sort();
+    for (var i = 0; i < ids.length; i++) { var r = m[ids[i]]; if (r && r.kind === 'track' && r.subject && r.subject.ref === 'music:' + role) return r; }
+    return null;
+  }
+  // Call inside a click or pointerup handler.
+  function unlock(b) {
+    if (host.audio) {
+      if (b && host.art !== b.art) { host.audio.load(b.art); host.art = b.art; }
+      host.audio.unlock();
+      return host.audio;
+    }
+    if (!supported()) { host.error = 'This browser has no Web Audio.'; return null; }
+    try {
+      var C = window.AudioContext || window.webkitAudioContext;
+      host.ctx = new C();
+      host.audio = ENGINE_AUDIO.create(host.ctx, { coarse: coarse(), navigator: window.navigator, createAudioElement: function () { return document.createElement('audio'); },
+        lookaheadMs: b && b.art && b.art.settings && b.art.settings.lookaheadMs });
+      host.audio.attachLifecycle(document);
+      host.audio.load(b && b.art);
+      host.art = b && b.art;
+      host.audio.unlock();
+      return host.audio;
+    } catch (e) { host.error = e.message; host.audio = null; return null; }
+  }
+  function play(b, slug) {
+    var a = unlock(b);
+    if (!a) return false;
+    var ok = a.playRole('field:' + slug, { restart: true });
+    host.slug = ok ? slug : null;
+    return ok;
+  }
+  function stop() { if (host.audio && host.slug) host.audio.stop(350); host.slug = null; }
+  Kit.on('load', function () { stop(); if (host.audio) { var b = Kit.bundle.current(); host.audio.load(b && b.art); host.art = b && b.art; } });
+  WORLD.audio = {
+    supported: supported, track: track, unlock: unlock, play: play, stop: stop,
+    playing: function () { return host.slug; },
+    error: function () { return host.error; },
+    player: function () { return host.audio; }
+  };
+})();
+// === WORLD:AUDIO END ===
+// === WS:WORLD BEGIN ===
+(function () {
+  'use strict';
+  // The World tab. Phase 3 built the overworld and read it one cell to a pixel. Phase 7: the map is drawn through
+  // tiles.drawMap in the shared viewer (pan, pinch, integer zoom), with overlays for biome, elevation, temperature,
+  // moisture, regions, and encounter zones, markers for sites and gates, a tap inspector that reads any cell and paints
+  // free land (sparse world.overrides.cells, refused when the walk would break), per continent controls for radius,
+  // ruggedness, and mountain share (world.settings.overworld.continents), and field music audition per continent.
+  // A changed map grows in the Web Worker while the last one stays on screen, dimmed.
+  var U = Kit.util, el = U.el, esc = U.esc;
+  var ui = { overlay: 'tiles', sites: true, gates: true, view: {}, focus: null, busy: false, lastOw: null, msg: null, viewer: null, paint: null };
+  var OVERLAYS = [['tiles', 'Tiles'], ['biome', 'Biome'], ['elev', 'Elevation'], ['temp', 'Temperature'], ['moist', 'Moisture'], ['region', 'Regions'], ['zones', 'Zones']];
+  var ELEV_C = ['#2f5f9a', '#d9c48a', '#7fae5c', '#4f7a3a', '#7a7068'];
+  var TEMP_C = ['#3d6fb6', '#6fa3c8', '#b8c47a', '#e0a04a', '#c8502e'];
+  var MOIST_C = ['#c9a96a', '#b4b46a', '#7fae5c', '#3f8a6a', '#2d6a8a'];
+  var ELEV_N = ['Sea', 'Coast', 'Low', 'High', 'Peak'], TEMP_N = ['Coldest', 'Cold', 'Mild', 'Warm', 'Hottest'], MOIST_N = ['Driest', 'Dry', 'Moderate', 'Wet', 'Wettest'];
+  var GATE_C = { pass: '#f5d142', landing: '#3fd0e0', seawall: '#f08a3c', lock: '#e04ad0' };
+  var GATE_LABEL = { pass: 'Pass', landing: 'Landing', seawall: 'Sea ring', lock: 'Lock' };
+  var GATE_PLURAL = { pass: 'passes', landing: 'landings', seawall: 'sea rings', lock: 'locks' };
+  var ENTRY_LABEL = { start: 'Start', pass: 'Over a pass', landing: 'By sea' };
+  var ST_LABEL = { 1: 'Wall: a ridge between chapters, a sea ring, or the side of a lock', 2: 'Gate', 3: 'Part of a site', 4: 'Site entrance' };
+  var SEA = '#1d3557';
+  function cur() { return Kit.bundle.current(); }
+  function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id; }
+  function regionHue(k) { return 'hsl(' + ((k * 137) % 360) + ', 55%, 55%)'; }
+  function zoneHue(key) { return 'hsl(' + (ENGINE_WORLD.hash.str(key) % 360) + ', 58%, 52%)'; }
+  // zone|field|<continent>|<chp>|<biome key> reads as 'forest, The Lowlands'.
+  function zoneLabel(b, k) { var p = String(k).split('|'); return (p[4] || k) + ', ' + chName(b, p[3]); }
+  function tilName(b, id) { var t = b.art.records.til_ && b.art.records.til_[id]; return t && t.name ? t.name : id; }
+  function refName(b, ref) {
+    ref = String(ref || '');
+    var k = ref.indexOf(':');
+    if (k < 0) return tilName(b, ref);
+    var key = ref.slice(k + 1);
+    return tilName(b, ref.slice(0, k)) + ', ' + key.charAt(0).toUpperCase() + key.slice(1);
+  }
+  function needText(b, k) {
+    return k.replace(/^chapter:(chp_.*)$/, function (m, id) { return 'chapter: ' + chName(b, id); }).replace(/^item:seal:(chp_.*)$/, function (m, id) { return 'seal: ' + chName(b, id); })
+      .replace(/^vehicle:ship$/, 'the ship').replace(/^vehicle:airship$/, 'the airship');
+  }
+
+  // ---------------------------------------------------------------- generating
+  function store(b, cleared) {
+    if (b !== cur()) return;
+    try {
+      var had = WORLD.interiors && WORLD.interiors.generated(b), hadZones = WORLD.zones && WORLD.zones.generated(b), r = WORLD.overworld.apply(b);
+      // Interiors hang off the overworld's sites, so once they exist they are generated again with it, and so are zones.
+      if (had && !r.kept) WORLD.interiors.apply(b);
+      if (had && hadZones && !r.kept) WORLD.zones.apply(b);
+      Kit.rerender();
+      Kit.ui.toast(r.kept ? 'The overworld record is marked as user made, so it was kept.' : 'Overworld stored: ' + r.ow.w + ' by ' + r.ow.h + ', ' + r.ow.sites.length + ' sites, ' + r.ow.gates.length + ' gates, grown in ' + r.ow.ms + ' ms.' +
+        (cleared ? ' ' + cleared + ' painted cell' + (cleared === 1 ? ' was' : 's were') + ' cleared for the new seed.' : ''), r.kept ? 'warn' : 'ok');
+    } catch (e) { Kit.rerender(); Kit.ui.toast(e.message, 'error', 8000); }
+  }
+  function generate(b, reroll) {
+    if (ui.busy) return;
+    try {
+      var cleared = 0;
+      if (reroll) {
+        b.world.seed = (Math.random() * 4294967295) >>> 0;
+        // DECISION: painted cells are coordinates on one map, so a new seed clears them (the toast says how many).
+        cleared = WORLD.overworld.unpaint(b);
+        Kit.bundle.touch('seed');
+      }
+      if (!WORLD.progression.graph(b) || WORLD.progression.stale(b)) WORLD.progression.apply(b);
+      if (WORLD.overworld.async() && !WORLD.overworld.ready(b)) {
+        ui.busy = true; Kit.rerender();
+        WORLD.overworld.prefetch(b).then(function (ow) { ui.busy = false; if (ow) store(b, cleared); else Kit.rerender(); }, function (e) { ui.busy = false; Kit.rerender(); Kit.ui.toast(e.message, 'error', 8000); });
+        return;
+      }
+      store(b, cleared);
+    } catch (e) { ui.busy = false; Kit.ui.toast(e.message, 'error', 8000); }
+  }
+
+  // ---------------------------------------------------------------- drawing
+  function colorFn(ow, b, overlay) {
+    var bio = ow.palette.biomes, keys = overlay === 'zones' ? WORLD.zones.cellKeys(ow, b) : null, biomeOf = {};
+    function biomeColor(ref) {
+      if (biomeOf[ref] !== undefined) return biomeOf[ref];
+      var r = String(ref || ''), id = r.split(':')[0], c = r.indexOf(':') >= 0 ? '#2a2420' : WORLD.biomeColor(id, bio[id] && bio[id].key);
+      biomeOf[ref] = c; return c;
+    }
+    return function (i) {
+      switch (overlay) {
+        case 'elev': return ELEV_C[ow.elev[i]] || '#000';
+        case 'temp': return ow.owner[i] < 0 ? SEA : TEMP_C[ow.temp[i]];
+        case 'moist': return ow.owner[i] < 0 ? SEA : MOIST_C[ow.moist[i]];
+        case 'region': return ow.region[i] >= 0 ? (ow.st[i] === 1 ? '#5a524c' : regionHue(ow.region[i])) : ow.owner[i] >= 0 ? '#888' : SEA;
+        case 'zones': return keys[i] ? zoneHue(keys[i]) : ow.owner[i] < 0 ? SEA : ow.st[i] ? '#2a2420' : '#4a4440';
+        default: return biomeColor(ow.ground[i]);
+      }
+    };
+  }
+  function overlayFn(ow, b) {
+    var painted = WORLD.overworld.paintCells(b);
+    return function (ctx, v) {
+      var s = v.s, lw = Math.max(1, Math.round(v.d)), w = ow.w;
+      function box(i, cw, ch) { var x = v.ox + (i % w) * s, y = v.oy + Math.floor(i / w) * s; return [x, y, cw * s, ch * s]; }
+      if (ui.sites) ow.sites.forEach(function (st) {
+        var x = v.ox + st.x * s, y = v.oy + st.y * s;
+        if (s < 4) { ctx.fillStyle = st.golden ? '#14100c' : '#3a3430'; ctx.fillRect(x, y, st.w * s, st.h * s); ctx.fillStyle = '#fff6d8'; var e = box(st.entrance, 1, 1); ctx.fillRect(e[0], e[1], s, s); return; }
+        ctx.lineWidth = lw * 2; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.strokeRect(x - lw, y - lw, st.w * s + 2 * lw, st.h * s + 2 * lw);
+        ctx.lineWidth = lw; ctx.strokeStyle = st.golden ? '#f4d27a' : '#d8cfc0'; ctx.strokeRect(x - lw / 2, y - lw / 2, st.w * s + lw, st.h * s + lw);
+      });
+      if (ui.gates) ow.gates.forEach(function (g) {
+        ctx.fillStyle = GATE_C[g.kind] || '#fff';
+        g.cells.forEach(function (c) {
+          var r = box(c, 1, 1);
+          if (s < 8) { ctx.fillRect(r[0], r[1], r[2], r[3]); return; }
+          ctx.globalAlpha = 0.35; ctx.fillRect(r[0], r[1], r[2], r[3]); ctx.globalAlpha = 1;
+          ctx.lineWidth = lw * 2; ctx.strokeStyle = GATE_C[g.kind] || '#fff'; ctx.strokeRect(r[0] + lw, r[1] + lw, r[2] - 2 * lw, r[3] - 2 * lw);
+        });
+      });
+      if (ow.start != null) {
+        var p = box(ow.start, 1, 1), m = Math.max(1, Math.round(s / 3));
+        ctx.fillStyle = '#ffffff';
+        if (s < 4) { ctx.fillRect(p[0] - s, p[1], 3 * s, s); ctx.fillRect(p[0], p[1] - s, s, 3 * s); }
+        else { ctx.fillRect(p[0] + m, p[1], s - 2 * m, s); ctx.fillRect(p[0], p[1] + m, s, s - 2 * m); }
+      }
+      if (s >= 6) Object.keys(painted).forEach(function (k) {
+        var q = k.split(','), x = v.ox + Number(q[0]) * s, y = v.oy + Number(q[1]) * s, d = Math.max(2, Math.round(s / 4));
+        ctx.fillStyle = '#000000'; ctx.fillRect(x + s - d - lw, y + lw, d + lw, d + lw);
+        ctx.fillStyle = '#ffd84a'; ctx.fillRect(x + s - d, y + lw * 1.5, d - lw / 2, d - lw / 2);
+      });
+    };
   }
   function legend(ow, b) {
-    var items = [];
-    if (ui.overlay === 'biome') {
+    var items = [], ov = ui.overlay;
+    if (ov === 'biome' || ov === 'tiles') {
       var counts = {}, order = [];
       ow.ground.forEach(function (r) { r = String(r || ''); if (r.indexOf(':') >= 0) return; if (!counts[r]) { counts[r] = 0; order.push(r); } counts[r]++; });
       order.sort(function (a, c) { return counts[c] - counts[a] || (a < c ? -1 : 1); }).forEach(function (id) {
-        var bio = ow.palette.biomes[id], t = b.art.records.til_[id], pct = counts[id] / (ow.w * ow.h) * 100;
-        items.push([WORLD.biomeColor(id, bio && bio.key), (t && t.name || id) + ' ' + (pct < 1 ? '<1' : Math.round(pct)) + '%']);
+        var bio = ow.palette.biomes[id], pct = counts[id] / (ow.w * ow.h) * 100;
+        items.push([WORLD.biomeColor(id, bio && bio.key), tilName(b, id) + ' ' + (pct < 1 ? '<1' : Math.round(pct)) + '%']);
       });
-    } else if (ui.overlay === 'elev') ['Sea', 'Coast', 'Low', 'High', 'Peak'].forEach(function (l, k) { items.push([ELEV_C[k], l]); });
-    else if (ui.overlay === 'temp') ['Coldest', 'Cold', 'Mild', 'Warm', 'Hottest'].forEach(function (l, k) { items.push([TEMP_C[k], l]); });
-    else if (ui.overlay === 'moist') ['Driest', 'Dry', 'Moderate', 'Wet', 'Wettest'].forEach(function (l, k) { items.push([MOIST_C[k], l]); });
-    else ow.regions.forEach(function (r, k) { items.push([regionHue(k), chName(b, r.chapter) + (r.ringed ? ' (sea ring)' : '')]); });
+    } else if (ov === 'elev') ELEV_N.forEach(function (l, k) { items.push([ELEV_C[k], l]); });
+    else if (ov === 'temp') TEMP_N.forEach(function (l, k) { items.push([TEMP_C[k], l]); });
+    else if (ov === 'moist') MOIST_N.forEach(function (l, k) { items.push([MOIST_C[k], l]); });
+    else if (ov === 'region') ow.regions.forEach(function (r, k) { items.push([regionHue(k), chName(b, r.chapter) + (r.ringed ? ' (sea ring)' : '')]); });
+    else if (ov === 'zones') {
+      var keys = WORLD.zones.cellKeys(ow, b), n = {};
+      keys.forEach(function (k) { if (k) n[k] = (n[k] || 0) + 1; });
+      var ks = Object.keys(n).sort(function (a, c) { return n[c] - n[a] || (a < c ? -1 : 1); });
+      ks.slice(0, 12).forEach(function (k) {
+        items.push([zoneHue(k), zoneLabel(b, k) + ' (' + n[k] + ')']);
+      });
+      if (ks.length > 12) items.push(['transparent', 'and ' + (ks.length - 12) + ' more zones']);
+    }
     if (ui.gates) Object.keys(GATE_LABEL).forEach(function (k) { if (ow.gates.some(function (g) { return g.kind === k; })) items.push([GATE_C[k], GATE_LABEL[k]]); });
-    if (ui.sites) items.push(['#14100c', 'Site (light dot is the door)']);
+    if (ui.sites) items.push(['#f4d27a', 'Golden path site'], ['#d8cfc0', 'Optional site']);
+    if (Object.keys(WORLD.overworld.paintCells(b)).length) items.push(['#ffd84a', 'Painted cell']);
     return el('div', 'w8-legend', items.map(function (it) { return '<span><i style="background:' + it[0] + '"></i>' + esc(it[1]) + '</span>'; }).join(''));
   }
 
+  // ---------------------------------------------------------------- the inspector
+  function siteAt(ow, x, y) { return ow.sites.filter(function (s) { return x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h; })[0] || null; }
+  function paintable(ow, i) { return ow.owner[i] >= 0 && ow.st[i] === 0 && !ow.deco[i]; }
+  function inspect(box, b, ow, x, y) {
+    U.clear(box);
+    box.appendChild(el('h3', 'section-h', 'Inspector'));
+    if (x == null) { box.appendChild(el('p', 'muted', 'Tap or click any cell of the map (or focus the map and press Enter) to read its ground, climate, region, gate, site, encounter zone, and how it walks. Free land can be painted with another biome.')); return; }
+    var i = y * ow.w + x, g = ow.ground[i], d = ow.deco[i], f = d ? ow.flags[d] | 0 : ow.flags[g] | 0, painted = WORLD.overworld.paintCells(b)[x + ',' + y];
+    var rows = [];
+    rows.push(['Cell', esc(x + ', ' + y)]);
+    rows.push(['Ground', esc(refName(b, g)) + (painted ? ' <span class="chip chip-accent">Painted</span>' : '') + (d ? '<small class="w8-sub">' + esc('Over it: ' + refName(b, d)) + '</small>' : '')]);
+    if (ow.owner[i] < 0) rows.push(['Where', ow.sea[i] ? 'Open sea' : 'A lake']);
+    else {
+      var c = ow.continents[ow.owner[i]], r = ow.region[i] >= 0 ? ow.regions[ow.region[i]] : null;
+      rows.push(['Where', esc((c ? c.label : '') + (r ? ', ' + chName(b, r.chapter) : ''))]);
+      rows.push(['Climate', esc(ELEV_N[ow.elev[i]] + ' ground, ' + TEMP_N[ow.temp[i]].toLowerCase() + ', ' + MOIST_N[ow.moist[i]].toLowerCase())]);
+    }
+    var walk = f & 1 ? 'Walkable' : f & 4 ? 'Water: the ship sails it' : 'Blocked';
+    if (f & 2) walk += ', random battles';
+    var gi = ow.gateAt[i], gate = gi >= 0 ? ow.gates[gi] : null;
+    if (gate) walk = 'A ' + (GATE_LABEL[gate.kind] || gate.kind).toLowerCase() + ': opens with ' + gate.requires.map(function (k) { return needText(b, k); }).join(' and ');
+    else if (ow.st[i]) walk = ST_LABEL[ow.st[i]] + (ow.st[i] === 4 ? ', enters with its chapter key' : '');
+    rows.push(['Walk', esc(walk)]);
+    var site = siteAt(ow, x, y);
+    if (site) {
+      var rec = WORLD.records.get(site.record, b);
+      rows.push(['Site', esc(rec ? rec.name : site.key)]);
+    }
+    if (f & 2 && ow.owner[i] >= 0 && !ow.st[i]) {
+      var zk = WORLD.zones.cellKeys(ow, b)[i], z = zk && WORLD.zones.generated(b) ? WORLD.zones.zone(zk, b) : null;
+      if (zk) rows.push(['Zone', z ? esc(zoneLabel(b, zk) + ': ' + z.rate + ' in 256 a step, ' + (z.troops.length ? z.troops.length + ' troop' + (z.troops.length === 1 ? '' : 's') : 'no troops')) + (z.overridden ? ' <span class="chip chip-accent">Edited</span>' : '') : '<span class="muted">' + esc(zoneLabel(b, zk)) + ' (not generated yet)</span>']);
+    }
+    box.appendChild(el('div', 'w8-insp', WORLD.ui.kv(rows.map(function (p) { return [p[0], p[1]]; }))));
+    var row = el('div', 'btn-row');
+    if (site) row.appendChild(btn('Open in Sites', 'jump', '', function () { if (WORLD.sitesUi) { WORLD.sitesUi.site = site.key; WORLD.sitesUi.floor = 1; } Kit.go('sites'); }));
+    if (WORLD.zones.generated(b) && f & 2 && ow.owner[i] >= 0 && !ow.st[i]) row.appendChild(btn('Edit this zone', 'jump', '', function () { var zk2 = WORLD.zones.cellKeys(ow, b)[i]; if (WORLD.encountersUi) WORLD.encountersUi.editing = zk2; Kit.go('encounters'); }));
+    if (row.childNodes.length) box.appendChild(row);
+
+    // Painting free land.
+    var pp = el('div', 'w8-paint');
+    if (!paintable(ow, i)) pp.appendChild(el('p', 'muted', ow.owner[i] < 0 ? 'Sea and lakes cannot be painted.' : 'This cell belongs to a ridge, ring, gate, or site, which the world needs as generated, so it cannot be painted.'));
+    else {
+      var ids = Object.keys(ow.palette.biomes).filter(function (id) { return !((ow.flags[id] | 0) & 4); }).sort(function (a, c) { var na = tilName(b, a), nc = tilName(b, c); return na < nc ? -1 : na > nc ? 1 : 0; });
+      var sid = 'w8p' + U.rand36(6), lab = el('label', 'w8-paint-lab', 'Paint with');
+      lab.htmlFor = sid;
+      var sel = el('select', 'inp');
+      sel.id = sid;
+      ids.forEach(function (id) { var op = el('option', null, esc(tilName(b, id) + ((ow.flags[id] | 0) & 1 ? '' : ' (blocks)'))); op.value = id; if (id === (ui.paint || g)) op.selected = true; sel.appendChild(op); });
+      sel.addEventListener('change', function () { ui.paint = sel.value; });
+      var pr = el('div', 'w8-paint-row');
+      pr.appendChild(lab); pr.appendChild(sel);
+      pr.appendChild(btn('Paint', 'spark', 'btn-primary', function () { doPaint(b, x, y, sel.value); }));
+      if (painted) pr.appendChild(btn('Clear paint', null, '', function () { doPaint(b, x, y, null); }));
+      pp.appendChild(pr);
+      pp.appendChild(el('p', 'muted w8-small', 'A painted cell is kept in world.overrides.cells and applied after the map is built. A cell whose new ground would break any chapter\'s walk is refused.'));
+    }
+    if (ui.msg) pp.appendChild(el('p', 'msg ' + (ui.msg.level === 'ok' ? 'w8-msg-ok' : 'msg-error'), esc(ui.msg.text)));
+    var n = Object.keys(WORLD.overworld.paintCells(b)).length;
+    if (n) { var cr = el('div', 'btn-row'); cr.appendChild(btn('Clear all ' + n + ' painted cell' + (n === 1 ? '' : 's'), null, '', function () { WORLD.overworld.unpaint(b); ui.msg = null; Kit.rerender(); })); pp.appendChild(cr); }
+    box.appendChild(pp);
+  }
+  function doPaint(b, x, y, id) {
+    var r = WORLD.overworld.paint(b, x, y, id);
+    if (!r.ok) { ui.msg = { level: 'error', text: r.message }; refreshInspector(); return; }
+    ui.msg = r.changed ? { level: 'ok', text: id ? 'Painted ' + tilName(b, id) + ' at ' + x + ', ' + y + '. Store the map to keep the records in step.' : 'Cleared the paint at ' + x + ', ' + y + '.' } : null;
+    ui.focus = [x, y];
+    Kit.rerender();
+  }
+  function refreshInspector() {
+    var box = document.getElementById('w8-inspect'), b = cur(), ow = WORLD.overworld.ready(b) ? WORLD.overworld.generate(b) : ui.lastOw, s = ui.view.sel;
+    if (box && ow) inspect(box, b, ow, s ? s[0] : null, s ? s[1] : null);
+  }
+  // Centers the live map on a cell and picks it, without rebuilding the tab.
+  function showCell(x, y) {
+    if (!ui.viewer) return;
+    ui.msg = null;
+    ui.viewer.center(x, y, 8);
+    ui.viewer.select(x, y);
+    refreshInspector();
+    var fig = ui.viewer.el;
+    if (fig && fig.scrollIntoView) fig.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  // ---------------------------------------------------------------- per continent controls
+  function slider(label, value, min, max, stp, isDefault, fmt, onSet) {
+    var id = 'w8s' + U.rand36(6), w = el('div', 'w8-slider'), top = el('div', 'w8-slider-top'), lab = el('label', null, esc(label));
+    lab.htmlFor = id;
+    var out = el('output', 'w8-slider-val', esc(fmt(value) + (isDefault ? ' (default)' : '')));
+    out.setAttribute('for', id);
+    top.appendChild(lab); top.appendChild(out); w.appendChild(top);
+    var inp = el('input', 'w8-range');
+    inp.type = 'range'; inp.id = id; inp.min = min; inp.max = max; inp.step = stp; inp.value = value;
+    inp.addEventListener('input', function () { out.textContent = fmt(Number(inp.value)); });
+    inp.addEventListener('change', function () { onSet(Number(inp.value)); });
+    w.appendChild(inp);
+    return w;
+  }
+  function continentsCard(b, ow) {
+    var card = el('section', 'panel'), S = ENGINE_WORLD.overworld.settings(b.world.settings), conts = WORLD.continents(b);
+    card.id = 'w8-conts';
+    card.appendChild(el('h3', 'section-h', 'Continents'));
+    card.appendChild(el('p', 'muted', 'Shape each continent: its radius against the size its chapters\' minutes earn, how ragged its coast is, and how much of its inland rises into impassable mountains. A change grows a new map from the same seed; IDs never move.'));
+    var list = el('div', 'w8-conts');
+    ow.continents.forEach(function (c) {
+      var own = (b.world.settings.overworld && b.world.settings.overworld.continents || {})[c.slug] || {}, eff = S.continents[c.slug] || {}, info = conts.filter(function (x) { return x.slug === c.slug; })[0];
+      var row = el('div', 'card w8-cont');
+      row.dataset.continent = c.slug;
+      row.appendChild(el('h4', 'w8-cont-h', esc(c.label) + '<small class="w8-sub">' + esc((info ? info.chapters.map(function (id) { return chName(b, id); }).join(', ') : '') + ', ' + c.cells + ' cells') + '</small>'));
+      function set(field, v) {
+        var o = b.world.settings.overworld = U.isObj(b.world.settings.overworld) ? b.world.settings.overworld : {};
+        o.continents = U.isObj(o.continents) ? o.continents : {};
+        o.continents[c.slug] = U.isObj(o.continents[c.slug]) ? o.continents[c.slug] : {};
+        o.continents[c.slug][field] = v;
+        Kit.bundle.touch('settings'); Kit.rerender();
+      }
+      var pct = function (v) { return Math.round(v * 100) + '%'; };
+      row.appendChild(slider('Radius', own.radius != null ? eff.radius : 1, 0.4, 1.8, 0.05, own.radius == null, function (v) { return v.toFixed(2) + 'x'; }, function (v) { set('radius', v); }));
+      row.appendChild(slider('Ruggedness', isFinite(eff.ruggedness) ? eff.ruggedness : S.ruggedness, 0, 1, 0.05, !isFinite(eff.ruggedness), pct, function (v) { set('ruggedness', v); }));
+      row.appendChild(slider('Mountain share', isFinite(eff.mountains) ? eff.mountains : S.mountainShare, 0, 0.45, 0.01, !isFinite(eff.mountains), pct, function (v) { set('mountains', v); }));
+      var br = el('div', 'btn-row w8-cont-btns');
+      var tr = WORLD.audio.track(b, 'field:' + c.slug);
+      if (tr) {
+        var mb = btn(WORLD.audio.playing() === c.slug ? 'Stop field music' : 'Play field music', null, 'w8-music', function () {
+          if (WORLD.audio.playing() === c.slug) { WORLD.audio.stop(); }
+          else if (!WORLD.audio.play(b, c.slug)) Kit.ui.toast(WORLD.audio.error() || 'The field music could not start.', 'warn');
+          Array.prototype.forEach.call(document.querySelectorAll('.w8-music'), function (x) { var me = x.closest('.w8-cont').dataset.continent === WORLD.audio.playing(); x.querySelector('span').textContent = me ? 'Stop field music' : 'Play field music'; x.setAttribute('aria-pressed', me ? 'true' : 'false'); });
+        });
+        mb.setAttribute('aria-pressed', WORLD.audio.playing() === c.slug ? 'true' : 'false');
+        mb.title = tr.name || 'field:' + c.slug;
+        br.appendChild(mb);
+      } else br.appendChild(el('span', 'muted w8-small', 'No track has the role field:' + esc(c.slug) + ' yet.'));
+      if (Object.keys(own).length) br.appendChild(btn('Reset', null, '', function () { delete b.world.settings.overworld.continents[c.slug]; Kit.bundle.touch('settings'); Kit.rerender(); }));
+      row.appendChild(br);
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+    return card;
+  }
+
+  // ---------------------------------------------------------------- the tab
   function render(host) {
     var b = cur();
     WORLD.ensure(b);
+    ui.viewer = null;
     var head = el('section', 'panel');
     head.innerHTML = '<h2 class="panel-title">World</h2><p class="muted">The overworld grows from the seed around the progression graph: continents sized by their chapters\' minutes, climate bands matched to biome tilesets, a mountain ridge with one pass between chapters that share a continent, a sea ring with one landing around each region the ship could reach early, and every town and dungeon stamped where its chapter can walk to it.</p>';
     host.appendChild(head);
@@ -6894,31 +7793,40 @@ var ENGINE_WORLD = (function () {
     var row = el('div', 'btn-row');
     if (!rec || !rec.paramHash) {
       card.appendChild(el('h3', 'section-h', 'Overworld'));
-      card.appendChild(el('p', 'muted', 'Nothing generated yet. Generating lays out the progression first if it is missing, then builds the map from seed ' + esc(String(b.world.seed)) + '.'));
-      row.appendChild(btn('Generate the overworld', 'spark', 'btn-primary', function () { generate(b); }));
+      card.appendChild(el('p', 'muted', ui.busy ? 'Growing the overworld from seed ' + esc(String(b.world.seed)) + '.' : 'Nothing generated yet. Generating lays out the progression first if it is missing, then builds the map from seed ' + esc(String(b.world.seed)) + '.'));
+      var g0 = btn(ui.busy ? 'Growing the map' : 'Generate the overworld', 'spark', 'btn-primary', function () { generate(b); });
+      g0.disabled = ui.busy;
+      row.appendChild(g0);
       card.appendChild(row);
       return;
     }
-    var ow = WORLD.overworld.generate(b), stale = WORLD.overworld.stale(b);
+    var ready = WORLD.overworld.ready(b), ow = ready || !WORLD.overworld.async() ? WORLD.overworld.generate(b) : null, stale = WORLD.overworld.stale(b), growing = !ow;
+    if (growing) {
+      WORLD.overworld.prefetch(b).then(function (o) { if (o && b === cur() && Kit.active() === 'world') Kit.rerender(); }, function (e) { Kit.ui.toast(e.message, 'error', 8000); });
+    } else ui.lastOw = ow;
+    var shown = ow || ui.lastOw;
     card.appendChild(el('h3', 'section-h', 'Overworld'));
     var kinds = {};
     rec.gates.forEach(function (g) { kinds[g.kind] = (kinds[g.kind] || 0) + 1; });
-    card.appendChild(el('p', 'w8-chips', '<span class="chip ' + (ow && ow.ok ? 'chip-ok' : 'chip-broken') + '">' + (ow && ow.ok ? 'Every chapter checks out' : 'Problems') + '</span>' +
+    var nPaint = Object.keys(WORLD.overworld.paintCells(b)).length;
+    card.appendChild(el('p', 'w8-chips', (growing ? '<span class="chip chip-muted">Growing</span>' : '<span class="chip ' + (ow.ok ? 'chip-ok' : 'chip-broken') + '">' + (ow.ok ? 'Every chapter checks out' : 'Problems') + '</span>') +
       (stale ? '<span class="chip chip-warning">Out of date</span>' : '') +
       '<span class="chip chip-muted">' + rec.w + ' by ' + rec.h + '</span>' +
       '<span class="chip chip-muted">Seed ' + esc(String(rec.seed)) + '</span>' +
       '<span class="chip chip-muted">Land ' + Math.round(rec.stats.land / (rec.w * rec.h) * 100) + '%</span>' +
       '<span class="chip chip-accent">' + rec.sites.length + ' sites</span>' +
       Object.keys(kinds).sort().map(function (k) { return '<span class="chip chip-accent">' + kinds[k] + ' ' + esc(kinds[k] === 1 ? (GATE_LABEL[k] || k).toLowerCase() : GATE_PLURAL[k] || k) + '</span>'; }).join('') +
-      (ow && ow.ms != null ? '<span class="chip chip-muted">' + ow.ms + ' ms</span>' : '')));
-    if (stale) card.appendChild(el('p', 'msg msg-warning', 'The seed, settings, chapters, or art changed since this map was made. The picture shows the new map; Generate again to store it.'));
-    row.appendChild(btn('Generate again', 'spark', stale ? 'btn-primary' : '', function () { generate(b); }));
-    row.appendChild(btn('New seed', 'spark', '', function () { generate(b, true); }));
+      (nPaint ? '<span class="chip chip-accent">' + nPaint + ' painted</span>' : '') +
+      (ow && ow.ms != null ? '<span class="chip chip-muted">' + ow.ms + ' ms' + (WORLD.overworld.worker().served ? ' in the worker' : '') + '</span>' : '')));
+    if (stale && !growing) card.appendChild(el('p', 'msg msg-warning', 'The seed, settings, painted cells, chapters, or art changed since this map was stored. The picture shows the new map; Store changes to write it (the interiors and zones follow).'));
+    var g1 = btn(ui.busy ? 'Growing the map' : stale ? 'Store changes' : 'Generate again', 'spark', stale ? 'btn-primary' : '', function () { generate(b); });
+    var g2 = btn('New seed', 'spark', '', function () { generate(b, true); });
+    g1.disabled = g2.disabled = ui.busy;
+    row.appendChild(g1); row.appendChild(g2);
     card.appendChild(row);
 
     // Overlay picker and toggles.
-    var bar = el('div', 'w8-owbar');
-    var seg = el('div', 'w8-seg');
+    var bar = el('div', 'w8-owbar'), seg = el('div', 'w8-seg');
     seg.setAttribute('role', 'radiogroup'); seg.setAttribute('aria-label', 'Map overlay');
     OVERLAYS.forEach(function (o) {
       var bt = el('button', 'btn w8-seg-btn', esc(o[1]));
@@ -6927,47 +7835,94 @@ var ENGINE_WORLD = (function () {
       seg.appendChild(bt);
     });
     bar.appendChild(seg);
-    bar.appendChild(WORLD.ui.toggle('Sites', ui.sites, function (on) { ui.sites = on; Kit.rerender(); }));
-    bar.appendChild(WORLD.ui.toggle('Gates', ui.gates, function (on) { ui.gates = on; Kit.rerender(); }));
+    bar.appendChild(WORLD.ui.toggle('Sites', ui.sites, function (on) { ui.sites = on; if (ui.viewer) ui.viewer.redraw(); }));
+    bar.appendChild(WORLD.ui.toggle('Gates', ui.gates, function (on) { ui.gates = on; if (ui.viewer) ui.viewer.redraw(); }));
     card.appendChild(bar);
-    if (ow) {
-      var fig = el('figure', 'w8-map'), cv = el('canvas');
-      cv.width = ow.w; cv.height = ow.h;
-      cv.setAttribute('role', 'img');
-      cv.setAttribute('aria-label', 'Overworld map, ' + ow.w + ' by ' + ow.h + ' cells, showing ' + (OVERLAYS.filter(function (o) { return o[0] === ui.overlay; })[0] || OVERLAYS[0])[1].toLowerCase());
-      cv.dataset.overlay = ui.overlay;
-      cv.dataset.drawn = draw(cv, ow, b) ? '1' : '0';
-      fig.appendChild(cv);
+
+    var fig = el('figure', 'w8-map'), ib = el('section', 'panel w8-inspect');
+    ib.id = 'w8-inspect';
+    if (shown) {
+      var cellOv = ui.overlay === 'tiles' ? 'biome' : ui.overlay;
+      var v = WORLD.viewer({ state: ui.view, key: 'ow|' + shown.w + 'x' + shown.h, map: shown, b: b, tiles: ui.overlay === 'tiles',
+        cellsKey: 'ow|' + shown.digest + '|' + cellOv, cellColor: colorFn(shown, b, cellOv), overlay: overlayFn(shown, b),
+        label: 'Overworld map, ' + shown.w + ' by ' + shown.h + ' cells, showing ' + (OVERLAYS.filter(function (o) { return o[0] === ui.overlay; })[0] || OVERLAYS[0])[1].toLowerCase(),
+        busy: growing ? 'Growing the map' : null,
+        onTap: function (x, y) { ui.msg = null; if (!growing) inspect(ib, b, shown, x, y); } });
+      v.canvas.dataset.overlay = ui.overlay;
+      ui.viewer = growing ? null : v;
+      fig.appendChild(v.el);
       card.appendChild(fig);
-      card.appendChild(legend(ow, b));
+      card.appendChild(legend(shown, b));
+      if (!growing && ui.focus != null) {
+        var fx = Array.isArray(ui.focus) ? ui.focus[0] : ui.focus % shown.w, fy = Array.isArray(ui.focus) ? ui.focus[1] : Math.floor(ui.focus / shown.w);
+        ui.focus = null;
+        v.center(fx, fy, 8); v.select(fx, fy);
+        setTimeout(function () { if (fig.isConnected && fig.scrollIntoView) fig.scrollIntoView({ block: 'center' }); }, 0);
+      }
+    } else {
+      fig.appendChild(el('div', 'w8-view-stage w8-view-empty', '<div class="w8-view-busy"><span class="w8-busy">Growing the map</span></div>'));
+      card.appendChild(fig);
+    }
+    if (shown) {
+      var sel = ui.view.sel;
+      inspect(ib, b, shown, sel && !growing ? sel[0] : null, sel && !growing ? sel[1] : null);
+      host.appendChild(ib);
+      host.appendChild(continentsCard(b, shown));
     }
 
-    // Regions and gates.
+    // Regions and gates, each with a Show button that centers the map on it.
     var rp = el('section', 'panel');
+    rp.id = 'w8-regions';
     rp.appendChild(el('h3', 'section-h', 'Regions'));
+    function showBtn(at, what) {
+      var x = el('button', 'btn w8-pick', 'Show');
+      x.type = 'button'; x.setAttribute('aria-label', 'Show ' + what + ' on the map');
+      x.addEventListener('click', function () { if (at) showCell(at[0], at[1]); });
+      x.disabled = !at || growing;
+      return x;
+    }
     var t = el('table', 'tbl');
-    t.innerHTML = '<thead><tr><th scope="col">Chapter</th><th scope="col">Arrive</th><th scope="col" class="num">Cells</th><th scope="col" class="num">Sites</th></tr></thead><tbody>' +
-      rec.regions.map(function (r) {
-        var n = rec.sites.filter(function (s) { return s.region === r.region; }).length, c = rec.continents.filter(function (x) { return x.continent === r.continent; })[0];
-        return '<tr><th scope="row">' + esc(chName(b, r.chapter)) + '<small class="w8-sub">' + esc((c ? c.label : r.continent) + (r.ringed ? ', sea ring' : '')) + '</small></th><td>' + esc(ENTRY_LABEL[r.entry] || r.entry) + '</td><td class="num">' + r.cells + '</td><td class="num">' + n + '</td></tr>';
-      }).join('') + '</tbody>';
+    t.innerHTML = '<thead><tr><th scope="col">Chapter</th><th scope="col">Arrive</th><th scope="col" class="num">Cells</th><th scope="col" class="num">Sites</th><th scope="col"><span class="sr-only">Show</span></th></tr></thead><tbody></tbody>';
+    rec.regions.forEach(function (r) {
+      var n = rec.sites.filter(function (s) { return s.region === r.region; }).length, c = rec.continents.filter(function (x) { return x.continent === r.continent; })[0];
+      var tr = el('tr', null, '<th scope="row">' + esc(chName(b, r.chapter)) + '<small class="w8-sub">' + esc((c ? c.label : r.continent) + (r.ringed ? ', sea ring' : '')) + '</small></th><td>' + esc(ENTRY_LABEL[r.entry] || r.entry) + '</td><td class="num">' + r.cells + '</td><td class="num">' + n + '</td>');
+      var td = el('td'); td.appendChild(showBtn(r.anchor, chName(b, r.chapter))); tr.appendChild(td);
+      t.tBodies[0].appendChild(tr);
+    });
     var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); rp.appendChild(wrap);
     if (rec.gates.length) {
       rp.appendChild(el('h3', 'section-h', 'Gates'));
       var t2 = el('table', 'tbl');
-      t2.innerHTML = '<thead><tr><th scope="col">Gate</th><th scope="col">Opens with</th></tr></thead><tbody>' +
-        rec.gates.map(function (g) {
-          var where = rec.regions.filter(function (r) { return r.region === g.region; })[0];
-          return '<tr><th scope="row"><span class="w8-dot" style="background:' + (GATE_C[g.kind] || '#fff') + '"></span>' + esc(GATE_LABEL[g.kind] || g.kind) + '<small class="w8-sub">' + esc(where ? chName(b, where.chapter) : '') + ' at ' + esc(g.cells.map(function (c) { return c.join(','); }).join(' and ')) + '</small></th><td>' +
-            g.requires.map(function (k) { return '<span class="chip chip-muted">' + esc(k.replace(/^chapter:(chp_.*)$/, function (m, id) { return 'chapter: ' + chName(b, id); }).replace(/^item:seal:(chp_.*)$/, function (m, id) { return 'seal: ' + chName(b, id); })) + '</span>'; }).join(' ') + '</td></tr>';
-        }).join('') + '</tbody>';
+      t2.innerHTML = '<thead><tr><th scope="col">Gate</th><th scope="col">Opens with</th><th scope="col"><span class="sr-only">Show</span></th></tr></thead><tbody></tbody>';
+      rec.gates.forEach(function (g) {
+        var where = rec.regions.filter(function (r) { return r.region === g.region; })[0];
+        var tr = el('tr', null, '<th scope="row"><span class="w8-dot" style="background:' + (GATE_C[g.kind] || '#fff') + '"></span>' + esc(GATE_LABEL[g.kind] || g.kind) + '<small class="w8-sub">' + esc(where ? chName(b, where.chapter) : '') + ' at ' + esc(g.cells.map(function (c) { return c.join(','); }).join(' and ')) + '</small></th><td>' +
+          g.requires.map(function (k) { return '<span class="chip chip-muted">' + esc(needText(b, k)) + '</span>'; }).join(' ') + '</td>');
+        var td = el('td'); td.appendChild(showBtn(g.cells[0], (GATE_LABEL[g.kind] || g.kind) + (where ? ' of ' + chName(b, where.chapter) : ''))); tr.appendChild(td);
+        t2.tBodies[0].appendChild(tr);
+      });
       var wrap2 = el('div', 'tbl-wrap'); wrap2.appendChild(t2); rp.appendChild(wrap2);
     }
     host.appendChild(rp);
   }
 
+  // Validation and other tabs open a cell here: map omitted or the overworld's map_ means the overworld; an interior
+  // map_ opens the Sites tab on that site and floor with the cell picked.
+  // The checks name an interior map as '<site key>|<floor>' and the overworld as 'overworld'; a map_ ID works too.
+  WORLD.showAt = function (mapId, at) {
+    var b = cur(), owRec = WORLD.overworld.record(b), m = mapId ? WORLD.records.get(mapId, b) : null, site = null, floor = 1;
+    if (m && !(owRec && m.id === owRec.id)) { site = String(m.key || '').replace(/^map\|/, '').replace(/\|\d+$/, ''); floor = m.floor || 1; }
+    else if (!m && mapId && mapId !== 'overworld') {
+      var mm = /^(.*)\|(\d+)$/.exec(String(mapId));
+      if (mm && WORLD.interiors.specs(b).some(function (sp) { return sp.key === mm[1]; })) { site = mm[1]; floor = Number(mm[2]); }
+    }
+    if (!site || !WORLD.sitesUi) { ui.focus = at; return Kit.go('world'); }
+    WORLD.sitesUi.site = site; WORLD.sitesUi.floor = floor; WORLD.sitesUi.focus = at;
+    return Kit.go('sites');
+  };
+
   WORLD.WS = WORLD.WS || {};
-  WORLD.WS.world = { render: render };
+  WORLD.WS.world = { render: render, onLeave: function () { if (WORLD.audio) WORLD.audio.stop(); } };
   WORLD.worldUi = ui;
 })();
 // === WS:WORLD END ===
@@ -6975,10 +7930,12 @@ var ENGINE_WORLD = (function () {
 (function () {
   'use strict';
   // The Sites tab. Phase 4: generate every interior, list the towns, dungeons, castles, and caves by chapter, and preview
-  // any floor one cell to a pixel with its exits, chests, locks, bosses, and people marked. Phase 7 adds the tile
-  // preview (tiles.drawMap) and the exits overlay on top of the real tiles.
+  // any floor one cell to a pixel with its exits, chests, locks, bosses, and people marked. Phase 7: the preview is the
+  // shared viewer drawing the real tiles through tiles.drawMap (people as their npc:<archetype> sprites between the two
+  // tile layers), with the exits overlay on top (ways out, stairs, the locked door, the boss, chests), a Plan view in
+  // flat colors, and a readout of any tapped cell.
   var U = Kit.util, el = U.el, esc = U.esc;
-  var ui = { site: null, floor: 1 };
+  var ui = { site: null, floor: 1, tiles: true, marks: true, view: {}, focus: null };
   var KIND_LABEL = { town: 'Town', dungeon: 'Dungeon', castle: 'Castle', cave: 'Cave' };
   var TILE_C = { wall: '#3a332e', floor: null, door: '#9a6a34', stairs: '#e8d48a', counter: '#b0643a', table: '#7a5636', barrel: '#6e4a2a', bed: '#b25a6a',
     shelf: '#5e4630', rug: '#a8473f', plant: '#3f8a4a', lintel: '#9a6a34', arch: '#9a6a34', pillar: '#8c8c94', torch: '#f0983c', chest: '#f5c542', channel: '#3a78c8', spikes: '#c0c0c8' };
@@ -7011,23 +7968,49 @@ var ENGINE_WORLD = (function () {
     if (k === 'floor') return FLOOR_C[kind] || '#888';
     return TILE_C[k] || '#888';
   }
-  function draw(cv, fl, site, b) {
-    var ctx = cv.getContext && cv.getContext('2d');
-    if (!ctx) return false;
-    ctx.imageSmoothingEnabled = false;
-    for (var y = 0; y < fl.h; y++) {
-      var run = 0, col = null;
-      for (var x = 0; x <= fl.w; x++) {
-        var c = x < fl.w ? colorAt(fl, y * fl.w + x, site.kind, b) : null;
-        if (c !== col) { if (col) { ctx.fillStyle = col; ctx.fillRect(x - run, y, run, 1); } col = c; run = 0; }
-        run++;
+  // Markers in device pixels: exits and stairs (cyan, an arrow toward the way out), the locked door (magenta), the
+  // boss (red), chests (gold), and people (white) when their sprite was not drawn or the plan view is on.
+  function overlayFn(fl, site, people) {
+    return function (ctx, v) {
+      if (!ui.marks) return;
+      var s = v.s, w = fl.w, lw = Math.max(1, Math.round(v.d)), big = s >= 8;
+      function at(i) { return [v.ox + (i % w) * s, v.oy + Math.floor(i / w) * s]; }
+      function ring(i, c) {
+        var p = at(i);
+        if (!big) { ctx.fillStyle = c; ctx.fillRect(p[0], p[1], s, s); return; }
+        ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeRect(p[0] + lw, p[1] + lw, s - 2 * lw, s - 2 * lw);
+        ctx.lineWidth = lw * 2; ctx.strokeStyle = c; ctx.strokeRect(p[0] + lw, p[1] + lw, s - 2 * lw, s - 2 * lw);
       }
-    }
-    function dot(i, c) { ctx.fillStyle = c; ctx.fillRect(i % fl.w, Math.floor(i / fl.w), 1, 1); }
-    fl.features.forEach(function (ft) { if (MARK[ft.kind]) dot(ft.at, MARK[ft.kind]); });
-    fl.exits.forEach(function (ex) { dot(ex.at, MARK.exit); });
-    site.npcs.forEach(function (p) { if (p.floor === fl.floor) dot(p.at, MARK.npc); });
-    return true;
+      fl.exits.forEach(function (ex) {
+        ring(ex.at, MARK.exit);
+        if (big && ex.kind === 'overworld') {
+          var p = at(ex.at), m = Math.round(s / 2), a = Math.max(2, Math.round(s / 5));
+          ctx.fillStyle = MARK.exit;
+          for (var k = 0; k < a; k++) ctx.fillRect(p[0] + m - k - lw, p[1] + s - a - lw * 2 + k, 2 * k + 2 * lw, lw);
+        }
+      });
+      fl.features.forEach(function (ft) {
+        if (ft.kind === 'chest') { var p = at(ft.at), q = big ? Math.round(s / 4) : 0; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p[0] + q - lw, p[1] + q - lw, s - 2 * q + 2 * lw, Math.max(lw, Math.round((s - 2 * q) / 2)) + 2 * lw); ctx.fillStyle = TILE_C.chest; ctx.fillRect(p[0] + q, p[1] + q, s - 2 * q, Math.max(lw, Math.round((s - 2 * q) / 2))); }
+        else if (MARK[ft.kind]) ring(ft.at, MARK[ft.kind]);
+      });
+      people.forEach(function (p) {
+        if (v.tiles && p.drawn) return;
+        var q = at(p.at), m = big ? Math.round(s / 3) : 0;
+        ctx.fillStyle = '#000000'; ctx.fillRect(q[0] + m - lw, q[1] + m - lw, s - 2 * m + 2 * lw, s - 2 * m + 2 * lw);
+        ctx.fillStyle = MARK.npc; ctx.fillRect(q[0] + m, q[1] + m, s - 2 * m, s - 2 * m);
+      });
+    };
+  }
+  function cellText(b, fl, site, x, y) {
+    var i = y * fl.w + x, g = fl.ground[i], d = fl.deco[i], parts = [];
+    function nm(ref) { ref = String(ref || ''); var k = ref.indexOf(':'), til = b.art.records.til_ && b.art.records.til_[k < 0 ? ref : ref.slice(0, k)]; return k < 0 ? (til ? til.name : ref) : ref.slice(k + 1); }
+    parts.push(nm(g) + (d ? ' under ' + nm(d) : ''));
+    var flags = ENGINE_RENDER.tiles.flagsAt(b.art, fl, x, y);
+    parts.push(flags & 1 ? (flags & 2 ? 'walkable, random battles' : 'walkable') : 'blocked');
+    fl.exits.forEach(function (ex) { if (ex.at === i) parts.push(ex.kind === 'overworld' ? 'way out to the overworld' : 'stairs ' + ex.kind + ' to floor ' + ex.toFloor); });
+    fl.features.forEach(function (ft) { if (ft.at === i) parts.push(ft.kind === 'lock' ? 'the locked door' : ft.kind === 'boss' ? 'the boss' + (ft.troop ? ' (' + ft.troop + ')' : ', slot empty for Day 149') : ft.kind === 'chest' ? (ft.prize ? 'the prize chest' : ft.item ? 'the key chest' : 'a treasure chest') : ft.kind); });
+    site.npcs.forEach(function (p) { if (p.floor === fl.floor && p.at === i) parts.push('a ' + p.archetype + (p.building ? ' in the ' + placeLabel(p.building).toLowerCase() : '')); });
+    return 'Cell ' + x + ', ' + y + ': ' + parts.join('; ') + '.';
   }
   function legend(site) {
     var items = [[FLOOR_C[site.kind], 'Floor'], [TILE_C.wall, 'Wall'], [TILE_C.door, 'Door'], [MARK.exit, 'Exit']];
@@ -7060,15 +8043,29 @@ var ENGINE_WORLD = (function () {
       });
       var bar = el('div', 'w8-owbar'); bar.appendChild(seg); card.appendChild(bar);
     }
-    var fig = el('figure', 'w8-imap'), cv = el('canvas');
-    cv.width = fl.w; cv.height = fl.h;
-    cv.style.aspectRatio = fl.w + ' / ' + fl.h;
-    cv.setAttribute('role', 'img');
-    cv.setAttribute('aria-label', (rec ? rec.name : s2.key) + ', floor ' + fl.floor + ', ' + fl.w + ' by ' + fl.h + ' cells');
-    cv.dataset.site = s2.key; cv.dataset.floor = String(fl.floor);
-    cv.dataset.drawn = draw(cv, fl, site, b) ? '1' : '0';
-    fig.appendChild(cv);
+    var bar2 = el('div', 'w8-owbar');
+    bar2.appendChild(WORLD.ui.toggle('Tiles', ui.tiles, function (on) { ui.tiles = on; Kit.rerender(); }));
+    bar2.appendChild(WORLD.ui.toggle('Exits and marks', ui.marks, function (on) { ui.marks = on; if (vw) vw.redraw(); }));
+    card.appendChild(bar2);
+    var spr = WORLD.interiors.sprites(b), people = site.npcs.filter(function (p) { return p.floor === fl.floor; }).map(function (p) { return { at: p.at, spr: spr[p.archetype] || null, dir: p.facing || 'down', drawn: false }; });
+    var fig = el('figure', 'w8-imap'), readout = el('p', 'w8-cellread muted', 'Tap a cell to read it.');
+    readout.setAttribute('aria-live', 'polite');
+    var vw = WORLD.viewer({ state: ui.view, key: 'site|' + s2.key + '|' + fl.floor, map: fl, b: b, tiles: ui.tiles, size: 'site', bg: '#0a0908',
+      cellsKey: 'site|' + s2.key + '|' + fl.floor + '|' + (site.digest || fl.digest || ''), cellColor: function (i) { return colorAt(fl, i, site.kind, b); },
+      sprites: people, overlay: overlayFn(fl, site, people),
+      label: (rec ? rec.name : s2.key) + ', floor ' + fl.floor + ', ' + fl.w + ' by ' + fl.h + ' cells',
+      onTap: function (x, y) { readout.textContent = cellText(b, fl, site, x, y); } });
+    vw.canvas.dataset.site = s2.key; vw.canvas.dataset.floor = String(fl.floor);
+    fig.appendChild(vw.el);
     card.appendChild(fig);
+    card.appendChild(readout);
+    if (ui.focus != null) {
+      var fx = Array.isArray(ui.focus) ? ui.focus[0] : ui.focus % fl.w, fy = Array.isArray(ui.focus) ? ui.focus[1] : Math.floor(ui.focus / fl.w);
+      ui.focus = null;
+      vw.center(fx, fy, 2 * WORLD.tiles.size(b)); vw.select(fx, fy);
+      readout.textContent = cellText(b, fl, site, fx, fy);
+      setTimeout(function () { if (fig.isConnected && fig.scrollIntoView) fig.scrollIntoView({ block: 'center' }); }, 0);
+    }
     card.appendChild(legend(site));
     // Exits and features in words.
     var outs = fl.exits.filter(function (ex) { return ex.kind === 'overworld'; }).map(function (ex) { return WORLD.overworld.xy(ex.at, fl.w).join(','); });
@@ -7150,8 +8147,11 @@ var ENGINE_WORLD = (function () {
   'use strict';
   // The Encounters tab. Phase 5: generate the encounter zones and read them back: field zones by chapter, continent,
   // and biome; one table per dungeon, castle, and cave floor; the bosses and guardians; and who gives each side quest.
-  // Phase 7 makes weights and rates editable (sparse overrides in world.overrides.zones, already honored here).
+  // Phase 7: every zone has an Edit button that opens its rate and weights inline. Saving stores only what differs from
+  // the generated table in world.overrides.zones (WORLD.zones.edit) and applies the zones again at once, so the table on
+  // screen is always the stored one. Back to generated removes the override.
   var U = Kit.util, el = U.el, esc = U.esc;
+  var ui = { editing: null };
   function cur() { return Kit.bundle.current(); }
   function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
   function nameOf(b, id) {
@@ -7176,9 +8176,95 @@ var ENGINE_WORLD = (function () {
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
   }
 
+  function editBtn(q) {
+    var open = ui.editing === q.key;
+    return '<td class="w8-zcell"><button class="btn w8-pick w8-zedit" type="button" data-zone="' + esc(q.key) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' + (open ? 'Close' : 'Edit') + '</button></td>';
+  }
+  function edited(q) { return q.overridden ? ' <span class="chip chip-accent">Edited</span>' : ''; }
+  // The inline form: rate in 256ths a step and one weight per troop, with what the generator made beside each.
+  function editor(b, q, q0) {
+    var box = el('div', 'w8-zform'), wid = {};
+    box.appendChild(el('h4', 'w8-zform-h', 'Edit ' + esc(q.kind === 'field' ? nameOf(b, q.biome) + ', ' + chName(b, q.chapter) : (WORLD.records.get(q.map, b) || {}).name || q.key)));
+    function num(label, value, max, hint) {
+      var id = 'w8z' + U.rand36(6), row = el('div', 'w8-zfield'), lab = el('label', null, esc(label));
+      lab.htmlFor = id;
+      var inp = el('input', 'inp w8-znum'); inp.type = 'number'; inp.id = id; inp.min = 0; inp.max = max; inp.step = 1; inp.value = value; inp.inputMode = 'numeric';
+      var out = el('span', 'w8-zhint muted', esc(hint));
+      row.appendChild(lab); row.appendChild(inp); row.appendChild(out);
+      box.appendChild(row);
+      return { inp: inp, out: out };
+    }
+    var rate = num('Battle chance each step, in 256', q.rate, 255, '');
+    function rateHint() { var r = Math.max(0, Math.min(255, Math.floor(Number(rate.inp.value) || 0))); rate.out.textContent = steps(r) + (q0 ? ', generated ' + q0.rate : ''); }
+    rateHint(); rate.inp.addEventListener('input', rateHint);
+    var tot = el('p', 'w8-ztotal muted');
+    if (!q.troops.length) box.appendChild(el('p', 'muted', 'This zone has no troops, so only its rate can change.'));
+    q.troops.forEach(function (t) {
+      var g0 = q0 && q0.troops.filter(function (x) { return x.troop === t.troop; })[0];
+      wid[t.troop] = num(nameOf(b, t.troop) + (t.troop === q.rare ? ' (rare slot)' : ''), t.weight, 64, '');
+      wid[t.troop].g0 = g0 ? g0.weight : null;
+    });
+    function totals() {
+      var sum = 0;
+      q.troops.forEach(function (t) { sum += Math.max(0, Math.floor(Number(wid[t.troop].inp.value) || 0)); });
+      q.troops.forEach(function (t) {
+        var v = Math.max(0, Math.floor(Number(wid[t.troop].inp.value) || 0));
+        wid[t.troop].out.textContent = (sum ? Math.round(v / sum * 100) : 0) + '% of battles' + (wid[t.troop].g0 != null ? ', generated ' + wid[t.troop].g0 : '');
+      });
+      tot.textContent = q.troops.length ? 'Weights add up to ' + sum + (sum === 16 ? ' sixteenths, as generated tables do.' : sum ? '; each troop fights in its share of the total.' : '. With every weight at 0 this zone never picks a troop.') : '';
+    }
+    q.troops.forEach(function (t) { wid[t.troop].inp.addEventListener('input', totals); });
+    totals();
+    box.appendChild(tot);
+    var row = el('div', 'btn-row');
+    row.appendChild(WORLD.ui.button('Save', 'check', 'btn-primary', function () {
+      var w = {};
+      q.troops.forEach(function (t) { w[t.troop] = wid[t.troop].inp.value; });
+      save(b, q.key, { rate: rate.inp.value, weights: w });
+    }));
+    if (q.overridden) row.appendChild(WORLD.ui.button('Back to generated', null, '', function () { save(b, q.key, null); }));
+    row.appendChild(WORLD.ui.button('Cancel', null, '', function () { ui.editing = null; Kit.rerender(); }));
+    box.appendChild(row);
+    return box;
+  }
+  function save(b, key, want) {
+    try {
+      var r = WORLD.zones.edit(b, key, want || {});
+      if (!r.ok) { Kit.ui.toast(r.message, 'error', 8000); return; }
+      ui.editing = null;
+      Kit.rerender();
+      Kit.ui.toast(r.override ? 'Zone saved: only the changes are stored, and the tables were applied again.' : 'Zone is back to its generated table.', 'ok');
+      var tr = document.querySelector('tr[data-zone="' + key.replace(/"/g, '\\"') + '"]');
+      if (tr && tr.scrollIntoView) tr.scrollIntoView({ block: 'center' });
+    } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+  }
+  // Wires a table's Edit buttons and puts the open form under its row.
+  function wire(b, wrap, list, base) {
+    Array.prototype.forEach.call(wrap.querySelectorAll('.w8-zedit'), function (bt) {
+      bt.addEventListener('click', function () {
+        ui.editing = ui.editing === bt.dataset.zone ? null : bt.dataset.zone;
+        Kit.rerender();
+        var f = document.querySelector('.w8-zform');
+        if (f && f.scrollIntoView) f.scrollIntoView({ block: 'nearest' });
+        var i = f && f.querySelector('input');
+        if (i) i.focus();
+      });
+    });
+    var q = list.filter(function (x) { return x.key === ui.editing; })[0];
+    if (!q) return;
+    var tr = Array.prototype.filter.call(wrap.querySelectorAll('tbody tr'), function (r) { return r.dataset.zone === q.key; })[0];
+    if (!tr) return;
+    var q0 = base ? base.field.concat(base.interior).filter(function (x) { return x.key === q.key; })[0] : null;
+    var er = el('tr', 'w8-zrow'), td = el('td');
+    td.colSpan = tr.children.length;
+    td.appendChild(editor(b, q, q0));
+    er.appendChild(td);
+    tr.parentNode.insertBefore(er, tr.nextSibling);
+  }
+
   function table(head, rows) {
     var t = el('table', 'tbl w8-enc');
-    t.innerHTML = '<thead><tr>' + head.map(function (h, k) { return '<th scope="col"' + (h.num ? ' class="num"' : '') + '>' + esc(h.t || h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody>';
+    t.innerHTML = '<thead><tr>' + head.map(function (h, k) { return '<th scope="col"' + (h.num ? ' class="num"' : '') + '>' + (h.sr ? '<span class="sr-only">' + esc(h.t) + '</span>' : esc(h.t || h)) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody>';
     var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t);
     return wrap;
   }
@@ -7203,6 +8289,9 @@ var ENGINE_WORLD = (function () {
     head.appendChild(row);
     host.appendChild(head);
     if (!z) return;
+    var all = z.field.concat(z.interior);
+    if (ui.editing && !all.some(function (q) { return q.key === ui.editing; })) ui.editing = null;
+    var base = ui.editing ? WORLD.zones.base(b) : null;
 
     if (z.warnings.length) {
       var wp = el('section', 'panel');
@@ -7218,23 +8307,27 @@ var ENGINE_WORLD = (function () {
     var rows = [];
     WORLD.chapters(b).forEach(function (c) {
       z.field.filter(function (q) { return q.chapter === c.id; }).sort(function (a, d) { return d.cells - a.cells || (a.key < d.key ? -1 : 1); }).forEach(function (q) {
-        rows.push('<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(nameOf(b, q.biome)) + '<small class="w8-sub">' + esc(chName(b, c.id) + ', ' + (c.continentLabel || 'Default')) + '</small></th>' +
+        rows.push('<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(nameOf(b, q.biome)) + edited(q) + '<small class="w8-sub">' + esc(chName(b, c.id) + ', ' + (c.continentLabel || 'Default')) + '</small></th>' +
           '<td class="num">' + q.cells + '</td><td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td>' +
-          '<td>' + esc(nameOf(b, q.background) || 'None') + '<small class="w8-sub">' + esc(nameOf(b, q.weather) || 'No weather') + '</small></td></tr>');
+          '<td>' + esc(nameOf(b, q.background) || 'None') + '<small class="w8-sub">' + esc(nameOf(b, q.weather) || 'No weather') + '</small></td>' + editBtn(q) + '</tr>');
       });
     });
-    fp.appendChild(table(['Zone', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background and weather'], rows));
+    var ft = table(['Zone', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background and weather', { t: 'Edit', sr: 1 }], rows);
+    wire(b, ft, z.field, base);
+    fp.appendChild(ft);
     host.appendChild(fp);
 
     // Interior zones.
     var ip = el('section', 'panel');
     ip.id = 'enc-interior';
     ip.appendChild(el('h3', 'section-h', 'Dungeon, castle, and cave floors'));
-    ip.appendChild(table(['Floor', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background'], z.interior.map(function (q) {
+    var it = table(['Floor', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background', { t: 'Edit', sr: 1 }], z.interior.map(function (q) {
       var m = WORLD.records.get(q.map, b);
-      return '<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(m ? m.name : q.map) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td class="num">' + q.cells + '</td>' +
-        '<td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td><td>' + esc(nameOf(b, q.background) || 'None') + '</td></tr>';
-    })));
+      return '<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(m ? m.name : q.map) + edited(q) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td class="num">' + q.cells + '</td>' +
+        '<td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td><td>' + esc(nameOf(b, q.background) || 'None') + '</td>' + editBtn(q) + '</tr>';
+    }));
+    wire(b, it, z.interior, base);
+    ip.appendChild(it);
     host.appendChild(ip);
 
     // Bosses and guardians.
@@ -7265,6 +8358,7 @@ var ENGINE_WORLD = (function () {
 
   WORLD.WS = WORLD.WS || {};
   WORLD.WS.encounters = { render: render };
+  WORLD.encountersUi = ui;
 })();
 // === WS:ENCOUNTERS END ===
 // === WS:VALIDATION BEGIN ===
@@ -7272,11 +8366,14 @@ var ENGINE_WORLD = (function () {
   'use strict';
   // The Validation tab. Phase 6: one pass or fail card per check (references, progression, map flags, encounter zones,
   // generation, records), each item with a Jump button, then the progression walk chapter by chapter and what the flag
-  // check read. Phase 7 polishes it; everything here reads Kit.validate and WORLD.checks, so it never disagrees with
-  // the badge or the Final gate.
+  // check read. Phase 7 polish: a row of jump links to the six cards with their status, failing cards first, Show all
+  // in place of a pointer to the panel, Show on map for any problem that names a cell (the World tab or the Sites tab
+  // centers on it and picks it), a Show button per chapter of the walk with why a chapter failed, and a way on to
+  // Export once the world is ready. Everything here reads Kit.validate and WORLD.checks, so it never disagrees with the
+  // badge or the Final gate.
   var U = Kit.util, el = U.el, esc = U.esc;
   function cur() { return Kit.bundle.current(); }
-  var SHOW = 8;
+  var SHOW = 8, ui = { open: {} };
   var CARDS = [
     { key: 'refs', title: 'References', lead: 'Every chapter, troop, biome, tileset, interior kind, battle background, music role, weather state, and person sprite the world names exists.' },
     { key: 'progression', title: 'Progression', lead: 'Each chapter, walking with only the keys earlier chapters gave, reaches all of its sites, and nothing of a later chapter opens early.' },
@@ -7302,12 +8399,26 @@ var ENGINE_WORLD = (function () {
     j.addEventListener('click', function () { Kit.jump(it.recordId, it.fieldPath); });
     return j;
   }
+  function mapBtn(it) {
+    if (it.at == null || !(it.check === 'flags' || it.check === 'progression') || !WORLD.showAt) return null;
+    var m = el('button', 'btn btn-ghost w8-jump w8-onmap', '<span>Show on map</span>');
+    m.type = 'button';
+    m.addEventListener('click', function () { WORLD.showAt(it.map || null, it.at); });
+    return m;
+  }
   function itemRow(it) {
     var row = el('li', 'w8-vitem', '<span class="chip chip-' + esc(it.level) + '">' + esc(it.level) + '</span><span class="w8-vmsg">' + esc(it.message) + '</span>');
-    var j = jumpBtn(it);
+    var m = mapBtn(it), j = jumpBtn(it);
+    if (m) row.appendChild(m);
     if (j) row.appendChild(j);
     return row;
   }
+  function stateOf(items, waiting) {
+    if (items.some(function (x) { return x.level === 'error' || x.level === 'broken'; })) return 'fail';
+    if (waiting && !items.length) return 'wait';
+    return items.length ? 'warn' : 'pass';
+  }
+  var RANK = { fail: 0, warn: 1, pass: 2, wait: 3 }, WORD = { fail: 'Fail', warn: 'Pass with warnings', pass: 'Pass', wait: 'Waiting' };
   function statusChip(items, waiting) {
     var bad = items.filter(function (x) { return x.level === 'error' || x.level === 'broken'; }).length, warn = items.filter(function (x) { return x.level === 'warning'; }).length;
     if (waiting && !items.length) return '<span class="chip chip-muted">Waiting</span>';
@@ -7324,7 +8435,8 @@ var ENGINE_WORLD = (function () {
       '<p class="w8-chips"><span class="chip chip-error">' + s.errors + ' errors</span><span class="chip chip-broken">' + s.broken + ' broken</span><span class="chip chip-warning">' + s.warnings + ' warnings</span><span class="chip chip-forward">' + s.forward + ' forward</span></p>';
     head.appendChild(el('p', 'msg ' + (why ? 'msg-error' : 'w8-msg-ok'), esc(why || 'Ready for a Final export: every check passes and the world is current.')));
     var row = el('div', 'btn-row');
-    row.appendChild(WORLD.ui.button('Check again', 'check', 'btn-primary', function () { Kit.rerender(); Kit.ui.toast('Checks run again.', 'ok'); }));
+    row.appendChild(WORLD.ui.button('Check again', 'check', why ? 'btn-primary' : '', function () { Kit.rerender(); Kit.ui.toast('Checks run again.', 'ok'); }));
+    if (!why) row.appendChild(WORLD.ui.button('Go to Export', 'export', 'btn-primary', function () { Kit.go('export'); }));
     row.appendChild(WORLD.ui.button('Open the validation panel', null, '', function () { Kit.openValidation(); }));
     head.appendChild(row);
     host.appendChild(head);
@@ -7333,15 +8445,34 @@ var ENGINE_WORLD = (function () {
     CARDS.forEach(function (c) { by[c.key] = []; });
     items.forEach(function (it) { by[cardOf(it)].push(it); });
     var waiting = { refs: !WORLD.count(b), progression: !st.owFresh, flags: !st.owFresh, zones: !st.zones, generation: !st.generated, records: false };
-    var grid = el('div', 'grid-cards w8-grid w8-vcards');
+    var states = {};
+    CARDS.forEach(function (c) { states[c.key] = stateOf(by[c.key], waiting[c.key]); });
+    // Jump links to the cards, in their usual order, each saying how its check stands.
+    var nav = el('nav', 'w8-vnav');
+    nav.setAttribute('aria-label', 'Checks');
     CARDS.forEach(function (c) {
-      var list = by[c.key], card = el('section', 'card w8-vcard', '<h3 class="section-h">' + esc(c.title) + '</h3><p class="w8-chips">' + statusChip(list, waiting[c.key]) + '</p><p class="muted w8-vlead">' + esc(c.lead) + '</p>');
+      var bad = by[c.key].filter(function (x) { return x.level === 'error' || x.level === 'broken'; }).length;
+      var a = el('a', 'w8-vpill w8-v-' + states[c.key], '<span class="w8-vpill-t">' + esc(c.title) + '</span><span class="w8-vpill-s">' + esc(states[c.key] === 'fail' ? 'Fail: ' + bad : WORD[states[c.key]]) + '</span>');
+      a.href = '#w8v-' + c.key;
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = document.getElementById('w8v-' + c.key);
+        if (t) { if (t.scrollIntoView) t.scrollIntoView({ block: 'start', behavior: 'smooth' }); t.focus({ preventScroll: true }); }
+      });
+      nav.appendChild(a);
+    });
+    host.appendChild(nav);
+    var grid = el('div', 'grid-cards w8-grid w8-vcards');
+    CARDS.slice().sort(function (a, c) { return RANK[states[a.key]] - RANK[states[c.key]] || CARDS.indexOf(a) - CARDS.indexOf(c); }).forEach(function (c) {
+      var list = by[c.key], card = el('section', 'card w8-vcard w8-v-' + states[c.key], '<h3 class="section-h">' + esc(c.title) + '</h3><p class="w8-chips">' + statusChip(list, waiting[c.key]) + '</p><p class="muted w8-vlead">' + esc(c.lead) + '</p>');
       card.dataset.check = c.key;
+      card.id = 'w8v-' + c.key;
+      card.tabIndex = -1;
       if (list.length) {
-        var ul = el('ul', 'w8-vlist');
-        list.slice(0, SHOW).forEach(function (it) { ul.appendChild(itemRow(it)); });
+        var ul = el('ul', 'w8-vlist'), all = !!ui.open[c.key];
+        list.slice(0, all ? list.length : SHOW).forEach(function (it) { ul.appendChild(itemRow(it)); });
         card.appendChild(ul);
-        if (list.length > SHOW) card.appendChild(el('p', 'muted', 'And ' + (list.length - SHOW) + ' more in the validation panel.'));
+        if (list.length > SHOW) card.appendChild(WORLD.ui.button(all ? 'Show fewer' : 'Show all ' + list.length, null, 'w8-vmore', function () { ui.open[c.key] = !all; Kit.rerender(); var t = document.getElementById('w8v-' + c.key); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'nearest' }); }));
       } else if (waiting[c.key]) {
         card.appendChild(el('p', 'muted', c.key === 'zones' ? 'Generate the encounter zones on the Encounters tab.' : c.key === 'refs' ? 'Nothing to check until the world has records.' : 'Generate the world (and keep it current) to run this check.'));
       }
@@ -7361,11 +8492,23 @@ var ENGINE_WORLD = (function () {
         (c.ship ? '<span class="chip chip-accent">Ship</span>' : '') + (c.airship ? '<span class="chip chip-accent">Airship</span>' : '');
       var okSites = c.sites.filter(function (x) { return x.ok; }).length, lock = c.lock;
       var lockTxt = !lock ? 'None' : lock.shut && lock.opens ? 'Shut, opens with the seal' : !lock.shut ? 'Opens early' : 'Stays shut';
-      return '<tr><th scope="row">' + esc(name) + '</th><td><span class="w8-chips w8-tight">' + hold + '</span></td><td class="num">' + okSites + ' of ' + c.sites.length + '</td><td>' + esc(lockTxt) + '</td><td>' + (c.sealed ? 'Yes' : '<span class="chip chip-error">No</span>') + '</td><td>' +
-        (c.ok ? '<span class="chip chip-ok">' + Kit.icon('check') + 'Pass</span>' : '<span class="chip chip-error">Fail</span>') + '</td></tr>';
+      var whys = [];
+      c.sites.forEach(function (x) { if (!x.ok) (x.why || []).forEach(function (m) { whys.push(m); }); });
+      return '<tr data-chapter="' + esc(c.chapter) + '"><th scope="row">' + esc(name) + '</th><td><span class="w8-chips w8-tight">' + hold + '</span></td><td class="num">' + okSites + ' of ' + c.sites.length + '</td><td>' + esc(lockTxt) + '</td><td>' + (c.sealed ? 'Yes' : '<span class="chip chip-error">No</span>') + '</td><td>' +
+        (c.ok ? '<span class="chip chip-ok">' + Kit.icon('check') + 'Pass</span>' : '<span class="chip chip-error">Fail</span>' + (whys.length ? '<small class="w8-sub w8-why">' + esc(whys.slice(0, 3).join(' ')) + '</small>' : '')) + '</td><td class="w8-zcell"></td></tr>';
     });
     var t = el('table', 'tbl w8-walk-tbl');
-    t.innerHTML = '<thead><tr><th scope="col">Chapter</th><th scope="col">Holding</th><th scope="col" class="num">Sites</th><th scope="col">Boss lock</th><th scope="col">Later sealed</th><th scope="col">Result</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+    t.innerHTML = '<thead><tr><th scope="col">Chapter</th><th scope="col">Holding</th><th scope="col" class="num">Sites</th><th scope="col">Boss lock</th><th scope="col">Later sealed</th><th scope="col">Result</th><th scope="col"><span class="sr-only">Show</span></th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+    // A Show button per chapter centers the World tab on where that chapter's region starts.
+    var owRec = WORLD.overworld.record(b);
+    Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function (tr) {
+      var reg = owRec && (owRec.regions || []).filter(function (r) { return r.chapter === tr.dataset.chapter; })[0];
+      if (!reg || !reg.anchor || !WORLD.showAt) return;
+      var x = el('button', 'btn w8-pick', 'Show');
+      x.type = 'button'; x.setAttribute('aria-label', 'Show this chapter\'s region on the map');
+      x.addEventListener('click', function () { WORLD.showAt(null, reg.anchor.slice()); });
+      tr.lastChild.appendChild(x);
+    });
     var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); pp.appendChild(wrap);
     var fs = w.flags.stats;
     pp.appendChild(el('p', 'muted w8-flagstats', 'The flag check read ' + fs.cells + ' cells on ' + fs.maps + ' maps: ' + fs.walls + ' walls and ridges, ' + fs.doors + ' doors, ' + fs.counters + ' counters, and ' + fs.floors + ' floor cells, in ' + w.ms.flags + ' ms; the walk took ' + w.ms.progression + ' ms.'));
@@ -7784,7 +8927,7 @@ var ENGINE_WORLD = (function () {
   Kit.mount('start', { title: 'Start', icon: 'scroll', canEnter: function () { return true; }, render: renderStart });
   LATER.forEach(function (t) {
     var real = WORLD.WS && WORLD.WS[t[0]];
-    Kit.mount(t[0], { title: t[1], icon: t[2], canEnter: ready, focus: real && real.focus,
+    Kit.mount(t[0], { title: t[1], icon: t[2], canEnter: ready, focus: real && real.focus, onLeave: real && real.onLeave,
       render: real ? real.render : function (h) { h.appendChild(Kit.ui.stub({ title: t[1], lead: t[3], status: 'Arrives in ' + t[4] + '.', icon: t[2] })); } });
   });
   Kit.mount('export', { title: 'Export', icon: 'export', canEnter: ready, render: renderExport });

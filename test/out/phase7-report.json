@@ -1,0 +1,354 @@
+{
+  "when": "2026-10-02T15:41:05.725Z",
+  "pass": 68,
+  "total": 68,
+  "results": [
+    {
+      "name": "overworld.paint is exported and the engine stays frozen",
+      "ok": true
+    },
+    {
+      "name": "nothing to paint returns the very same map",
+      "ok": true
+    },
+    {
+      "name": "a free land cell takes the new biome; the copy names the painted cell, keeps the map as built, and changes the digest",
+      "ok": true
+    },
+    {
+      "name": "only the ground array is copied: every other layer is shared and untouched",
+      "ok": true
+    },
+    {
+      "name": "the painted digest is identical in two vm contexts and the plain context",
+      "ok": true,
+      "detail": [
+        "bbc091a8-68ed8998:59",
+        "bbc091a8-68ed8998:59",
+        "bbc091a8-68ed8998:59"
+      ]
+    },
+    {
+      "name": "build with spec.paint equals paint after build (same digest, same painted cell)",
+      "ok": true
+    },
+    {
+      "name": "every refusal has its code: paint-key, paint-bounds, paint-biome, paint-water, and paint-structure for a ridge, a gate, and a stamp",
+      "ok": true,
+      "detail": [
+        "paint-biome",
+        "paint-bounds",
+        "paint-key",
+        "paint-structure",
+        "paint-structure",
+        "paint-structure",
+        "paint-water"
+      ]
+    },
+    {
+      "name": "water cannot be painted onto land (paint-swim)",
+      "ok": true
+    },
+    {
+      "name": "a wall on the start or a site front is refused (paint-front), while walkable ground there is fine",
+      "ok": true,
+      "detail": [
+        {
+          "at": [
+            155,
+            148
+          ],
+          "biome": "til_mountains_fh2q",
+          "code": "paint-front",
+          "message": "Cell 155,148 is where play starts or stands before a site, so it can only take walkable ground."
+        }
+      ]
+    },
+    {
+      "name": "walling in a site is refused at the last open cell (paint-blocks, naming the walk problem) and every other cell is kept",
+      "ok": true,
+      "detail": {
+        "ring": [
+          30855,
+          30857,
+          31080
+        ],
+        "sk": [
+          {
+            "at": [
+              169,
+              137
+            ],
+            "biome": "til_mountains_fh2q",
+            "code": "paint-blocks",
+            "message": "Painting cell 169,137 with til_mountains_fh2q would break the walk: dgn|chp_the_lowlands_auem|key cannot be reached in its chapter."
+          }
+        ]
+      }
+    },
+    {
+      "name": "the painted map still passes the engine's own check",
+      "ok": true
+    },
+    {
+      "name": "a map that failed its own checks is never painted",
+      "ok": true
+    },
+    {
+      "name": "the paint code keeps the determinism rules (no Math.random, Date, for in, or Object.keys)",
+      "ok": true
+    },
+    {
+      "name": "the page has no Web Worker here, so builds run on the main thread (async false, nothing made)",
+      "ok": true
+    },
+    {
+      "name": "an empty painted set leaves the hash as it always was, and the record has no paint field",
+      "ok": true
+    },
+    {
+      "name": "prefetch without a worker resolves the current map at once",
+      "ok": true
+    },
+    {
+      "name": "the page builds the same overworld digest as the engine (four, seed 42)",
+      "ok": true
+    },
+    {
+      "name": "paint stores the cell in world.overrides.cells, updates the cached map without a rebuild, and moves the hash",
+      "ok": true
+    },
+    {
+      "name": "painting a ridge is refused with the engine's reason and stores nothing",
+      "ok": true
+    },
+    {
+      "name": "painting a wall in front of the start town is refused (paint-front) and stores nothing",
+      "ok": true,
+      "detail": "Cell 155,148 is where play starts or stands before a site, so it can only take walkable ground."
+    },
+    {
+      "name": "through the page, walling in the key dungeon is refused at the last open cell (paint-blocks) and only the others are stored",
+      "ok": true,
+      "detail": [
+        "ok",
+        "ok",
+        "paint-blocks"
+      ]
+    },
+    {
+      "name": "storing the painted map writes record.paint {cells 1, skipped none}, regenerates interiors and zones current, and validates clean but the Marches warning",
+      "ok": true,
+      "detail": [
+        "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
+      ]
+    },
+    {
+      "name": "the walks of Phase 6 read the painted ground",
+      "ok": true
+    },
+    {
+      "name": "IDs never move when a cell is painted",
+      "ok": true
+    },
+    {
+      "name": "a stored painted cell the engine cannot apply is listed in record.paint.skipped and is a warning, never an error",
+      "ok": true
+    },
+    {
+      "name": "clearing a painted cell removes it; unpaint removes the rest and says how many",
+      "ok": true
+    },
+    {
+      "name": "with every paint cleared the hash is the original again and nothing is stale",
+      "ok": true
+    },
+    {
+      "name": "zones.cellKeys covers every cell and agrees with cellKey (water, walls, and stamps have none)",
+      "ok": true
+    },
+    {
+      "name": "an edit equal to the generated table stores nothing",
+      "ok": true
+    },
+    {
+      "name": "an edit stores only what differs (the rate and one weight), applies at once, and the stored table shows it marked overridden",
+      "ok": true
+    },
+    {
+      "name": "zones.base still gives the generated table under the edit",
+      "ok": true
+    },
+    {
+      "name": "an unknown zone is refused",
+      "ok": true
+    },
+    {
+      "name": "every weight at 0 with a rate above 0 is a warning that names the zone and never blocks Final",
+      "ok": true
+    },
+    {
+      "name": "an edit naming a zone the world no longer has is a warning",
+      "ok": true
+    },
+    {
+      "name": "Back to generated removes the override and the table is the generated one again",
+      "ok": true
+    },
+    {
+      "name": "a continent radius moves the hash and marks the map out of date; the engine reads it",
+      "ok": true
+    },
+    {
+      "name": "removing it brings the stored map back to current",
+      "ok": true
+    },
+    {
+      "name": "the zoom ladder is whole device pixels a cell, below the tile size then whole multiples of it",
+      "ok": true
+    },
+    {
+      "name": "tile size comes from the Charter specs as Day 147 reads it (16 here) and the master palette has entries",
+      "ok": true
+    },
+    {
+      "name": "every continent of the fixture has its field:<slug> track, found the way the player finds it",
+      "ok": true
+    },
+    {
+      "name": "without Web Audio, Play says so instead of throwing",
+      "ok": true
+    },
+    {
+      "name": "World: seven overlays (Tiles first and chosen), Sites and Gates toggles, the viewer naming the 224 by 224 map, and zoom buttons of 44 px by style",
+      "ok": true
+    },
+    {
+      "name": "World: the inspector invites a tap, and the Continents card has three sliders and a field music button per continent",
+      "ok": true
+    },
+    {
+      "name": "World: every region and gate has a Show button",
+      "ok": true
+    },
+    {
+      "name": "choosing Zones redraws with the zone overlay and a legend of zones by biome and chapter",
+      "ok": true
+    },
+    {
+      "name": "moving a continent slider writes the sparse setting and the tab offers Store changes",
+      "ok": true
+    },
+    {
+      "name": "Reset removes the continent's settings and the map is current again",
+      "ok": true
+    },
+    {
+      "name": "Show on map opens the World tab with that cell picked and the inspector reading it, with its paint controls",
+      "ok": true
+    },
+    {
+      "name": "the inspector's Paint button paints the cell, marks the chip, and offers Clear paint",
+      "ok": true
+    },
+    {
+      "name": "Clear all removes every painted cell",
+      "ok": true
+    },
+    {
+      "name": "Sites: Tiles and Exits toggles, the viewer on the site with its floor, and a readout of the tapped cell",
+      "ok": true
+    },
+    {
+      "name": "Show on map with an interior map opens the Sites tab on that site and floor, the cell picked and read",
+      "ok": true
+    },
+    {
+      "name": "Encounters: one Edit button per zone, and the edited zone wears an Edited chip",
+      "ok": true
+    },
+    {
+      "name": "Edit opens the form under its row: the rate and one weight per troop, with the generated values beside them",
+      "ok": true
+    },
+    {
+      "name": "Back to generated in the form removes the override and closes it",
+      "ok": true
+    },
+    {
+      "name": "Save in the form stores the new rate only",
+      "ok": true
+    },
+    {
+      "name": "Validation: six jump links naming each check's state, failing or warned cards first, a Show button per chapter, and Go to Export when ready",
+      "ok": true
+    },
+    {
+      "name": "a flag fault puts its card first with Fail, and its item offers Show on map",
+      "ok": true,
+      "detail": "Map flagsFail: 25Every tile resolves in the art and blocks, opens, or triggers the way play needs.errorA site wall on the overworld can be walked through. (95 cells)Show on mapJumperrordgn|chp_the_far"
+    },
+    {
+      "name": "the flag fault items carry their map and cell",
+      "ok": true
+    },
+    {
+      "name": "Show on map follows the item: an overworld fault opens the World tab on its cell",
+      "ok": true
+    },
+    {
+      "name": "and an interior fault (map named <site key>|<floor>) opens the Sites tab on that site and floor with the cell picked",
+      "ok": true
+    },
+    {
+      "name": "no card needs Show all on a clean world",
+      "ok": true
+    },
+    {
+      "name": "prior namespaces are untouched by everything this phase does (the givers aside, as in Phase 5)",
+      "ok": true
+    },
+    {
+      "name": "Final is allowed with a painted cell and a zone edit, and the bundle carries both",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Day 146 opens it with every namespace identical, 0 errors, 0 broken, 0 forward",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "fwd": 0,
+        "diff": []
+      }
+    },
+    {
+      "name": "Day 147 opens it with every namespace identical, 0 errors, 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "the exported engine-world.js carries overworld.paint, so Day 150 regenerates painted worlds from the bundle",
+      "ok": true
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

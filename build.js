@@ -43,8 +43,8 @@ const engineBase = R('src/engine-world.js');
 if (engineBase.split(FREEZE).length !== 2) throw new Error('ENGINE:WORLD freeze marker not found exactly once.');
 const engineWorld = engineBase.replace(FREEZE, () => ENGINE_SECTIONS.map((f) => R(f).replace(/\s+$/, '') + '\n\n').join('') + FREEZE).trim();
 // Workspace fences arrive with later phases; each is optional until its phase.
-const CSS_FENCES = ['src/world-map.css', 'src/world-sites.css', 'src/world-encounters.css', 'src/world-validation.css'].filter(exists);
-const JS_FENCES = ['src/world-generate.js', 'src/world-checks.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
+const CSS_FENCES = ['src/world-viewer.css', 'src/world-map.css', 'src/world-sites.css', 'src/world-encounters.css', 'src/world-validation.css'].filter(exists);
+const JS_FENCES = ['src/world-generate.js', 'src/world-checks.js', 'src/world-viewer.js', 'src/world-audio.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
 
 const html = `<!--
 ${buildLog.trim()}

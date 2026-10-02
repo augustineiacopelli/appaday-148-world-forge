@@ -1,7 +1,8 @@
   // ---------------------------------------------------------------- overworld (Phase 3)
   // Continents, climate, regions, gates, and site stamps, drawn around a progression graph already proven solvable.
   // build(spec) -> overworld. spec: {seed, settings (world.settings), graph (Phase 2), minutes {chp: target minutes},
-  // palette (palette(art, table) below)}. Pure: the art arrives as plain data and nothing outside the spec is read.
+  // palette (palette(art, table) below), paint (optional painted cells, see paint below)}. Pure: the art arrives as
+  // plain data and nothing outside the spec is read.
   //
   // Movement is four way. A cell's walkability comes from its tile flags (bit 1 passable, bit 4 swim), except that a
   // gate cell (overlay) is walkable exactly when every key it requires is held, and a site's entrance is never walked
@@ -556,7 +557,60 @@
       if (last.ok) break;
     }
     last.attempts = last.attempt + 1;
-    return last;
+    return spec.paint && last.ok ? owPaint(last, spec.paint, spec.graph) : last;
+  }
+
+  // ---------------------------------------------------------------- painted cells (Phase 7)
+  // paint(ow, cells, graph) -> a copy of a built map with sparse ground overrides: cells {'x,y': biome tileset ID}, the
+  // shape of world.overrides.cells. Only free land may be painted (owned by a continent, not a wall, gate, stamp, or
+  // door, no decoration), and only with a biome of the palette that is not water, because painting sea onto land
+  // would change what the sea and the lakes are. Cells apply in sorted key order. If the painted map fails the
+  // progression check, each cell is tried in that order and kept only while the check still passes, so a paint can
+  // never break sequence. The copy carries painted [cell index], skipped [{at [x, y], biome, code, message}], and
+  // unpainted (the map as built). A map with nothing to paint, or one that failed its own checks, is returned as is.
+  function owPaint(ow, cells, g) {
+    var ks = keys(cells || {});
+    if (!ks.length || !ow.ok) return ow;
+    // Where play stands still: the start, every site's front, and every boss approach. These may only take passable
+    // ground, because the walk seeds from the start and treats a front as a goal, so a wall there would not show up as
+    // a broken walk (Phase 6's flag check would catch it, later).
+    var stand = {};
+    if (ow.start != null) stand[ow.start] = 1;
+    ow.sites.forEach(function (s) { stand[s.front] = 1; if (s.approach != null) stand[s.approach] = 1; });
+    var good = [], skipped = [];
+    ks.forEach(function (k) {
+      var m = /^(\d+),(\d+)$/.exec(k), id = cells[k];
+      function skip(code, msg) { skipped.push({ at: m ? [Number(m[1]), Number(m[2])] : k, biome: id, code: code, message: msg }); }
+      if (!m) return skip('paint-key', 'Painted cell ' + k + ' is not written as x,y.');
+      var x = Number(m[1]), y = Number(m[2]), i = y * ow.w + x;
+      if (x >= ow.w || y >= ow.h) return skip('paint-bounds', 'Painted cell ' + k + ' lies outside the ' + ow.w + ' by ' + ow.h + ' map.');
+      if (typeof id !== 'string' || id.indexOf(':') >= 0 || ow.flags[id] === undefined) return skip('paint-biome', 'Cell ' + k + ' is painted with ' + id + ', which is not a biome tileset of this art.');
+      if (ow.owner[i] < 0) return skip('paint-water', 'Cell ' + k + ' is sea or lake; only land can be painted.');
+      if (ow.st[i] !== ST_FREE || ow.deco[i]) return skip('paint-structure', 'Cell ' + k + ' belongs to a ridge, sea ring, gate, or site, which the world needs as generated.');
+      if ((ow.flags[id] | 0) & 4) return skip('paint-swim', 'Cell ' + k + ' cannot be painted with ' + id + ': water cannot be painted onto land.');
+      if (stand[i] && !((ow.flags[id] | 0) & 1)) return skip('paint-front', 'Cell ' + k + ' is where play starts or stands before a site, so it can only take walkable ground.');
+      good.push({ k: k, i: i, id: id });
+    });
+    function make(list) {
+      var o = {}, gr = ow.ground.slice();
+      keys(ow).forEach(function (f) { o[f] = ow[f]; });
+      list.forEach(function (c) { gr[c.i] = c.id; });
+      o.ground = gr; o.painted = list.map(function (c) { return c.i; }); o.unpainted = ow;
+      return o;
+    }
+    var out = make(good), bad = good.length ? owCheck(out, g) : [];
+    if (bad.length) {
+      var kept = [];
+      good.forEach(function (c) {
+        var p = owCheck(make(kept.concat([c])), g);
+        if (p.length) skipped.push({ at: [c.i % ow.w, Math.floor(c.i / ow.w)], biome: c.id, code: 'paint-blocks', message: 'Painting cell ' + c.k + ' with ' + c.id + ' would break the walk: ' + p[0].message });
+        else kept.push(c);
+      });
+      out = make(kept);
+    }
+    out.skipped = skipped;
+    out.digest = mapDigest(out);
+    return out;
   }
 
   // ---------------------------------------------------------------- walking the map
@@ -609,5 +663,5 @@
   }
   // Refs of a site stamp, for a caller that wants to draw a marker without rebuilding.
   W.overworld = { DEFAULTS: OW_DEFAULTS, ST: { FREE: ST_FREE, WALL: ST_WALL, GATE: ST_GATE, STAMP: ST_STAMP, DOOR: ST_DOOR }, CLS: { WATER: CLS_WATER, STRIP: CLS_STRIP, INNER: CLS_INNER },
-    settings: owSettings, size: owSize, palette: owPalette, build: owBuild, reach: owReach, walkable: owWalkable, check: owCheck,
+    settings: owSettings, size: owSize, palette: owPalette, build: owBuild, paint: owPaint, reach: owReach, walkable: owWalkable, check: owCheck,
     grid: { bfs: bfs, components: components, largest: largest, nb4: nb4 } };

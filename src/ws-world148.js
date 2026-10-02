@@ -406,7 +406,7 @@
   Kit.mount('start', { title: 'Start', icon: 'scroll', canEnter: function () { return true; }, render: renderStart });
   LATER.forEach(function (t) {
     var real = WORLD.WS && WORLD.WS[t[0]];
-    Kit.mount(t[0], { title: t[1], icon: t[2], canEnter: ready, focus: real && real.focus,
+    Kit.mount(t[0], { title: t[1], icon: t[2], canEnter: ready, focus: real && real.focus, onLeave: real && real.onLeave,
       render: real ? real.render : function (h) { h.appendChild(Kit.ui.stub({ title: t[1], lead: t[3], status: 'Arrives in ' + t[4] + '.', icon: t[2] })); } });
   });
   Kit.mount('export', { title: 'Export', icon: 'export', canEnter: ready, render: renderExport });

@@ -6,4 +6,15 @@
 .w8-troop b { font-weight: 700; color: var(--ink2); }
 .w8-troop.w8-rare { border-color: var(--accent2); }
 .w8-troop.w8-rare b { color: var(--accent2); }
+.w8-zcell { width: 1%; white-space: nowrap; }
+.w8-zedit[aria-expanded="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.w8-zrow > td { background: var(--panel2); padding: 12px; }
+.w8-zform { position: sticky; left: 12px; width: min(100%, calc(100vw - 72px)); min-width: 0; white-space: normal; }
+.w8-zform-h { margin: 0 0 8px; font-size: 1rem; }
+.w8-zfield { display: grid; grid-template-columns: 1fr; gap: 4px 12px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.w8-zfield label { font-weight: 600; color: var(--ink2); overflow-wrap: anywhere; }
+.w8-znum { width: 7.5em; min-height: 44px; font-variant-numeric: tabular-nums; }
+.w8-zhint { font-size: .88rem; }
+@media (min-width: 720px) { .w8-zfield { grid-template-columns: minmax(10em, 1.4fr) 8em 1.6fr; } }
+.w8-ztotal { margin: 8px 0 10px; font-size: .9rem; }
 /* === WORLD:ENCOUNTERS CSS END === */

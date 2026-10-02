@@ -1,10 +1,10 @@
 {
-  "when": "2026-10-02T15:02:04.872Z",
+  "when": "2026-10-02T15:39:57.100Z",
   "pass": 61,
   "total": 61,
   "timing": {
-    "demo": 52,
-    "four": 166
+    "demo": 40,
+    "four": 117
   },
   "digest42": "7b62a757-68ed8998:59",
   "results": [
@@ -280,11 +280,11 @@
       "ok": true
     },
     {
-      "name": "generation time in a plain context: demo 52 ms, four 166 ms (under 1500 ms)",
+      "name": "generation time in a plain context: demo 40 ms, four 117 ms (under 1500 ms)",
       "ok": true,
       "detail": {
-        "demo": 52,
-        "four": 166
+        "demo": 40,
+        "four": 117
       }
     },
     {
@@ -407,7 +407,7 @@
       "detail": "WorldThe overworld grows from the seed around the progression graph: continents sized by their chapters' minutes, climate bands matched to biome tilesets, a mountain ridge with one pass between chapte"
     },
     {
-      "name": "five overlay buttons as a radio group, Biome checked, each at least 44 px tall by style",
+      "name": "seven overlay buttons as a radio group, Tiles checked, each at least 44 px tall by style",
       "ok": true
     },
     {

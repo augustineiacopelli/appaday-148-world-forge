@@ -235,7 +235,8 @@ function worldFor(ctx, b, seed, settings) {
   check('clearing it hands the quest back to a resident chosen here', WORLD.records.get(b.rules.sdq_[q0].giver).role === 'resident' && b.world.zones.givers[q0] === b.rules.sdq_[q0].giver && !WORLD.records.get(elder.id).quests);
   // The World and Sites tabs carry the zones along once they exist.
   b.world.seed = 44; Kit.bundle.touch('seed'); Kit.go('world'); await wait(30);
-  Array.prototype.find.call(d.getElementById('ws').querySelectorAll('button'), (x) => /Generate again/.test(x.textContent)).click(); await wait(60);
+  // Phase 7: the World tab's button reads Store changes while the map on screen is newer than the stored one.
+  Array.prototype.find.call(d.getElementById('ws').querySelectorAll('button'), (x) => /Generate again|Store changes/.test(x.textContent)).click(); await wait(60);
   check('Generate again on the World tab regenerates the interiors and the zones with it', !WORLD.interiors.stale() && !WORLD.zones.stale());
   b.world.seed = 42; Kit.bundle.touch('seed'); Kit.go('sites'); await wait(30);
   Array.prototype.find.call(d.getElementById('ws').querySelectorAll('button'), (x) => /Generate again/.test(x.textContent)).click(); await wait(60);

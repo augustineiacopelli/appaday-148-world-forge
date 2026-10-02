@@ -90,6 +90,7 @@
     if (p.id) o.id = p.id;
     if (p.chapter) o.chapter = p.chapter;
     if (p.map) o.map = p.map;
+    if (p.at != null) o.at = p.at;
     return o;
   }
 
@@ -163,6 +164,11 @@
     go: function (id) {
       var b = cur(), rec = WORLD.records.get(id, b), key = siteKeyOf(b, rec);
       if (key && WORLD.sitesUi) { WORLD.sitesUi.site = key; WORLD.sitesUi.floor = rec && rec.floor ? rec.floor : 1; return Kit.go('sites'); }
+      // Phase 7: a region opens the World tab centered on where its chapter starts walking.
+      if (rec && Kit.ids.prefixOf(id) === 'reg_' && WORLD.worldUi) {
+        var ow = WORLD.overworld.record(b), r2 = ow && (ow.regions || []).filter(function (x) { return x.region === id; })[0];
+        if (r2 && r2.anchor) WORLD.worldUi.focus = r2.anchor.slice();
+      }
       if (rec) return Kit.go('world');
       return Kit.go('validation');
     }

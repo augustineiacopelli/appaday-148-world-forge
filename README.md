@@ -14,9 +14,9 @@ Live: https://augustineiacopelli.github.io/appaday-148-world-forge/ (add `?dev=1
 | 3 | Continents and the overworld: climate, regions, ridges and passes, sea rings and landings, locks, site stamps, the map_ record, the World tab | Done |
 | 4 | Interiors: towns, BSP dungeons and castles, caves, map_ per floor, npc_ per person, two way exits, the Sites tab | Done |
 | 5 | Encounter zones per continent, chapter, and biome, one per dungeon and cave floor, bosses and guardians, side quest givers, the Encounters tab | Done |
-| 6 | Validation | Next |
-| 7 | Interface | |
-| 8 | Export and ship | |
+| 6 | Validation: references, the per chapter walk, map flags, zones, the Final gate, the Validation tab | Done |
+| 7 | Interface: tile previews with pan and pinch, overlays, the tap inspector and painted cells, per continent controls, editable zones, field music, the Web Worker | Done |
+| 8 | Export and ship | Next |
 
 `src/build-log.txt` records every decision; it is also the comment at the top of `index.html`.
 
@@ -28,7 +28,7 @@ Clone this repo next to `appaday-146-saga-forge` and `appaday-147-art-and-audio-
 node build.js
 cd test && npm install
 node make-demo.js   # only when the fixtures need rebuilding from Day 147
-node phase0.js && node phase1.js && node phase2.js && node phase3.js && node phase4.js && node phase5.js
+node phase0.js && node phase1.js && node phase2.js && node phase3.js && node phase4.js && node phase5.js && node phase6.js && node phase7.js
 ```
 
 `test/layout.js` audits every view at 390 and 1280 wide in headless Chromium. Playwright is not in package.json: install a version that matches the local Chromium build in a scratch folder and run with `NODE_PATH` pointing at its node_modules (and `PLAYWRIGHT_BROWSERS_PATH` if the browsers live elsewhere).

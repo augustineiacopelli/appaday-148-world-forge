@@ -2,10 +2,12 @@
 (function () {
   'use strict';
   // The Sites tab. Phase 4: generate every interior, list the towns, dungeons, castles, and caves by chapter, and preview
-  // any floor one cell to a pixel with its exits, chests, locks, bosses, and people marked. Phase 7 adds the tile
-  // preview (tiles.drawMap) and the exits overlay on top of the real tiles.
+  // any floor one cell to a pixel with its exits, chests, locks, bosses, and people marked. Phase 7: the preview is the
+  // shared viewer drawing the real tiles through tiles.drawMap (people as their npc:<archetype> sprites between the two
+  // tile layers), with the exits overlay on top (ways out, stairs, the locked door, the boss, chests), a Plan view in
+  // flat colors, and a readout of any tapped cell.
   var U = Kit.util, el = U.el, esc = U.esc;
-  var ui = { site: null, floor: 1 };
+  var ui = { site: null, floor: 1, tiles: true, marks: true, view: {}, focus: null };
   var KIND_LABEL = { town: 'Town', dungeon: 'Dungeon', castle: 'Castle', cave: 'Cave' };
   var TILE_C = { wall: '#3a332e', floor: null, door: '#9a6a34', stairs: '#e8d48a', counter: '#b0643a', table: '#7a5636', barrel: '#6e4a2a', bed: '#b25a6a',
     shelf: '#5e4630', rug: '#a8473f', plant: '#3f8a4a', lintel: '#9a6a34', arch: '#9a6a34', pillar: '#8c8c94', torch: '#f0983c', chest: '#f5c542', channel: '#3a78c8', spikes: '#c0c0c8' };
@@ -38,23 +40,49 @@
     if (k === 'floor') return FLOOR_C[kind] || '#888';
     return TILE_C[k] || '#888';
   }
-  function draw(cv, fl, site, b) {
-    var ctx = cv.getContext && cv.getContext('2d');
-    if (!ctx) return false;
-    ctx.imageSmoothingEnabled = false;
-    for (var y = 0; y < fl.h; y++) {
-      var run = 0, col = null;
-      for (var x = 0; x <= fl.w; x++) {
-        var c = x < fl.w ? colorAt(fl, y * fl.w + x, site.kind, b) : null;
-        if (c !== col) { if (col) { ctx.fillStyle = col; ctx.fillRect(x - run, y, run, 1); } col = c; run = 0; }
-        run++;
+  // Markers in device pixels: exits and stairs (cyan, an arrow toward the way out), the locked door (magenta), the
+  // boss (red), chests (gold), and people (white) when their sprite was not drawn or the plan view is on.
+  function overlayFn(fl, site, people) {
+    return function (ctx, v) {
+      if (!ui.marks) return;
+      var s = v.s, w = fl.w, lw = Math.max(1, Math.round(v.d)), big = s >= 8;
+      function at(i) { return [v.ox + (i % w) * s, v.oy + Math.floor(i / w) * s]; }
+      function ring(i, c) {
+        var p = at(i);
+        if (!big) { ctx.fillStyle = c; ctx.fillRect(p[0], p[1], s, s); return; }
+        ctx.lineWidth = lw * 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.strokeRect(p[0] + lw, p[1] + lw, s - 2 * lw, s - 2 * lw);
+        ctx.lineWidth = lw * 2; ctx.strokeStyle = c; ctx.strokeRect(p[0] + lw, p[1] + lw, s - 2 * lw, s - 2 * lw);
       }
-    }
-    function dot(i, c) { ctx.fillStyle = c; ctx.fillRect(i % fl.w, Math.floor(i / fl.w), 1, 1); }
-    fl.features.forEach(function (ft) { if (MARK[ft.kind]) dot(ft.at, MARK[ft.kind]); });
-    fl.exits.forEach(function (ex) { dot(ex.at, MARK.exit); });
-    site.npcs.forEach(function (p) { if (p.floor === fl.floor) dot(p.at, MARK.npc); });
-    return true;
+      fl.exits.forEach(function (ex) {
+        ring(ex.at, MARK.exit);
+        if (big && ex.kind === 'overworld') {
+          var p = at(ex.at), m = Math.round(s / 2), a = Math.max(2, Math.round(s / 5));
+          ctx.fillStyle = MARK.exit;
+          for (var k = 0; k < a; k++) ctx.fillRect(p[0] + m - k - lw, p[1] + s - a - lw * 2 + k, 2 * k + 2 * lw, lw);
+        }
+      });
+      fl.features.forEach(function (ft) {
+        if (ft.kind === 'chest') { var p = at(ft.at), q = big ? Math.round(s / 4) : 0; ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p[0] + q - lw, p[1] + q - lw, s - 2 * q + 2 * lw, Math.max(lw, Math.round((s - 2 * q) / 2)) + 2 * lw); ctx.fillStyle = TILE_C.chest; ctx.fillRect(p[0] + q, p[1] + q, s - 2 * q, Math.max(lw, Math.round((s - 2 * q) / 2))); }
+        else if (MARK[ft.kind]) ring(ft.at, MARK[ft.kind]);
+      });
+      people.forEach(function (p) {
+        if (v.tiles && p.drawn) return;
+        var q = at(p.at), m = big ? Math.round(s / 3) : 0;
+        ctx.fillStyle = '#000000'; ctx.fillRect(q[0] + m - lw, q[1] + m - lw, s - 2 * m + 2 * lw, s - 2 * m + 2 * lw);
+        ctx.fillStyle = MARK.npc; ctx.fillRect(q[0] + m, q[1] + m, s - 2 * m, s - 2 * m);
+      });
+    };
+  }
+  function cellText(b, fl, site, x, y) {
+    var i = y * fl.w + x, g = fl.ground[i], d = fl.deco[i], parts = [];
+    function nm(ref) { ref = String(ref || ''); var k = ref.indexOf(':'), til = b.art.records.til_ && b.art.records.til_[k < 0 ? ref : ref.slice(0, k)]; return k < 0 ? (til ? til.name : ref) : ref.slice(k + 1); }
+    parts.push(nm(g) + (d ? ' under ' + nm(d) : ''));
+    var flags = ENGINE_RENDER.tiles.flagsAt(b.art, fl, x, y);
+    parts.push(flags & 1 ? (flags & 2 ? 'walkable, random battles' : 'walkable') : 'blocked');
+    fl.exits.forEach(function (ex) { if (ex.at === i) parts.push(ex.kind === 'overworld' ? 'way out to the overworld' : 'stairs ' + ex.kind + ' to floor ' + ex.toFloor); });
+    fl.features.forEach(function (ft) { if (ft.at === i) parts.push(ft.kind === 'lock' ? 'the locked door' : ft.kind === 'boss' ? 'the boss' + (ft.troop ? ' (' + ft.troop + ')' : ', slot empty for Day 149') : ft.kind === 'chest' ? (ft.prize ? 'the prize chest' : ft.item ? 'the key chest' : 'a treasure chest') : ft.kind); });
+    site.npcs.forEach(function (p) { if (p.floor === fl.floor && p.at === i) parts.push('a ' + p.archetype + (p.building ? ' in the ' + placeLabel(p.building).toLowerCase() : '')); });
+    return 'Cell ' + x + ', ' + y + ': ' + parts.join('; ') + '.';
   }
   function legend(site) {
     var items = [[FLOOR_C[site.kind], 'Floor'], [TILE_C.wall, 'Wall'], [TILE_C.door, 'Door'], [MARK.exit, 'Exit']];
@@ -87,15 +115,29 @@
       });
       var bar = el('div', 'w8-owbar'); bar.appendChild(seg); card.appendChild(bar);
     }
-    var fig = el('figure', 'w8-imap'), cv = el('canvas');
-    cv.width = fl.w; cv.height = fl.h;
-    cv.style.aspectRatio = fl.w + ' / ' + fl.h;
-    cv.setAttribute('role', 'img');
-    cv.setAttribute('aria-label', (rec ? rec.name : s2.key) + ', floor ' + fl.floor + ', ' + fl.w + ' by ' + fl.h + ' cells');
-    cv.dataset.site = s2.key; cv.dataset.floor = String(fl.floor);
-    cv.dataset.drawn = draw(cv, fl, site, b) ? '1' : '0';
-    fig.appendChild(cv);
+    var bar2 = el('div', 'w8-owbar');
+    bar2.appendChild(WORLD.ui.toggle('Tiles', ui.tiles, function (on) { ui.tiles = on; Kit.rerender(); }));
+    bar2.appendChild(WORLD.ui.toggle('Exits and marks', ui.marks, function (on) { ui.marks = on; if (vw) vw.redraw(); }));
+    card.appendChild(bar2);
+    var spr = WORLD.interiors.sprites(b), people = site.npcs.filter(function (p) { return p.floor === fl.floor; }).map(function (p) { return { at: p.at, spr: spr[p.archetype] || null, dir: p.facing || 'down', drawn: false }; });
+    var fig = el('figure', 'w8-imap'), readout = el('p', 'w8-cellread muted', 'Tap a cell to read it.');
+    readout.setAttribute('aria-live', 'polite');
+    var vw = WORLD.viewer({ state: ui.view, key: 'site|' + s2.key + '|' + fl.floor, map: fl, b: b, tiles: ui.tiles, size: 'site', bg: '#0a0908',
+      cellsKey: 'site|' + s2.key + '|' + fl.floor + '|' + (site.digest || fl.digest || ''), cellColor: function (i) { return colorAt(fl, i, site.kind, b); },
+      sprites: people, overlay: overlayFn(fl, site, people),
+      label: (rec ? rec.name : s2.key) + ', floor ' + fl.floor + ', ' + fl.w + ' by ' + fl.h + ' cells',
+      onTap: function (x, y) { readout.textContent = cellText(b, fl, site, x, y); } });
+    vw.canvas.dataset.site = s2.key; vw.canvas.dataset.floor = String(fl.floor);
+    fig.appendChild(vw.el);
     card.appendChild(fig);
+    card.appendChild(readout);
+    if (ui.focus != null) {
+      var fx = Array.isArray(ui.focus) ? ui.focus[0] : ui.focus % fl.w, fy = Array.isArray(ui.focus) ? ui.focus[1] : Math.floor(ui.focus / fl.w);
+      ui.focus = null;
+      vw.center(fx, fy, 2 * WORLD.tiles.size(b)); vw.select(fx, fy);
+      readout.textContent = cellText(b, fl, site, fx, fy);
+      setTimeout(function () { if (fig.isConnected && fig.scrollIntoView) fig.scrollIntoView({ block: 'center' }); }, 0);
+    }
     card.appendChild(legend(site));
     // Exits and features in words.
     var outs = fl.exits.filter(function (ex) { return ex.kind === 'overworld'; }).map(function (ex) { return WORLD.overworld.xy(ex.at, fl.w).join(','); });

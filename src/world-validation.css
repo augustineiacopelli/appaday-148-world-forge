@@ -11,4 +11,25 @@
 .w8-tight { margin-top: 0; }
 .w8-walk-tbl td { vertical-align: top; }
 .w8-flagstats { margin-top: 8px; }
+.w8-vnav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; }
+@media (min-width: 760px) { .w8-vnav { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.w8-vpill { display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 6px 10px; border: 1px solid var(--line2); border-left-width: 4px; border-radius: 10px; background: var(--panel); color: var(--ink); text-decoration: none; min-width: 0; }
+.w8-vpill:hover { background: var(--panel2); }
+.w8-vpill:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.w8-vpill-t { font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+.w8-vpill-s { font-size: .82rem; color: var(--ink2); }
+.w8-vpill.w8-v-fail { border-left-color: var(--danger); } .w8-vpill.w8-v-fail .w8-vpill-s { color: var(--danger); }
+.w8-vpill.w8-v-warn { border-left-color: var(--warn); }
+.w8-vpill.w8-v-pass { border-left-color: var(--ok); } .w8-vpill.w8-v-pass .w8-vpill-s { color: var(--ok); }
+.w8-vpill.w8-v-wait { border-left-color: var(--line2); }
+.w8-vcard.w8-v-fail { border-color: var(--danger); }
+.w8-vcard:focus { outline: none; }
+.w8-vcard:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.w8-vmore { margin-top: 8px; align-self: flex-start; }
+.w8-onmap { margin-left: auto; }
+.w8-onmap + .w8-jump { margin-left: 0; }
+.w8-why { display: block; margin-top: 4px; color: var(--danger); max-width: 28em; }
+/* A visually hidden column header is absolutely positioned; without a positioned wrapper it escapes the table's
+   horizontal scroll box and widens the page on a phone. */
+.tbl-wrap { position: relative; }
 /* === WORLD:VALIDATION CSS END === */

@@ -98,11 +98,63 @@
   function palette(b) { return OWE.palette(b.art, ENGINE_WORLD.climate.table(b.art, ENGINE_RENDER)); }
   function minutesOf(b) { var m = {}; WORLD.chapters(b).forEach(function (c) { m[c.id] = Number(c.targetMinutes) || 60; }); return m; }
   function settingsForHash(b) { var s = U.clone(b.world.settings || {}); delete s.bake; return s; }
+  // Painted cells (Phase 7): world.overrides.cells {'x,y': biome tileset ID}, sparse, applied by the engine after the
+  // map is built. They join the hash only when there are any, so a world nobody painted keeps the hash it always had.
+  function paintCells(b) { var o = b.world && b.world.overrides; return o && U.isObj(o.cells) ? o.cells : {}; }
   function paramHash(b, g, pal) {
-    return ENGINE_WORLD.util.digest([ENGINE_WORLD.version, b.world.seed, canon(settingsForHash(b)), g ? g.digest : '-', pal.digest, canon(minutesOf(b))]);
+    var parts = [ENGINE_WORLD.version, b.world.seed, canon(settingsForHash(b)), g ? g.digest : '-', pal.digest, canon(minutesOf(b))], pc = paintCells(b);
+    if (Object.keys(pc).length) parts.push('paint', canon(pc));
+    return ENGINE_WORLD.util.digest(parts);
   }
+  function owSpec(b, g, pal) { return { seed: b.world.seed, settings: b.world.settings, graph: g, minutes: minutesOf(b), palette: pal, paint: paintCells(b) }; }
   function xy(i, w) { return i == null || i < 0 ? null : [i % w, Math.floor(i / w)]; }
   function overworldRecord(b) { return WORLD.records.list('map_', b).filter(function (m) { return m.kind === 'overworld'; })[0] || null; }
+
+  // The Web Worker (Phase 7). Measured in Chromium at a 4x CPU slowdown, the overworld takes 190 to 330 ms for the demo
+  // and 550 to 780 ms for the four continent fixture, over the 100 ms bar, so interactive builds run off the main
+  // thread. DECISION: the worker is a Blob of this page's own ENGINE:WORLD fence (WORLD.engines.source(), the very bytes
+  // the export writes as engine-world.js) plus a few lines that call overworld.build, rather than importScripts of the
+  // file, so it works offline and from a file:// page and can never drift from the engine in the page. A newer request
+  // replaces a running one (the old promise resolves null). Where no worker can start (jsdom, a strict CSP) everything
+  // runs on the main thread as before, and the synchronous generate stays the one authority the validators use.
+  var WORKER_TAIL = '\nself.onmessage = function (e) { var d = e.data; try { var t0 = Date.now(), ow = ENGINE_WORLD.overworld.build(d.spec); ow.ms = Date.now() - t0; self.postMessage({ hash: d.hash, ow: ow }); }' +
+    ' catch (err) { self.postMessage({ hash: d.hash, error: String(err && err.message || err) }); } };\n';
+  var wk = { worker: null, broken: false, url: null, job: null, made: 0, served: 0 };
+  function killWorker() { if (wk.worker) { try { wk.worker.terminate(); } catch (e) { /* gone */ } } wk.worker = null; }
+  function startWorker() {
+    if (wk.worker || wk.broken) return wk.worker;
+    try {
+      if (typeof Worker !== 'function' || typeof Blob !== 'function' || typeof URL === 'undefined' || !URL.createObjectURL) throw new Error('No Web Worker here.');
+      var src = WORLD.engines && WORLD.engines.source();
+      if (!src) throw new Error('The ENGINE:WORLD fence was not found in the page.');
+      if (!wk.url) wk.url = URL.createObjectURL(new Blob([src + WORKER_TAIL], { type: 'text/javascript' }));
+      var w = new Worker(wk.url);
+      w.onmessage = function (e) {
+        var d = e.data || {}, job = wk.job;
+        if (!job || job.hash !== d.hash) return;
+        wk.job = null;
+        if (d.error || !d.ow) { job.done(syncFor(job)); return; }
+        var ow = d.ow;
+        ow.paramHash = job.hash; ow.palette = job.pal;
+        memo = { hash: job.hash, ow: ow };
+        wk.served++;
+        job.done(ow);
+      };
+      w.onerror = function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        wk.broken = true; killWorker();
+        var job = wk.job; wk.job = null;
+        if (job) job.done(syncFor(job));
+      };
+      wk.worker = w; wk.made++;
+    } catch (e) { wk.broken = true; wk.worker = null; }
+    return wk.worker;
+  }
+  // The main thread fallback for a job: only when its hash is still the bundle's, so a superseded job never builds.
+  function syncFor(job) {
+    var b = job.b;
+    try { return WORLD.overworld.paramHash(b) === job.hash ? WORLD.overworld.generate(b) : null; } catch (e) { return null; }
+  }
 
   WORLD.overworld = {
     record: overworldRecord,
@@ -116,10 +168,80 @@
       if (!g) return null;
       var pal = palette(b), hash = paramHash(b, g, pal);
       if (memo && memo.hash === hash) return memo.ow;
-      var t0 = Date.now(), ow = OWE.build({ seed: b.world.seed, settings: b.world.settings, graph: g, minutes: minutesOf(b), palette: pal });
+      var t0 = Date.now(), ow = OWE.build(owSpec(b, g, pal));
       ow.ms = Date.now() - t0; ow.paramHash = hash; ow.palette = pal;
       memo = { hash: hash, ow: ow };
       return ow;
+    },
+    // True when generate would answer at once (the map for the current hash is already built).
+    ready: function (b) {
+      b = b || cur();
+      if (!memo || !WORLD.progression.graph(b)) return false;
+      return memo.hash === WORLD.overworld.paramHash(b);
+    },
+    // True when builds run in the Web Worker.
+    async: function () { return !!startWorker(); },
+    worker: function () { return { running: !!wk.worker, broken: wk.broken, made: wk.made, served: wk.served, busy: !!wk.job }; },
+    // Builds the current map off the main thread and fills the same cache generate reads. Resolves the map, or null when
+    // a newer request replaced this one. Without a worker it builds here.
+    prefetch: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var g = WORLD.progression.graph(b);
+      if (!g) return Promise.resolve(null);
+      var pal = palette(b), hash = paramHash(b, g, pal);
+      if (memo && memo.hash === hash) return Promise.resolve(memo.ow);
+      if (wk.job && wk.job.hash === hash) return wk.job.p;
+      var w = startWorker();
+      if (!w) { try { return Promise.resolve(WORLD.overworld.generate(b)); } catch (e) { return Promise.reject(e); } }
+      if (wk.job) {
+        // A newer map is wanted: stop the running build and start again.
+        var old = wk.job; wk.job = null; killWorker(); old.done(null);
+        w = startWorker();
+        if (!w) return Promise.resolve(WORLD.overworld.generate(b));
+      }
+      var job = { hash: hash, b: b, pal: pal };
+      job.p = new Promise(function (res) { job.done = res; });
+      wk.job = job;
+      w.postMessage({ hash: hash, spec: owSpec(b, g, pal) });
+      return job.p;
+    },
+    // Painted cells: world.overrides.cells. paint(b, x, y, biome) stores one (biome null clears it) when the engine
+    // accepts it on the current map, and refuses with the engine's reason otherwise (a ridge, gate, site, water, or a
+    // cell whose new ground would break the walk). The cached map is updated in place, so nothing is rebuilt.
+    paintCells: function (b) { return U.clone(paintCells(b || cur())); },
+    paint: function (b, x, y, biome) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+      if (!ow || !g) return { ok: false, message: 'Generate the overworld first.' };
+      var base = ow.unpainted || ow, cells = U.clone(paintCells(b)), k = x + ',' + y;
+      if (biome) cells[k] = biome; else if (cells[k]) delete cells[k]; else return { ok: true, ow: ow, changed: false };
+      // Cells apply in sorted order, so the cell refused may be an earlier one; any cell that applied before and would
+      // not now refuses the new paint, so a paint never silently undoes another.
+      var out = OWE.paint(base, cells, g), was = {};
+      (ow.skipped || []).forEach(function (s) { was[String(s.at)] = 1; });
+      var miss = biome && (out.skipped || []).filter(function (s) { return !was[String(s.at)]; })[0];
+      if (miss) {
+        var mine = Array.isArray(miss.at) && miss.at[0] === x && miss.at[1] === y;
+        return { ok: false, code: miss.code, message: mine ? miss.message : 'Painting cell ' + k + ' with ' + biome + ' would break the walk together with the cells already painted (cell ' + miss.at.join(',') + ' would no longer apply).' };
+      }
+      if (!base.ok) return { ok: false, code: 'not-ok', message: 'The overworld failed its own checks, so it cannot be painted.' };
+      b.world.overrides = U.isObj(b.world.overrides) ? b.world.overrides : {};
+      if (Object.keys(cells).length) b.world.overrides.cells = cells; else delete b.world.overrides.cells;
+      out.ms = base.ms; out.palette = ow.palette; out.paramHash = WORLD.overworld.paramHash(b);
+      memo = { hash: out.paramHash, ow: out };
+      if (b === cur()) Kit.bundle.touch('paint');
+      return { ok: true, ow: out, changed: true };
+    },
+    // Clears every painted cell.
+    unpaint: function (b) {
+      b = b || cur();
+      var n = Object.keys(paintCells(b)).length;
+      if (!n) return 0;
+      delete b.world.overrides.cells;
+      if (b === cur()) Kit.bundle.touch('paint');
+      return n;
     },
     // True when the stored map was made from something other than what the bundle holds now.
     stale: function (b) {
@@ -157,6 +279,8 @@
         gates: ow.gates.map(function (gq) { return { key: gq.key, gate: gq.gate, kind: gq.kind, requires: gq.requires.slice(), region: regId[gq.region], from: gq.from ? regId[gq.from] : null, cells: gq.cells.map(function (c) { return xy(c, w); }) }; }),
         stats: { land: land, sea: seaN, lake: lake, biomes: Object.keys(counts).sort(function (a, c) { return counts[c] - counts[a] || (a < c ? -1 : 1); }).map(function (k) { return { biome: k, cells: counts[k] }; }) }
       });
+      // Painted cells (Phase 7) are named only when there are any, so an unpainted record is unchanged.
+      if (ow.painted || ow.skipped) rec.paint = { cells: (ow.painted || []).length, skipped: (ow.skipped || []).map(function (s) { return { at: s.at, biome: s.biome, code: s.code, message: s.message }; }) };
       var old = WORLD.records.get(rec.id, b);
       if (old && old.origin === 'user') return { ow: ow, record: old, kept: true };
       WORLD.records.put(rec, b);
@@ -171,7 +295,10 @@
   Kit.validate.register('world.overworld', function (b, ctx) {
     var rec = overworldRecord(b);
     if (!rec || !rec.paramHash) return;
-    if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
+    if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, painted cells, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
+    else if (rec.paint && Array.isArray(rec.paint.skipped)) rec.paint.skipped.forEach(function (s) {
+      ctx.add({ recordId: rec.id, fieldPath: 'paint', message: 'A painted cell was not applied: ' + s.message + ' Clear it or paint it again on the World tab.', level: 'warning' });
+    });
     // Missing sites and regions are reported by world.refs (Phase 6), the one authority for references.
   });
 
@@ -346,7 +473,7 @@
   // keeps the hash of what it was made from, so a stale table is caught. Sparse edits live in world.overrides.zones
   // {zone key: {rate, weights {trp_: n}}} and survive every regeneration. Filling sdq_.giver is the one write this forge
   // makes outside world; a giver someone else set (resolving, and not the one this forge last wrote) is kept.
-  var ZNE = ENGINE_WORLD.zones;
+  var ZNE = ENGINE_WORLD.zones, ckMemo = null;
   function zoneData(b) { var z = b && b.world && b.world.zones; return U.isObj(z) && Array.isArray(z.field) ? z : null; }
   function tilesets(b) { return (b.art && b.art.records && b.art.records.til_) || {}; }
   function biomeKeys(b) { var o = {}, t = tilesets(b); Object.keys(t).sort().forEach(function (id) { if (t[id] && t[id].kind === 'biome') o[id] = t[id].key || id; }); return o; }
@@ -418,6 +545,36 @@
     spec: function (b) { b = b || cur(); WORLD.ensure(b); return znSpec(b); },
     // The field zone of an overworld cell index, by the engine's rule (null for water, walls, and stamps).
     cellKey: function (i, b) { b = b || cur(); var ow = WORLD.overworld.generate(b); return ow ? ZNE.cellKey(ow, i, biomeKeys(b)) : null; },
+    // Every cell's zone key for a map already built (the World tab's Zones overlay), memoized by the map's digest.
+    cellKeys: function (ow, b) {
+      b = b || cur();
+      if (!ow) return null;
+      if (ckMemo && ckMemo.digest === ow.digest && ckMemo.w === ow.w) return ckMemo.keys;
+      var bk = biomeKeys(b), out = new Array(ow.w * ow.h);
+      for (var i = 0; i < out.length; i++) out[i] = ZNE.cellKey(ow, i, bk);
+      ckMemo = { digest: ow.digest, w: ow.w, keys: out };
+      return out;
+    },
+    // The tables as generated, before any override (what an edit is compared with, so only real changes are stored).
+    base: function (b) { b = b || cur(); WORLD.ensure(b); var sp = znSpec(b); return sp ? ZNE.build(Object.assign({}, sp, { overrides: {} })) : null; },
+    // Sets one zone's rate and weights (the full values wanted). Only what differs from the generated table is stored in
+    // world.overrides.zones, an empty difference removes the override, and the zones are applied again at once.
+    edit: function (b, key, want) {
+      b = b || cur();
+      var base = WORLD.zones.base(b), z0 = base && base.field.concat(base.interior).filter(function (x) { return x.key === key; })[0];
+      if (!z0) return { ok: false, message: 'Zone ' + key + ' is not in the world.' };
+      var ov = {}, w = {};
+      function n(v) { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(0, Math.min(255, v)) : null; }
+      if (want && want.rate != null && n(want.rate) != null && n(want.rate) !== z0.rate) ov.rate = n(want.rate);
+      z0.troops.forEach(function (t) { var v = want && want.weights ? n(want.weights[t.troop]) : null; if (v != null && v !== t.weight) w[t.troop] = v; });
+      if (Object.keys(w).length) ov.weights = w;
+      b.world.overrides = U.isObj(b.world.overrides) ? b.world.overrides : {};
+      var all = U.isObj(b.world.overrides.zones) ? U.clone(b.world.overrides.zones) : {};
+      if (Object.keys(ov).length) all[key] = ov; else delete all[key];
+      if (Object.keys(all).length) b.world.overrides.zones = all; else delete b.world.overrides.zones;
+      var r = WORLD.zones.apply(b);
+      return { ok: true, override: Object.keys(ov).length ? ov : null, zone: WORLD.zones.zone(key, b), ms: r.ms };
+    },
     zone: function (key, b) { var z = zoneData(b || cur()); return z ? z.field.concat(z.interior).filter(function (x) { return x.key === key; })[0] || null : null; },
     stale: function (b) {
       b = b || cur();
@@ -467,6 +624,16 @@
     // table stays a warning, because a zone with no troop never starts a battle; a missing battle background is left to
     // world.refs, which makes it an error exactly when that zone (or boss) can start a battle and passes it otherwise.
     (z.warnings || []).forEach(function (w) { if (w.code !== 'no-background') ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+    // Phase 7 edits: a table whose weights were all set to 0 never picks a troop, and an edit naming a zone the world no
+    // longer has does nothing. Both are warnings; neither blocks a Final export.
+    z.field.concat(z.interior).forEach(function (q) {
+      if (q.empty || !(q.rate > 0)) return;
+      if (!q.troops.some(function (t) { return t.weight > 0; })) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' has troops but every weight is 0, so it can never pick one. Raise a weight or set its rate to 0 on the Encounters tab.', level: 'warning' });
+    });
+    var ovz = b.world.overrides && U.isObj(b.world.overrides.zones) ? b.world.overrides.zones : {};
+    Object.keys(ovz).sort().forEach(function (k) {
+      if (!z.field.concat(z.interior).some(function (q) { return q.key === k; })) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'An encounter edit names zone ' + k + ', which the world no longer has, so it does nothing.', level: 'warning' });
+    });
   });
 
   // Graph level checks (Phase 6's world.progression adds the geometric ones). Only runs once a graph has been laid out.

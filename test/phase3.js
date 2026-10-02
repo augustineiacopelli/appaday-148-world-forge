@@ -253,12 +253,14 @@ const SYNTH = {
   const genBtn = Array.prototype.find.call(ws().querySelectorAll('button'), (x) => /Generate the overworld/.test(x.textContent));
   check('the World tab offers Generate before anything exists', !!genBtn && !ws().querySelector('canvas'));
   genBtn.click(); await wait(30);
+  // Phase 7 made the map the shared viewer (a canvas sized to the page that names the map's size) and added the Tiles
+  // and Zones overlays (Tiles first and chosen), so these two checks read the new structure.
   const cv = ws().querySelector('.w8-map canvas'), txt = ws().textContent;
-  check('after Generate: a 160 by 160 map canvas, size and site chips, two region rows, and a gates table', cv && cv.width === 160 && cv.height === 160 && /160 by 160/.test(txt) && /9 sites/.test(txt) &&
-    ws().querySelectorAll('.panel')[2].querySelectorAll('tbody')[0].querySelectorAll('tr').length === 2 && /Landing/.test(txt) && /Lock/.test(txt), txt.slice(0, 200));
+  check('after Generate: a 160 by 160 map canvas, size and site chips, two region rows, and a gates table', cv && cv.dataset.w === '160' && cv.dataset.h === '160' && /160 by 160/.test(txt) && /9 sites/.test(txt) &&
+    d.getElementById('w8-regions').querySelectorAll('tbody')[0].querySelectorAll('tr').length === 2 && /Landing/.test(txt) && /Lock/.test(txt), txt.slice(0, 200));
   const segs = ws().querySelectorAll('.w8-seg-btn');
-  check('five overlay buttons as a radio group, Biome checked, each at least 44 px tall by style', segs.length === 5 && segs[0].getAttribute('aria-checked') === 'true' && ws().querySelector('.w8-seg').getAttribute('role') === 'radiogroup');
-  segs[1].click(); await wait(20);
+  check('seven overlay buttons as a radio group, Tiles checked, each at least 44 px tall by style', segs.length === 7 && segs[0].getAttribute('aria-checked') === 'true' && segs[0].textContent === 'Tiles' && ws().querySelector('.w8-seg').getAttribute('role') === 'radiogroup');
+  segs[2].click(); await wait(20);
   check('choosing Elevation redraws with the elevation overlay and its legend', ws().querySelector('.w8-map canvas').dataset.overlay === 'elev' && ws().querySelector('.w8-seg-btn[aria-checked="true"]').textContent === 'Elevation' && /Peak/.test(ws().querySelector('.w8-legend').textContent));
   check('no page errors', !errors.length, errors.slice(0, 3));
 

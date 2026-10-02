@@ -1,0 +1,19 @@
+/* === WORLD:VIEWER CSS BEGIN === */
+.w8-view { margin: 0; }
+.w8-view-stage { position: relative; width: 100%; height: auto; aspect-ratio: 1 / 1; max-height: clamp(300px, 70vh, 760px); background: #0c1424; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; }
+.w8-view-site .w8-view-stage { aspect-ratio: 5 / 4; max-height: clamp(260px, 60vh, 640px); background: #0a0908; }
+.w8-view-cv { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; image-rendering: pixelated; image-rendering: crisp-edges; -webkit-user-select: none; user-select: none; }
+.w8-view-cv:active { cursor: grabbing; }
+.w8-view-cv:focus-visible { outline: 2px solid var(--accent2); outline-offset: -3px; }
+.w8-view-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.w8-zoom { min-width: 44px; min-height: 44px; padding: 0 12px; font-weight: 700; font-size: 1.05rem; justify-content: center; }
+.w8-view-read { font-variant-numeric: tabular-nums; color: var(--ink2); font-size: .9rem; }
+.w8-view-hint { flex: 1 1 14em; min-width: 0; color: var(--muted); font-size: .85rem; }
+.w8-view-busy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.w8-busy { background: rgba(12, 16, 26, .82); color: #f4ecd6; padding: 10px 16px; border-radius: 999px; font-weight: 600; letter-spacing: .01em; }
+.w8-busy::after { content: ''; display: inline-block; width: 1.4em; text-align: left; animation: w8dots 1.2s steps(4, end) infinite; }
+@keyframes w8dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+.w8-dim .w8-view-cv { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .w8-busy::after { animation: none; content: '...'; } }
+@media (min-width: 900px) { .w8-view { max-width: 900px; } }
+/* === WORLD:VIEWER CSS END === */

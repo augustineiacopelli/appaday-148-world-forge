@@ -477,6 +477,89 @@ SESSION 6 / PHASE 6 (2026-10-02, Opus): VALIDATION. COMPLETE.
     controls, the tap inspector writing sparse overrides, editable zone weights and rates (world.overrides.zones), field
     music audition, and polish of the Validation tab; measure generation on a phone before adding the Worker.
 === END SESSION 6 ===
+SESSION 7 / PHASE 7 (2026-10-02, Opus): THE INTERFACE. COMPLETE.
+  Session start: the repo built byte identical and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53,
+    phase5 58/58, phase6 75/75; layout.js 32 views.
+  Measured first (Chromium, headless, 4x CPU slowdown as the mobile profile): the overworld takes 190 to 330 ms for the
+    demo and 550 to 780 ms for the four fixture (interiors 126 and 235, zones 30 and 98, a validation pass 229 and 498).
+    Over the 100 ms bar, so the Worker went in.
+  Worker (WORLD:GENERATE): DECISION, a Blob of this page's own ENGINE:WORLD fence (WORLD.engines.source(), the very bytes
+    the export writes as engine-world.js) plus a few lines that call overworld.build, not importScripts of the file: it
+    works offline and from file://, and can never drift from the page's engine. Only the overworld build moves off the
+    main thread; it fills the same memo the synchronous generate reads, so validators and apply are unchanged and stay
+    the one authority. WORLD.overworld {ready, async, worker, prefetch}: a newer request terminates the running build
+    (the old promise resolves null); no Worker (jsdom, a strict CSP, a worker error) falls back to the main thread.
+    Validators never trigger a build after a change (they short circuit on a stale overworld), so only the World tab and
+    the Generate buttons wait. Proven in Chromium: about 390 ms in the worker from a file page, digest equal to the main
+    thread's. Interiors and zones still run on the main thread (well under half the overworld).
+  Painted cells (engine, src/engine-overworld.js): overworld.paint(ow, cells, graph) and spec.paint in build.
+    world.overrides.cells {'x,y': biome til_ ID}, sparse, applied after the map is built, sorted key order. Refused, each
+    with a code and message: paint-key, paint-bounds, paint-biome (not a biome of this art), paint-water (sea or lake),
+    paint-structure (ridge, ring, gate, stamp, door, decoration), paint-swim (water onto land), paint-front (DECISION:
+    the start, every site front, and every boss approach take only walkable ground, because the walk seeds from the
+    start and treats fronts as goals, so a wall there would not show as a broken walk), paint-blocks (the painted map
+    fails overworld.check: cells are then tried one by one and kept while the check passes). The copy shares every layer
+    but ground, carries painted, skipped, unpainted, and a new digest. Build with paint equals paint after build; a map
+    that failed its own checks is never painted. Determinism rules hold (no Object.keys, Date, random).
+  WORLD side: the paramHash gains the painted cells only when there are any, so unpainted worlds keep their hashes and
+    every earlier fixture and test is unchanged. WORLD.overworld.paint(b, x, y, biome or null) refuses when the new cell,
+    or any cell that applied before, would not apply (sorted order means the refused one may be an older cell; a paint
+    never silently undoes another), else stores it and updates the memo in place. unpaint clears all. The map_ record
+    gains paint {cells, skipped [{at, biome, code, message}]} only when painted; world.overworld warns per skipped cell.
+    DECISION: New seed clears painted cells (they are coordinates on one map) and says how many; Generate again keeps them.
+  Zones: WORLD.zones.cellKeys(ow) (every cell's field zone, memoized by digest), base (the tables before overrides), and
+    edit(b, key, {rate, weights}) storing only what differs from base in world.overrides.zones (an empty difference
+    removes it) and applying the zones at once. world.zones now also warns when a zone with troops has every weight 0 and
+    a rate above 0, and when an edit names a zone the world no longer has. Neither blocks Final.
+  Viewer (new fence src/world-viewer.js WORLD:VIEWER, CSS src/world-viewer.css): shared by the World and Sites tabs. Draws
+    through tiles.drawMap (below layer, sprites, above layer) at logical size with a whole number scale and smoothing off,
+    or one color per cell (cached by key) for overlays and whenever a cell is smaller than a tile. Zoom ladder in device
+    pixels a cell: 1, 2, 3, 4, 6, 8, 12 below the tile size, then 1x to 8x of it. Drag pans, two pointers pinch about
+    their midpoint, the wheel and the plus, minus, and Fit buttons zoom, arrows pan, 0 fits, Enter picks the middle cell,
+    a press that moved under 6 px picks a cell. Camera state lives with the caller, so a rerender keeps the view; the tile
+    bake cache is per art and tile size (Day 147's tileSize and master palette entries, read the same way). Animated
+    tiles redraw about seven times a second while visible; reduced motion turns that off. Device pixel ratio capped at 3.
+  Audio (new fence src/world-audio.js WORLD:AUDIO): on the first Play press, inside the click, an AudioContext,
+    ENGINE_AUDIO.create, load(bundle.art), unlock, then playRole('field:<slug>'). One player; leaving the World tab or
+    loading a bundle stops it (Kit.mount now passes a workspace's onLeave). No Web Audio gives a message, never a throw.
+  World tab (rewritten): overlays Tiles (default), Biome, Elevation, Temperature, Moisture, Regions, Zones; Sites and Gates
+    toggles redraw without a rebuild; markers drawn in device pixels (gates, site outlines in gold for the golden path,
+    the start, painted cells). A changed map shows the last one dimmed under Growing the map while the worker builds; the
+    button reads Store changes while the shown map is newer than the record. Inspector: cell, ground (and what is over
+    it), continent and chapter, climate bands, how it walks (gate requirements in words), site (Open in Sites), zone with
+    rate and troops (Edit this zone), and Paint with any non water biome, Clear paint, Clear all. Continents card: radius
+    (0.4 to 1.8), ruggedness, mountain share sliders writing settings.overworld.continents[slug] on release, Reset, and
+    Play field music when a track has that role. Regions and Gates tables have Show buttons that center the map in place.
+    WORLD.showAt(map, at) opens a cell from anywhere: 'overworld' or no map opens the World tab, '<site key>|<floor>' (the
+    form the checks use) or an interior map_ ID opens Sites on that floor; the cell is centered, picked, and read.
+  Sites tab: the viewer on each floor with Tiles and Exits and marks toggles, people drawn as their npc:<archetype> sprites
+    (a white marker when a sprite is missing or in the plan view), exits outlined in cyan with an arrow on the way out,
+    stairs, the locked door, the boss, chests; a readout of the tapped cell (tile, walk flags, exit, feature, person).
+    data-site, data-floor, and the floor radio group are kept.
+  Encounters tab: an Edit button per zone opens a form under its row (rate in 256 with steps per battle, one weight per
+    troop with its share of battles, the generated value beside each, the total), Save, Back to generated, Cancel; edited
+    zones wear an Edited chip.
+  Validation tab polish: six jump links naming each check's state; failing, then warned cards first; Show all in place;
+    Show on map on any flag or progression item with a cell (items now carry at); a Show button per chapter of the walk
+    and the reasons a chapter failed in its row; Go to Export when ready. Region jumps (reg_) center the World tab on the
+    region's anchor.
+  Layout fixes found on the way: the visually hidden column headers escaped the tables' scroll boxes and widened the
+    page at 390, so .tbl-wrap is positioned; the old Sites frame swallowed the viewer's toolbar.
+  Tests: test/phase7.js 68 of 68 (paint identical in two vm contexts and the plain context; build with paint equals paint
+    after build; every refusal code; walling in a key dungeon refused at the last open cell with the others kept, in the
+    engine and through the page; the page: no worker in jsdom, empty paint keeps the hash, paint, refusals, record.paint,
+    skipped warning, clear and unpaint, hash restored; cellKeys; zone edits as sparse diffs, base, 0 weight and orphan
+    warnings, Back to generated; continent settings; the zoom ladder; tile size and palette; field tracks; no Web Audio;
+    the four tabs' new structure and every button path; Show on map for overworld and interior faults; a Final with a
+    painted cell and a zone edit opens in Days 146 and 147 with every namespace identical, 0 broken, 0 forward; the
+    exported engine carries paint). phase3 (two World tab checks now read the viewer and seven overlays) and phase5
+    (Store changes) were updated for the new interface. phase0 63, phase1 37, phase2 40, phase3 61, phase4 53, phase5 58,
+    phase6 75: 455 of 455. layout.js 40 views pass (390 now at 3x pixels; World tiles with the inspector, the Zones
+    overlay, the town in tiles, a zone editor open). Pictures: test/out/phase7-*.png.
+  Next: Phase 8, export and ship: the optional bake (run length encoded ground and deco per interior with a reference
+    palette, used only when generator version and parameter hash match), the final definition of done suite, the README,
+    and the six item shipping checklist.
+=== END SESSION 7 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
