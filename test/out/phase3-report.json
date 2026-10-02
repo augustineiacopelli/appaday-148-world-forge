@@ -1,0 +1,423 @@
+{
+  "when": "2026-10-02T13:46:43.123Z",
+  "pass": 61,
+  "total": 61,
+  "timing": {
+    "demo": 90,
+    "four": 249
+  },
+  "digest42": "7b62a757-68ed8998:59",
+  "results": [
+    {
+      "name": "one seed gives an identical overworld in two vm contexts and the plain context (four fixture, 4 seeds; demo)",
+      "ok": true
+    },
+    {
+      "name": "different seeds give different overworlds",
+      "ok": true,
+      "detail": [
+        "21f9ae25-f98a6afb:59",
+        "7b62a757-68ed8998:59",
+        "705afee1-2af1102b:59",
+        "e0d146a5-2a769cb9:59"
+      ]
+    },
+    {
+      "name": "a reroll moves every site but never renames one: the same site records, at new places",
+      "ok": true
+    },
+    {
+      "name": "ENGINE_WORLD.overworld is frozen with the rest of the engine",
+      "ok": true
+    },
+    {
+      "name": "demo and four on 30 seeds each, and five synthetic layouts (one chapter to twelve, six continents, a returning continent) on 8 seeds each, all build and walk clean",
+      "ok": true,
+      "detail": {
+        "sweep": [],
+        "attempts": {
+          "demo": 30,
+          "four": 31,
+          "one": 8,
+          "oneContinent": 8,
+          "returns": 8,
+          "everyNew": 8,
+          "long": 10
+        }
+      }
+    },
+    {
+      "name": "size is 96 plus 32 per continent: demo (2) 160, four (4) 224",
+      "ok": true,
+      "detail": [
+        160,
+        224
+      ]
+    },
+    {
+      "name": "mapSize.max caps the side (160)",
+      "ok": true,
+      "detail": [
+        160,
+        []
+      ]
+    },
+    {
+      "name": "a three cell border of ocean",
+      "ok": true
+    },
+    {
+      "name": "no land of one continent within two cells of another (straits at least two cells wide)",
+      "ok": true
+    },
+    {
+      "name": "each continent is one four way connected landmass, and four continents appear",
+      "ok": true,
+      "detail": [
+        "westland:4149",
+        "eastland:3741",
+        "northreach:2427",
+        "southmere:7639"
+      ]
+    },
+    {
+      "name": "continent radius follows its chapters' target minutes (Southmere, 195 minutes, is the largest)",
+      "ok": true,
+      "detail": [
+        "westland 36.6",
+        "eastland 33.9",
+        "northreach 27.7",
+        "southmere 49.9"
+      ]
+    },
+    {
+      "name": "every open land cell takes the climate table's biome for its temperature, moisture, and elevation (or carved lowland)",
+      "ok": true,
+      "detail": {
+        "climateOk": 15558,
+        "bad": []
+      }
+    },
+    {
+      "name": "every open water cell is a swim tile",
+      "ok": true
+    },
+    {
+      "name": "temperature bands split the land at the thresholds in world.settings (each near a fifth)",
+      "ok": true,
+      "detail": [
+        "0.200",
+        "0.200",
+        "0.200",
+        "0.200",
+        "0.200"
+      ]
+    },
+    {
+      "name": "temperature falls with latitude (equator rows warmer than polar rows)",
+      "ok": true,
+      "detail": [
+        "3.68",
+        "0.31"
+      ]
+    },
+    {
+      "name": "every wall (ridge, ring, lock side) is the mountain biome itself, impassable, never looked up through the table",
+      "ok": true
+    },
+    {
+      "name": "coast is land within one or two steps of water",
+      "ok": true
+    },
+    {
+      "name": "volcanic cells lie inside volcanic's own climate box, on inland ground",
+      "ok": true,
+      "detail": 1196
+    },
+    {
+      "name": "featureCoverage 0 places no volcanic ground",
+      "ok": true
+    },
+    {
+      "name": "a larger mountainShare raises more peaks",
+      "ok": true,
+      "detail": [
+        1778,
+        4454
+      ]
+    },
+    {
+      "name": "a per continent radius override grows that continent",
+      "ok": true,
+      "detail": [
+        2427,
+        5257
+      ]
+    },
+    {
+      "name": "one region per chapter, each one connected piece of its continent",
+      "ok": true,
+      "detail": [
+        2371,
+        1778,
+        3741,
+        2427,
+        2939,
+        4700
+      ]
+    },
+    {
+      "name": "regions after the ship's chapter that touch the sea are ringed; Westland's two are not",
+      "ok": true,
+      "detail": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "every boundary between two regions is wall or gate (no open cell touches another region's open cell)",
+      "ok": true
+    },
+    {
+      "name": "gates: 2 passes (Westland, Southmere), 3 landings (Eastland, Northreach, Southmere), 1 sea ring (the Southmere pass region), 6 locks",
+      "ok": true,
+      "detail": [
+        "pass",
+        "pass",
+        "landing",
+        "landing",
+        "landing",
+        "seawall",
+        "lock",
+        "lock",
+        "lock",
+        "lock",
+        "lock",
+        "lock"
+      ]
+    },
+    {
+      "name": "each pass is two adjacent mountain cells straddling the ridge between consecutive chapters, needing the later chapter's key",
+      "ok": true
+    },
+    {
+      "name": "each landing and sea ring is one ring cell three steps from the sea; landings also need the ship",
+      "ok": true
+    },
+    {
+      "name": "each lock is the cell in front of a boss door, needing the chapter key and its seal, walled on both sides",
+      "ok": true
+    },
+    {
+      "name": "every twn_ and dgn_ of the graph is stamped once, in its own region",
+      "ok": true,
+      "detail": [
+        25,
+        25
+      ]
+    },
+    {
+      "name": "every stamp tile resolves through tiles.resolve",
+      "ok": true
+    },
+    {
+      "name": "stamp doors read passable through tiles.flagsAt (town lintel 33, dungeon arch 33, cave stairs 1); stamp walls read 0",
+      "ok": true
+    },
+    {
+      "name": "the finale is a 5 by 3 castle; towns, dungeons, and caves are 3 by 2",
+      "ok": true
+    },
+    {
+      "name": "sites sit on inland ground of their region (never on the beach strip of a ringed region)",
+      "ok": true
+    },
+    {
+      "name": "sites keep at least three cells between centers",
+      "ok": true
+    },
+    {
+      "name": "play starts in front of chapter one's start town",
+      "ok": true
+    },
+    {
+      "name": "the walking check finds nothing wrong with the four fixture",
+      "ok": true
+    },
+    {
+      "name": "the walking check catches an open pass, a landing without its chapter key, a lock without its seal, and a ring torn down",
+      "ok": true,
+      "detail": {
+        "openPass": [
+          "early"
+        ],
+        "openLanding": [
+          "early"
+        ],
+        "openLock": [
+          "lock-open"
+        ],
+        "wallHole": [
+          "early",
+          "early"
+        ]
+      }
+    },
+    {
+      "name": "holding every key and the ship, every site front is reachable",
+      "ok": true
+    },
+    {
+      "name": "without the ship nothing beyond Westland is reachable, even holding every key",
+      "ok": true
+    },
+    {
+      "name": "at the start only the first chapter's ground is open",
+      "ok": true
+    },
+    {
+      "name": "generation time in a plain context: demo 90 ms, four 249 ms (under 1500 ms)",
+      "ok": true,
+      "detail": {
+        "demo": 90,
+        "four": 249
+      }
+    },
+    {
+      "name": "before generating, isGenerated is false and there is no graph",
+      "ok": true
+    },
+    {
+      "name": "apply lays out the progression first, then writes one map_ record keyed map|overworld",
+      "ok": true,
+      "detail": "map_map_overworld_670c"
+    },
+    {
+      "name": "the page builds the very map the engine builds outside it (same digest for seed 42)",
+      "ok": true,
+      "detail": [
+        "7b62a757-68ed8998:59",
+        "7b62a757-68ed8998:59"
+      ]
+    },
+    {
+      "name": "the record holds size, seed, engine version, parameter hash, start, continents, regions, sites, gates, and stats, and no tile arrays",
+      "ok": true,
+      "detail": 13246
+    },
+    {
+      "name": "every site, region, and continent region in the record resolves to a world record; no field is named id inside",
+      "ok": true
+    },
+    {
+      "name": "charter, codex, rules, and art are untouched by generating",
+      "ok": true
+    },
+    {
+      "name": "the generated four fixture validates with no errors and no broken references, and nothing about the overworld",
+      "ok": true,
+      "detail": {
+        "s": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "e": []
+      }
+    },
+    {
+      "name": "after a reroll the map is stale and validation says so",
+      "ok": true
+    },
+    {
+      "name": "generating again clears the warning, keeps every world ID, and moves the sites",
+      "ok": true
+    },
+    {
+      "name": "the bake toggle alone does not make the map stale",
+      "ok": true
+    },
+    {
+      "name": "a map_ record marked user made is kept on generate",
+      "ok": true
+    },
+    {
+      "name": "Draft manifest lists 32 created world IDs (the map_ included) and nothing unresolved",
+      "ok": true,
+      "detail": {
+        "created": 32,
+        "unresolved": []
+      }
+    },
+    {
+      "name": "Final is no longer blocked for want of an overworld",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Day 146 opens the generated Draft with every namespace identical and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "Day 147 opens the generated Draft with every namespace identical, coverage green, and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        }
+      }
+    },
+    {
+      "name": "the World tab offers Generate before anything exists",
+      "ok": true
+    },
+    {
+      "name": "after Generate: a 160 by 160 map canvas, size and site chips, two region rows, and a gates table",
+      "ok": true,
+      "detail": "WorldThe overworld grows from the seed around the progression graph: continents sized by their chapters' minutes, climate bands matched to biome tilesets, a mountain ridge with one pass between chapte"
+    },
+    {
+      "name": "five overlay buttons as a radio group, Biome checked, each at least 44 px tall by style",
+      "ok": true
+    },
+    {
+      "name": "choosing Elevation redraws with the elevation overlay and its legend",
+      "ok": true
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

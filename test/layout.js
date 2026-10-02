@@ -29,6 +29,12 @@ const ROOT = require('path').join(__dirname, '..');
       await pg.evaluate((t) => window.Kit.go(t), t); await pg.waitForTimeout(120);
       report.push(Object.assign({ w }, await audit(t)));
     }
+    // The World tab once the overworld exists (Phase 3): the map, overlay buttons, and the region and gate tables.
+    await pg.evaluate(() => { window.WORLD.overworld.apply(); window.Kit.go('world'); }); await pg.waitForTimeout(200);
+    report.push(Object.assign({ w }, await audit('world (generated)')));
+    await pg.evaluate(() => { const b = document.querySelectorAll('.w8-seg-btn')[4]; if (b) b.click(); }); await pg.waitForTimeout(150);
+    report.push(Object.assign({ w }, await audit('world (regions overlay)')));
+    await (await pg.$('.w8-ow')).screenshot({ path: ROOT + '/test/out/phase3-world-' + w + '.png' });
     await pg.evaluate(() => window.Kit.openExport()); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('export dialog')));
     await pg.evaluate(() => window.Kit.ui.closeTop()); await pg.waitForTimeout(100);

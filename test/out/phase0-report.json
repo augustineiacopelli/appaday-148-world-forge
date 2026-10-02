@@ -16,10 +16,10 @@
       "detail": [
         1,
         139593,
-        162018,
-        530011,
-        559429,
-        588592
+        162468,
+        530461,
+        622907,
+        652070
       ]
     },
     {
@@ -92,7 +92,7 @@
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 3625228247,
+        "seed": 2313882887,
         "settings": {
           "mapSize": {
             "base": 96,
@@ -123,6 +123,14 @@
           "cavesPerChapter": 1,
           "secondTownInChapterOne": true,
           "featureCoverage": 0.35,
+          "overworld": {
+            "landFraction": 0.36,
+            "mountainShare": 0.12,
+            "highShare": 0.35,
+            "ruggedness": 0.35,
+            "siteSpacing": 8,
+            "continents": {}
+          },
           "bake": false
         },
         "records": {
@@ -260,7 +268,7 @@
         },
         "148": {
           "status": "draft",
-          "exportedAt": "2026-10-02T13:12:50.278Z",
+          "exportedAt": "2026-10-02T13:46:00.338Z",
           "worldVersion": "1.0.0",
           "generatorVersion": "1.0.0",
           "charterVersion": 1
@@ -281,16 +289,16 @@
       "ok": true,
       "detail": {
         "forge": 148,
-        "bundleHash": "43954ce53e7218c4b60fb80bedbf6354208b865ae54d4453da7a47108083cccf",
+        "bundleHash": "f93720d3bee63eee0bbe6fab8472af3011cf1e6dfe96e4962ad73e6afa74b65f",
         "worldVersion": "1.0.0",
         "generator": {
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 114461579,
+        "seed": 184947961,
         "charterVersion": 1,
         "artVersion": "1.0.0",
-        "exportedAt": "2026-10-02T13:12:50.307Z",
+        "exportedAt": "2026-10-02T13:46:00.368Z",
         "created": [
           "npc_npc_chp_the_lowlands_auem_start_innkeepe_kos2",
           "twn_twn_chp_the_lowlands_auem_start_c7hb"

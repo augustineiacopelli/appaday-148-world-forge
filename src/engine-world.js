@@ -96,6 +96,8 @@ var ENGINE_WORLD = (function () {
   // ---------------------------------------------------------------- simplex noise
   // 2D simplex noise (Gustavson's formulation), its permutation shuffled by a seeded generator. Output in about [-1, 1].
   var GRAD = [[1, 1], [-1, 1], [1, -1], [-1, -1], [1, 0], [-1, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0, 1], [0, -1]];
+  var GX = new Float64Array(12), GY = new Float64Array(12);
+  for (var gq = 0; gq < 12; gq++) { GX[gq] = GRAD[gq][0]; GY[gq] = GRAD[gq][1]; }
   var F2 = 0.36602540378443864676, G2 = 0.21132486540518711775; // (sqrt(3) - 1) / 2 and (3 - sqrt(3)) / 6
   function simplex(seed) {
     var r = rng(seed), base = [], i;
@@ -103,18 +105,20 @@ var ENGINE_WORLD = (function () {
     base = r.shuffle(base);
     var perm = new Uint8Array(512), pm12 = new Uint8Array(512);
     for (i = 0; i < 512; i++) { perm[i] = base[i & 255]; pm12[i] = perm[i] % 12; }
-    function corner(gi, x, y) {
-      var t = 0.5 - x * x - y * y;
-      if (t < 0) return 0;
-      t *= t;
-      return t * t * (GRAD[gi][0] * x + GRAD[gi][1] * y);
-    }
+    // The three corner contributions are written out in place (same arithmetic, same order as a corner helper would
+    // do it), with the gradient components in flat tables, because this is the hottest function in the generator.
     function noise2(xin, yin) {
       var s = (xin + yin) * F2, i0 = Math.floor(xin + s), j0 = Math.floor(yin + s), t = (i0 + j0) * G2;
       var x0 = xin - (i0 - t), y0 = yin - (j0 - t), i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
       var x1 = x0 - i1 + G2, y1 = y0 - j1 + G2, x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
-      var ii = i0 & 255, jj = j0 & 255;
-      return 70 * (corner(pm12[ii + perm[jj]], x0, y0) + corner(pm12[ii + i1 + perm[jj + j1]], x1, y1) + corner(pm12[ii + 1 + perm[jj + 1]], x2, y2));
+      var ii = i0 & 255, jj = j0 & 255, g, n0 = 0, n1 = 0, n2 = 0;
+      var t0 = 0.5 - x0 * x0 - y0 * y0;
+      if (t0 >= 0) { g = pm12[ii + perm[jj]]; t0 *= t0; n0 = t0 * t0 * (GX[g] * x0 + GY[g] * y0); }
+      var t1 = 0.5 - x1 * x1 - y1 * y1;
+      if (t1 >= 0) { g = pm12[ii + i1 + perm[jj + j1]]; t1 *= t1; n1 = t1 * t1 * (GX[g] * x1 + GY[g] * y1); }
+      var t2 = 0.5 - x2 * x2 - y2 * y2;
+      if (t2 >= 0) { g = pm12[ii + 1 + perm[jj + 1]]; t2 *= t2; n2 = t2 * t2 * (GX[g] * x2 + GY[g] * y2); }
+      return 70 * (n0 + n1 + n2);
     }
     return { seed: seed >>> 0, noise2: noise2 };
   }

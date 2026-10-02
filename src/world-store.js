@@ -45,6 +45,10 @@
     airshipAt: 0.67, cavesPerChapter: 1, secondTownInChapterOne: true,
     // Volcanic and other feature biomes: the most of their own climate box they may cover.
     featureCoverage: 0.35,
+    // Overworld shape (Phase 3): share of the map that is land, mountain and high ground shares of each continent's
+    // inland, coastline ruggedness, minimum spacing between sites, and sparse per continent overrides keyed by slug
+    // ({radius multiplier, ruggedness, mountains}) that the World tab edits in Phase 7.
+    overworld: { landFraction: 0.36, mountainShare: 0.12, highShare: 0.35, ruggedness: 0.35, siteSpacing: 8, continents: {} },
     bake: false
   };
   function skeleton() {

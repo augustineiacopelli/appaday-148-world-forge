@@ -164,6 +164,90 @@ SESSION 2 / PHASE 2 (2026-10-02, Opus): THE PROGRESSION GRAPH BEFORE GEOMETRY. C
     region split ridges with one pass cell per 'pass' gate, landing rings with one pass per 'landing' gate, sites placed per
     region from the graph's site nodes, and the mountain biome placed directly (the Phase 1 snowfield finding).
 === END SESSION 2 ===
+SESSION 3 / PHASE 3 (2026-10-02, Opus): CONTINENTS AND THE OVERWORLD. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40 before any change.
+  ENGINE:WORLD section src/engine-overworld.js: ENGINE_WORLD.overworld {DEFAULTS, ST, CLS, settings, size, palette(art,
+    table), build(spec), reach(ow, held, opts), walkable, check(ow, graph), grid {bfs, components, largest, nb4}}. spec =
+    {seed, settings (world.settings), graph (Phase 2, nodes carrying record), minutes {chp: target minutes}, palette}. Pure:
+    art arrives as plain data, nothing outside the spec is read. Four way movement throughout.
+  Palette: ocean from the climate table (elevation 0); walls use the mountain biome directly (box elevation 4, not passable,
+    key mountain preferred), never the table (the Phase 1 snowfield finding); a passable lowland biome for carving; stamps
+    from interior:<kind> with the planned fallbacks (cave and castle to dungeon, town to whichever exists). Stamps: town 3x2
+    walls with door plus lintel deco (flagsAt 33); dungeon 3x2 with door plus arch (33); cave 3x2 with stairs (1); castle 5x3
+    for the finale with pillars and torches when the set has them. Any missing piece is a palette problem, not a crash.
+  Build order: continents (seeded rejection sampling, 120 tries, 6 cell separation, radius sqrt(landFraction x area x minutes
+    share / pi) x the continent's radius override) -> masks (1 - d/r + ruggedness x noise, minus an edge falloff over the
+    outer 12 cells so coasts curve away from the border) -> strongest mask wins, close contests and the 3 cell margin are
+    ocean, and any land within two cells (Chebyshev) of another continent is cut, so straits are at least two cells wide ->
+    each continent keeps its largest landmass -> sea is water joined to the edge, the rest are lakes -> elevation: coast is
+    land one step from water, or two where noise allows; mountains are the top mountainShare of inland cells (sea distance
+    4+) by 0.65 ridge + 0.35 height; high ground the top highShare of the rest -> temperature (latitude, minus height) and
+    moisture (distance to water, plus noise) cut into five bands at world.settings.thresholds over the land -> biome by
+    climate.lookup -> regions -> rings and ridges -> gates -> feature biomes -> sites and locks -> carving -> walls.
+  Regions: one continent per region when alone; a shared continent is cut into bands across a seeded direction, shares by
+    chapter minutes, noisy edges, stray pieces joined to the band they touch. Every land cell touching another region's cell
+    is a wall (a two cell ridge).
+  DECISION, rings: after the ship arrives, every later region that touches the sea is ringed, not only landings. The ring is
+    the region's land at sea distance exactly 3 (every four way path from the shore inland crosses it); the strip outside is
+    beach. A landing region's ring holds its landing gate (chapter key plus ship); a region entered over a pass that is
+    ringed gets a 'seawall' gate (its chapter key), so the ship can never reach a later chapter's inland early, even on a
+    continent shared with earlier chapters. Region and ring gate cells stay mountain; the overlay opens them.
+  Gates in world.records map_ (overlay): pass (two adjacent ridge cells, consecutive chapters on one continent, needs the
+    later chapter's key), landing, seawall, lock. DECISION, the lock: the cell in front of the boss door is a gate needing
+    the chapter key and its seal, walled on both sides, ground left as passable lowland so it can be drawn as a seal marker.
+  Sites: per region, anchor = the pass's inner cell, else the landing's inner cell, else (chapter one) the cell of the
+    largest walkable ground nearest its centroid; anchor and gate sides are carved into the region's largest walkable ground
+    first. Candidates need a fully good zone (stamp plus a one cell margin, the front, and for bosses the lock row and
+    approach) on inland low or high ground, no feature, no coast or peak, reachable from the anchor; start towns from the
+    nearest 20 percent by walking distance, key dungeons 40 to 65, bosses the farthest 15, optional anywhere; spacing from
+    siteSpacing (8) down to 3. Summed area table over the region's bounding box. Afterward every site front and lock
+    approach is joined to the anchor by carving (shortest path inside the region; blocked cells become passable lowland).
+  Features: volcanic (any feature biome) last among the terrain, on inland open cells inside its own box, ranked by its own
+    noise, featureCoverage of the eligible cells.
+  Self check (overworld.check): for each chapter n, holding what earlier chapters granted (airship left out on purpose, as
+    every site entrance already needs its chapter key): every non boss front and each lock's approach reachable, the lock
+    shut; with the seal the lock opens; no inner ground of a later region reachable. A build that fails retries with the
+    next attempt key (overworld|<name>|<attempt>, attempt 0 has no suffix) up to settings.overworld.attempts (6).
+  Speed: in a vm context everything is several times slower (globals such as Math go through interceptors), so timing is
+    measured in a plain context: demo 64 ms, four 189 ms in Node; four 387 to 481 ms in headless Chromium here. Under the
+    plan's 100 ms mobile bar only for the demo, so Phase 7 should still measure on a phone before adding the Worker.
+    Speedups that keep every value identical: noise sampled on a lattice 2 (4 for temperature and region edges) cells apart
+    and filled in bilinearly; hot loops lifted out of the attempt's closure into top level helpers (maskOwners, cutStraits,
+    climateRaw, lattice); simplex noise2 corners written out in place with flat gradient tables (proven bit identical on
+    20000 samples and five seeds before and after); a 5x5 running min and max for the strait cut; a cheap integer digest.
+  WORLD side (WORLD:GENERATE): WORLD.overworld {record, paramHash, generate (memoized by paramHash), stale, apply, xy}. The
+    map is not stored; it regenerates from seed, settings (bake excluded), graph digest, palette digest, chapter minutes, and
+    engine version, whose hash the record keeps. apply lays out the progression first when missing or stale, refuses a map
+    that failed its own checks, and writes one map_ (key map|overworld, kind overworld): w, h, seed, generatorVersion,
+    paramHash, digest, attempts, start [x, y], continents [{continent, label, center, radius, cells, regions}], regions
+    [{region, chapter, continent, entry, ringed, cells, anchor}], sites [{site, key, kind, role, chapter, region, interior,
+    stamp, rect, entrance, front, approach}], gates [{key, gate, kind, requires, region, from, cells}], stats {land, sea,
+    lake, biomes}. No tile arrays (four fixture record about 9 KB). A user map_ is kept. Validator world.overworld: stale is
+    a warning; a site or region the record names that is missing is an error. Settings gain overworld {landFraction 0.36,
+    mountainShare 0.12, highShare 0.35, ruggedness 0.35, siteSpacing 8, continents {slug: {radius, ruggedness, mountains}}}.
+  World tab (WS:WORLD, src/ws-world.js, CSS src/world-map.css): Generate the overworld, chips (checks, size, seed, land, sites,
+    gates by kind, ms, out of date), Generate again and New seed, a five button overlay radio group (Biome, Elevation,
+    Temperature, Moisture, Regions), Sites and Gates toggles, one canvas pixel per cell drawn with row runs and scaled with
+    pixelated rendering, a legend, and Regions and Gates tables. Phase 7 adds the tile preview, pan and pinch, per continent
+    controls, and the tap inspector on top.
+  Tests: test/phase3.js 61 of 61 (identical maps in two vm contexts and a plain context; seeds differ; IDs never move on a
+    reroll; demo and four on 30 seeds each plus five synthetic layouts on 8 seeds each all build and walk clean; size and
+    cap; margin; straits; one landmass per continent; radius by minutes; every open land cell matches the table or carved
+    lowland; water is swim; temperature bands at the thresholds and falling with latitude; walls are the mountain biome;
+    coast near water; volcanic inside its box; featureCoverage 0, mountainShare, and a radius override take effect; regions
+    connected and walled from each other; ringed regions exactly those after the ship; gate counts and shapes; locks walled;
+    every site stamped once in its region on inland ground; stamps resolve and read the right flags through flagsAt; castle
+    finale; spacing; start in front of chapter one's town; the walking check clean, and catching an open pass, a keyless
+    landing, a sealless lock, and a torn ring; all keys plus ship reach every site, no ship stays on Westland, the start
+    reaches only chapter one; timing; the page builds the same digest, writes the record, validates clean, goes stale on a
+    reroll and fresh on regenerate with every ID kept, ignores bake, keeps a user map_; Draft manifest 32 created, none
+    unresolved; Final no longer blocked for want of a map; Days 146 and 147 open the generated Draft with every namespace
+    identical and no new errors; the World tab). phase0 63, phase1 37, phase2 40; layout.js 22 views pass (World generated
+    and with the Regions overlay added). Pictures: test/out/phase3-four-42.png, phase3-demo-42.png, phase3-world-390.png,
+    phase3-world-1280.png.
+  Next: Phase 4, interiors (src/engine-interiors.js). It reads the map_ record's sites (entrance and front cells) for the
+    exits back to the overworld, the site records' interior hint (town, dungeon, cave, castle), and palette.stamps' sets.
+=== END SESSION 3 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

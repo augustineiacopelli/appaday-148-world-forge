@@ -1,0 +1,13 @@
+/* === WORLD:MAP CSS BEGIN === */
+.w8-ow .section-h { margin-top: 0; }
+.w8-owbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0 10px; }
+.w8-seg { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line2); border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; flex: 1 1 100%; }
+.w8-seg-btn { flex: 1 1 96px; min-height: 44px; border: 0; border-radius: 0; background: var(--panel); color: var(--ink2); padding: 0 10px; font-weight: 600; }
+@media (min-width: 720px) { .w8-seg { flex: 0 1 auto; } .w8-seg-btn { flex: 0 0 auto; } }
+.w8-seg-btn[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+.w8-seg-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+.w8-map { margin: 0; background: #1d3557; border: 1px solid var(--line2); border-radius: 10px; overflow: hidden; line-height: 0; }
+.w8-map canvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; image-rendering: crisp-edges; }
+.w8-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; border: 1px solid var(--line2); }
+@media (min-width: 900px) { .w8-map { max-width: 760px; } }
+/* === WORLD:MAP CSS END === */
