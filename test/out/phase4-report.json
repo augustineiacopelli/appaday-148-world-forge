@@ -1,8 +1,8 @@
 {
-  "when": "2026-10-02T14:10:03.400Z",
+  "when": "2026-10-02T14:24:49.937Z",
   "pass": 53,
   "total": 53,
-  "buildMs": 33,
+  "buildMs": 41,
   "firstTry": "258/272",
   "results": [
     {
@@ -189,9 +189,9 @@
       }
     },
     {
-      "name": "all 25 interiors of the four fixture build in 33 ms in a plain context (under 1500)",
+      "name": "all 25 interiors of the four fixture build in 41 ms in a plain context (under 1500)",
       "ok": true,
-      "detail": 33
+      "detail": 41
     },
     {
       "name": "nothing is generated before apply",
@@ -207,7 +207,7 @@
         "written": 118,
         "removed": 0,
         "kept": [],
-        "ms": 222
+        "ms": 201
       }
     },
     {
@@ -245,16 +245,17 @@
       "ok": true
     },
     {
-      "name": "the generated four fixture validates with no errors, no broken references, and only the Marches boss warning",
+      "name": "the generated four fixture validates with no errors, no broken references, and only the Marches boss warning (plus Phase 5's zones not yet generated)",
       "ok": true,
       "detail": {
         "s": {
           "errors": 0,
           "broken": 0,
           "forward": 0,
-          "warnings": 1
+          "warnings": 2
         },
         "w": [
+          "The world has no encounter zones yet. Generate them on the Encounters tab.",
           "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
         ],
         "e": []
@@ -290,7 +291,7 @@
         "written": 100,
         "removed": 18,
         "kept": [],
-        "ms": 129
+        "ms": 144
       }
     },
     {

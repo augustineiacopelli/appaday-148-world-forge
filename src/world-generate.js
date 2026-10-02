@@ -345,6 +345,144 @@
     });
   });
 
+  // ---------------------------------------------------------------- encounter zones (Phase 5)
+  // world.zones holds the encounter tables (no record prefix: zones are data the maps point at by key, not records Day 149
+  // references by ID): field zones per continent, chapter, and biome over flag 2 overworld cells, one interior zone per
+  // dungeon, castle, and cave floor, boss and guardian encounters, and the sdq_ givers this forge wrote. Like the maps it
+  // keeps the hash of what it was made from, so a stale table is caught. Sparse edits live in world.overrides.zones
+  // {zone key: {rate, weights {trp_: n}}} and survive every regeneration. Filling sdq_.giver is the one write this forge
+  // makes outside world; a giver someone else set (resolving, and not the one this forge last wrote) is kept.
+  var ZNE = ENGINE_WORLD.zones;
+  function zoneData(b) { var z = b && b.world && b.world.zones; return U.isObj(z) && Array.isArray(z.field) ? z : null; }
+  function tilesets(b) { return (b.art && b.art.records && b.art.records.til_) || {}; }
+  function biomeKeys(b) { var o = {}, t = tilesets(b); Object.keys(t).sort().forEach(function (id) { if (t[id] && t[id].kind === 'biome') o[id] = t[id].key || id; }); return o; }
+  function subjectRef(b, tilId) { var t = tilesets(b)[tilId]; return t && t.subject && t.subject.ref || null; }
+  function backgrounds(b) {
+    var o = {}, recs = (b.art && b.art.records && b.art.records.bgd_) || {};
+    Object.keys(recs).sort().forEach(function (id) { var g = recs[id]; if (g && g.subject && g.subject.kind === 'role' && g.subject.ref && !o[g.subject.ref]) o[g.subject.ref] = id; });
+    return o;
+  }
+  function weatherList(b) {
+    var w = (b.rules && b.rules.wth_) || {};
+    return Object.keys(w).map(function (id) { return { weather: id, name: w[id].name || '', text: w[id].realWorld || '' }; });
+  }
+  function siteKeyOfMap(m) { return String(m.key || '').replace(/^map\|/, '').replace(/\|\d+$/, ''); }
+  function znSpec(b) {
+    var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+    if (!ow || !g) return null;
+    var bk = biomeKeys(b), regId = {}, trp = (b.rules && b.rules.trp_) || {}, enm = (b.rules && b.rules.enm_) || {};
+    g.regions.forEach(function (r) { regId[r.key] = r.record || ENGINE_WORLD.ids.structural('reg_', r.key); });
+    var field = ZNE.fieldCells(ow, bk).map(function (f) { return Object.assign({}, f, { region: regId[f.region], ref: subjectRef(b, f.biome) }); });
+    var chapters = WORLD.chapters(b).map(function (c) {
+      var troops = [], bosses = [];
+      Object.keys(trp).sort().forEach(function (id) {
+        var t = trp[id];
+        if (!t || t.chapter !== c.id) return;
+        if (ZNE.isBoss(t, enm)) bosses.push(id); else troops.push({ troop: id, power: ZNE.power(t, enm) });
+      });
+      return { chapter: c.id, continent: WORLD.continentSlug(c), troops: troops, bosses: bosses };
+    });
+    var flags = INE.palette(b.art).flags, interiors = [], bossSites = [], caves = [], keys2 = [];
+    interiorMaps(b).filter(function (m) { return m.kind !== 'town'; }).sort(function (a, c) { return a.key < c.key ? -1 : 1; }).forEach(function (m) {
+      var sk = siteKeyOfMap(m), site = WORLD.interiors.site(sk, b), fl = site && site.floors[(m.floor || 1) - 1], siteRec = WORLD.records.get(m.site, b) || {};
+      var ref = subjectRef(b, m.tileset) || 'interior:' + m.kind;
+      interiors.push({ key: sk, site: m.site, map: m.id, kind: m.kind, chapter: m.chapter, floor: m.floor || 1, floors: m.floors || 1, cells: fl ? ZNE.floorCells(fl, flags) : 0, ref: ref });
+      (m.features || []).forEach(function (ft) {
+        if (ft.kind === 'boss') bossSites.push({ site: m.site, map: m.id, at: ft.at, troop: ft.troop || null, chapter: m.chapter, ref: ref, finale: !!ft.finale });
+        else if (ft.kind === 'chest' && ft.treasure && /^cave/.test(siteRec.role || '')) caves.push({ chapter: m.chapter, site: m.site, map: m.id, at: ft.at, ref: ref, kind: 'cave', order: sk });
+        else if (ft.kind === 'chest' && ft.prize) keys2.push({ chapter: m.chapter, site: m.site, map: m.id, at: ft.at, ref: ref, kind: 'key', order: sk });
+      });
+    });
+    var ovr = b.world.overrides && U.isObj(b.world.overrides.zones) ? b.world.overrides.zones : {};
+    var sp = { settings: b.world.settings, chapters: chapters, field: field, interiors: interiors, backgrounds: backgrounds(b), weather: weatherList(b),
+      bossSites: bossSites, spareSlots: caves.concat(keys2), overrides: ovr };
+    sp.hash = ENGINE_WORLD.util.digest([ENGINE_WORLD.version, (WORLD.overworld.record(b) || {}).paramHash || '-', canon(interiorMaps(b).map(function (m) { return m.id + '=' + m.paramHash; }).sort()),
+      canon(chapters), canon(sp.backgrounds), canon(sp.weather), canon(b.world.settings && b.world.settings.zones || {}), canon(ovr)]);
+    return sp;
+  }
+  function znGivers(b, prior) {
+    var people = [], towns = {};
+    WORLD.records.list('twn_', b).forEach(function (t) { towns[t.id] = t; });
+    WORLD.records.list('npc_', b).forEach(function (p) {
+      var t = towns[p.site];
+      if (t) people.push({ npc: p.id, chapter: p.chapter, town: t.order | 0, slot: p.slot || '', role: p.role || '' });
+    });
+    var quests = [], sdq = (b.rules && b.rules.sdq_) || {};
+    Object.keys(sdq).sort().forEach(function (id) {
+      var q = sdq[id], g0 = q.giver, live = g0 && WORLD.records.get(g0, b);
+      // Someone else's choice stays: a giver that resolves and is not the one this forge last wrote.
+      quests.push({ quest: id, chapter: q.chapter || null, keep: live && g0 !== prior[id] ? g0 : null });
+    });
+    var r = ZNE.givers({ chapters: WORLD.chapters(b).map(function (c) { return c.id; }), quests: quests, people: people });
+    r.kept = quests.filter(function (q) { return q.keep; }).map(function (q) { return q.quest; });
+    return r;
+  }
+
+  WORLD.zones = {
+    data: function (b) { return zoneData(b || cur()); },
+    generated: function (b) { return !!zoneData(b || cur()); },
+    spec: function (b) { b = b || cur(); WORLD.ensure(b); return znSpec(b); },
+    // The field zone of an overworld cell index, by the engine's rule (null for water, walls, and stamps).
+    cellKey: function (i, b) { b = b || cur(); var ow = WORLD.overworld.generate(b); return ow ? ZNE.cellKey(ow, i, biomeKeys(b)) : null; },
+    zone: function (key, b) { var z = zoneData(b || cur()); return z ? z.field.concat(z.interior).filter(function (x) { return x.key === key; })[0] || null : null; },
+    stale: function (b) {
+      b = b || cur();
+      var z = zoneData(b);
+      if (!z) return false;
+      if (WORLD.interiors.stale(b)) return true;
+      var sp = znSpec(b);
+      return !sp || sp.hash !== z.paramHash;
+    },
+    // Generates the interiors first when they are missing or stale, then the tables, bosses, and givers.
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      if (!WORLD.interiors.generated(b) || WORLD.interiors.stale(b)) WORLD.interiors.apply(b);
+      var t0 = Date.now(), sp = znSpec(b), r = ZNE.build(sp), old = zoneData(b), prior = old && U.isObj(old.givers) ? old.givers : {};
+      var gv = znGivers(b, prior), sdq = (b.rules && b.rules.sdq_) || {}, wrote = {}, filled = 0;
+      WORLD.batching = true;
+      try {
+        Object.keys(gv.assign).sort().forEach(function (q) { if (sdq[q].giver !== gv.assign[q]) { sdq[q].giver = gv.assign[q]; filled++; } wrote[q] = gv.assign[q]; });
+        // Every generated person who gives a quest lists it in quests (a giver set by hand is marked too).
+        var giving = {};
+        Object.keys(sdq).sort().forEach(function (q) { var n = sdq[q].giver; if (n) (giving[n] = giving[n] || []).push(q); });
+        WORLD.records.list('npc_', b).forEach(function (p) {
+          if (p.origin === 'user') return;
+          var qs = giving[p.id] || [];
+          if (qs.length) p.quests = qs; else delete p.quests;
+        });
+      } finally { WORLD.batching = false; }
+      var stats = { field: r.field.length, interior: r.interior.length, bosses: r.bosses.filter(function (x) { return x.role === 'boss'; }).length,
+        guardians: r.bosses.filter(function (x) { return x.role === 'guardian'; }).length, givers: Object.keys(wrote).length, kept: gv.kept.length,
+        cells: r.field.reduce(function (s, z) { return s + z.cells; }, 0) };
+      b.world.zones = { version: 1, generatorVersion: ENGINE_WORLD.version, paramHash: sp.hash, digest: r.digest, field: r.field, interior: r.interior,
+        bosses: r.bosses, givers: wrote, warnings: r.warnings.concat(gv.warnings), stats: stats };
+      if (b === cur()) { Kit.index.invalidate(); Kit.bundle.touch('zones'); }
+      return { zones: b.world.zones, filled: filled, kept: gv.kept, ms: Date.now() - t0 };
+    }
+  };
+
+  Kit.validate.register('world.zones', function (b, ctx) {
+    var z = zoneData(b), trp = (b.rules && b.rules.trp_) || {}, bg = (b.art && b.art.records && b.art.records.bgd_) || {}, wth = (b.rules && b.rules.wth_) || {};
+    if (!z) {
+      if (WORLD.interiors.generated(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The world has no encounter zones yet. Generate them on the Encounters tab.', level: 'warning' });
+      return;
+    }
+    if (WORLD.zones.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The maps, troops, art, or settings changed after the encounter zones were made. Generate them again on the Encounters tab.', level: 'warning' });
+    z.field.concat(z.interior).forEach(function (q) {
+      q.troops.forEach(function (t) { if (!trp[t.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' draws troop ' + t.troop + ', which does not exist.', level: 'error' }); });
+      if (q.background && !bg[q.background]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses battle background ' + q.background + ', which does not exist.', level: 'error' });
+      if (q.weather && !wth[q.weather]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses weather ' + q.weather + ', which does not exist.', level: 'error' });
+      if (q.map && !WORLD.records.get(q.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' is on a map that does not exist.', level: 'error' });
+    });
+    z.bosses.forEach(function (x) {
+      if (x.troop && !trp[x.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The ' + x.role + ' on ' + x.map + ' is troop ' + x.troop + ', which does not exist.', level: 'error' });
+      if (!WORLD.records.get(x.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'A ' + x.role + ' stands on map ' + x.map + ', which does not exist.', level: 'error' });
+    });
+    // Empty tables and missing backgrounds are warnings here; Phase 6's reference check decides what blocks export.
+    (z.warnings || []).forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+  });
+
   // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);

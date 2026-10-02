@@ -1,10 +1,10 @@
 {
-  "when": "2026-10-02T14:09:14.596Z",
+  "when": "2026-10-02T14:23:45.113Z",
   "pass": 61,
   "total": 61,
   "timing": {
-    "demo": 34,
-    "four": 140
+    "demo": 46,
+    "four": 114
   },
   "digest42": "7b62a757-68ed8998:59",
   "results": [
@@ -280,11 +280,11 @@
       "ok": true
     },
     {
-      "name": "generation time in a plain context: demo 34 ms, four 140 ms (under 1500 ms)",
+      "name": "generation time in a plain context: demo 46 ms, four 114 ms (under 1500 ms)",
       "ok": true,
       "detail": {
-        "demo": 34,
-        "four": 140
+        "demo": 46,
+        "four": 114
       }
     },
     {

@@ -236,7 +236,9 @@ const build = (ctx, sp) => ctx.E.interiors.build(Object.assign({}, sp, { site: u
   check('no field named id inside any world record', ['map_', 'npc_', 'twn_', 'dgn_'].every((p) => WORLD.records.list(p).every((r) => !/"id"\s*:/.test(JSON.stringify(Object.assign({}, r, { id: undefined }))))));
   check('charter, codex, rules, and art are untouched; sdq_ givers are left for Phase 5', PRIOR.every((k) => canon(b[k]) === canon(before[k])));
   let res = Kit.refreshValidation();
-  check('the generated four fixture validates with no errors, no broken references, and only the Marches boss warning', !res.errors.length && !res.broken.length && res.warnings.length === 1 && /Marches/.test(res.warnings[0].message), { s: Kit.validate.summary(res), w: res.warnings.map((x) => x.message).slice(0, 3), e: res.errors.slice(0, 2).map((x) => x.message) });
+  // Phase 5 adds one warning until the encounter zones are generated; nothing else may appear.
+  const w4 = res.warnings.filter((x) => !/no encounter zones yet/.test(x.message));
+  check('the generated four fixture validates with no errors, no broken references, and only the Marches boss warning (plus Phase 5\'s zones not yet generated)', !res.errors.length && !res.broken.length && w4.length === 1 && /Marches/.test(w4[0].message) && res.warnings.length <= 2, { s: Kit.validate.summary(res), w: res.warnings.map((x) => x.message).slice(0, 3), e: res.errors.slice(0, 2).map((x) => x.message) });
   const ids0 = JSON.stringify(Object.keys(b.world.records).map((p) => Object.keys(b.world.records[p]).sort()));
   b.world.seed = 43; Kit.bundle.touch('seed');
   res = Kit.refreshValidation();

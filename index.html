@@ -329,6 +329,74 @@ SESSION 4 / PHASE 4 (2026-10-02, Opus): INTERIORS. COMPLETE.
     one table per dungeon, castle, and cave map_ (none for towns), boss troops on boss features, and the sdq_.giver fill
     from npc_ records in a town of the quest's chapter (prefer role resident).
 === END SESSION 4 ===
+SESSION 5 / PHASE 5 (2026-10-02, Opus): ENCOUNTER ZONES. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53.
+  ENGINE:WORLD section src/engine-zones.js: ENGINE_WORLD.zones {DEFAULTS, WEATHER_HINTS, settings, fieldKey, interiorKey,
+    power, isBoss, slots, weatherFor, cellKey, fieldCells, floorCells, build(spec), givers(spec)}. Pure: spec = {settings,
+    chapters [{chapter, continent, troops [{troop, power}] (non boss), bosses}], field (fieldCells plus region reg_ ID and
+    ref), interiors [{key, site, map, kind, chapter, floor, floors, cells, ref}], backgrounds {subject ref: bgd_}, weather
+    [{weather, name, text}] in rules order, bossSites, spareSlots, overrides}.
+  Field zones: built only from overworld cells whose ground is a biome carrying flag 2 (ocean, mountain walls, gate cells,
+    and site stamps never count). DECISION: keyed zone|field|<continent slug>|<chp ID>|<biome key>, the chapter included
+    because troops belong to chapters, so Westland (shared by two chapters) has one table per chapter and biome; the
+    cell's region names its chapter. cellKey(ow, i, biomes) gives the zone of any cell, for Day 150 at run time.
+  Interior zones: one per dungeon, castle, and cave floor map_ (zone|<site key>|<floor>); towns have none. Cells counted
+    are the floor cells carrying flag 2 (decoration flags first, as the walk reads them).
+  Tables: four slots weighted 5 5 5 1 in sixteenths (settings zones.slots). The rare slot is the chapter's strongest non
+    boss troop (power = sum of member levels, tier x 5 when a level is missing, then hit points, then ID); the three common
+    slots cycle through the rest in an order shuffled by rng(hash.str('zone|' + zone key)). DECISION: the shuffle uses the
+    zone key, never the seed, so a reroll moves cells but keeps every table's troops (and any override). Duplicates merge:
+    one troop 16; two 15 and 1; three 10, 5, 1. A chapter with no non boss troop gives an empty table and a warning.
+  Rates in 256ths per step: grassland 8, steppe 8, coast 6, forest 12, rainforest 14, swamp 14, desert 12, tundra 10, snow
+    12, volcanic 16, mountain 6, default 10; dungeon 12, castle 10, cave 14; times 1 + chapterScale (0.5) x chapter index /
+    (chapters - 1), times 1 + floorScale (0.15) x (floor - 1), rounded, 0 to 255. All under settings.zones.
+  Background: the bgd_ whose role subject equals the biome tileset's (biome:<key>), and for interiors the tileset drawn with
+    (interior:dungeon fallback). Missing is a warning here; Phase 6 decides what blocks export. Weather: keywords per biome
+    (snow, frost; rain, mist; sand, heat; ash, ember; clear for grassland and interiors) matched against wth_ name and
+    realWorld text, first wth_ as fallback, null with no weather. Music: zones 'battle', bosses 'boss'.
+  Bosses: each boss feature on a last floor keeps its troop (null in a bossless chapter, shown as an empty slot for Day 149);
+    the finale is marked. DECISION, spare boss troops (a chapter with more than one): they guard the chapter's optional
+    cave treasure chests first, then its key dungeon's prize chest, as role 'guardian' on that cell; any left over is a
+    warning (spare-boss). Boss and guardian troops never appear in a random table.
+  Overrides: world.overrides.zones {zone key: {rate, weights {trp_: n}}}, sparse, applied after generation and marked
+    overridden; part of the zones hash, so editing one makes the zones stale until applied. Phase 7 edits them.
+  Givers (the one write outside world): each sdq_ in ID order takes a person in a town of its own chapter: residents first,
+    then anyone but innkeepers, merchants, and the priest, then anyone; the one giving fewest quests so far, then the
+    earliest town and slot (natural order). A chapter with no townsfolk borrows the nearest chapter's (earlier first) with a
+    warning; a quest naming no chapter goes to the first chapter with a warning. DECISION: a giver that resolves and is not
+    the one this forge last wrote (world.zones.givers) was set by someone else and is kept; dangling or forge written givers
+    are rewritten. Every generated npc_ giving quests lists them in quests [sdq_]; others lose the field.
+  WORLD side (WORLD:GENERATE): WORLD.zones {data, generated, spec, cellKey, zone, stale, apply}. world.zones = {version 1,
+    generatorVersion, paramHash (engine version, overworld paramHash, every interior map's paramHash, chapters and troops,
+    backgrounds, weather, settings.zones, overrides), digest, field, interior, bosses, givers {sdq_: npc_ written here},
+    warnings, stats}. No field named id anywhere, so Kit.index files nothing from it. apply generates the interiors first
+    when missing or stale. The World tab's Generate again and the Sites tab's Generate carry the zones along once they
+    exist. Validator world.zones: none yet (once interiors exist) and stale are warnings; a missing troop, background,
+    weather, or map is an error; the engine's warnings are warnings. With the givers filled WORLD.canOpen is true, so a
+    Final export now opens world.
+  Encounters tab (WS:ENCOUNTERS, src/ws-encounters.js, CSS src/world-encounters.css): Generate encounter zones (or again),
+    chips (field and interior zone counts, bosses, guardians, encounter cells, givers, warnings, out of date), warnings,
+    Overworld zones by chapter (biome, chapter and continent, cells, rate with steps per battle, troops as weight chips with
+    the rare slot outlined, background and weather), floors, bosses and guardians, and side quest givers (set by World
+    Forge or kept as set). Tables scroll inside their wrap at 390.
+  Tests: test/phase5.js 58 of 58 (identical zones in two vm contexts and the plain context; a reroll moves cells but keeps
+    every shared key's troops, interior keys, and bosses; field cells equal the flag 2 cells on seed 42 and six more seeds
+    for each fixture, each in its region's chapter, continent, and biome; Westland split by chapter; no town zones, one per
+    floor; 5 5 5 1 sums, no boss troops, strongest rare; one to seven troop cases; empty table warning; rates by biome,
+    kind, chapter, floor; settings; backgrounds by role; weather keywords and fallbacks; missing background warning;
+    music; overrides; bosses, the Marches empty slot, the finale; three spare bosses (cave, key prize, warning); givers
+    (order, spread, borrowing, no chapter, kept, guard before innkeeper); 0.6 ms per build; the page matches the engine's
+    digest, cellKey, rules differ only in the two givers, each a resident of its chapter's town marked with its quest,
+    validation clean but the Marches warning, canOpen true, stale on a reroll and on an override, IDs kept, a hand set
+    giver kept, a dangling one replaced, the World and Sites tabs carry the zones; Draft round trip into 146 and 147
+    identical with the givers as forward; Final opens world and Days 146 and 147 open it with 0 broken and 0 forward; the
+    Encounters tab). phase0 63, phase1 37 (the static scan covers the new section), phase2 40, phase3 61, phase4 53 (its
+    validation check now allows Phase 5's zones not yet warning); layout.js 30 views pass (Encounters generated added).
+    Pictures: test/out/phase5-encounters-390.png, phase5-encounters-1280.png.
+  Next: Phase 6, validation (src/engine-checks.js): world.refs (chapters, troops, biomes, tilesets, interior keys, backgrounds,
+    music roles, weather, NPC archetype sprites), world.progression flood fill per chapter with held keys, world.flags,
+    and world.zones (decide whether an empty table or a missing background blocks export).
+=== END SESSION 5 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -698,6 +766,15 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-pick[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .w8-sites tr[aria-current="true"] th { color: var(--accent2); }
 /* === WORLD:SITES CSS END === */
+/* === WORLD:ENCOUNTERS CSS BEGIN === */
+.w8-enc td { vertical-align: top; }
+.w8-enc th .w8-sub, .w8-enc td .w8-sub { display: block; }
+.w8-enc td.num .w8-sub { white-space: nowrap; }
+.w8-troop { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; border: 1px solid var(--line2); border-radius: 999px; white-space: nowrap; font-size: 0.92em; }
+.w8-troop b { font-weight: 700; color: var(--ink2); }
+.w8-troop.w8-rare { border-color: var(--accent2); }
+.w8-troop.w8-rare b { color: var(--accent2); }
+/* === WORLD:ENCOUNTERS CSS END === */
 </style>
 </head>
 <body>
@@ -5400,6 +5477,230 @@ var ENGINE_WORLD = (function () {
     settings: inSettings, palette: inPalette, floors: function (spec) { return siteFloors(spec, inSettings(spec.settings)); }, slots: inSlots,
     build: inBuild, check: inCheck, walk: function (pal, fl, held) { return inWalk(pal, fl, held); }, reach: reachFrom };
 
+  // ---------------------------------------------------------------- encounter zones (Phase 5)
+  // Encounter tables for the overworld and every dungeon, castle, and cave floor, plus the boss and guardian encounters
+  // and the side quest givers. Pure: the bundle arrives as plain data (the WORLD side builds the spec) and nothing outside
+  // the spec is read.
+  //
+  // Field zones are keyed by continent slug, chapter, and biome key (zone|field|<continent>|<chp>|<biome key>) and are
+  // built only from overworld cells whose ground carries flag 2. DECISION: the chapter is part of the key because troops
+  // belong to chapters, so a continent shared by two chapters has one table per chapter and biome (the cell's region
+  // names its chapter). Interior zones are one per floor map (zone|<site key>|<floor>). Towns have none. Every key is
+  // structural, so a reroll moves cells between zones but never renames one.
+  //
+  // A table fills four slots in FF6's pattern, weights in sixteenths 5, 5, 5, 1: the rare slot holds the strongest
+  // non boss troop of the chapter, the three common slots cycle through the others in an order shuffled by the zone key
+  // (not the seed), so different biomes of one chapter draw different mixes and a reroll keeps every table's troops.
+  // Duplicate slots merge their weights. A rate in 256ths per step comes from the biome (or interior kind), scaled up
+  // through the chapters and down the floors of a dungeon.
+  var ZN_DEFAULTS = {
+    slots: [5, 5, 5, 1],
+    rates: { grassland: 8, steppe: 8, coast: 6, forest: 12, rainforest: 14, swamp: 14, desert: 12, tundra: 10, snow: 12, volcanic: 16, mountain: 6, default: 10 },
+    interiorRates: { dungeon: 12, castle: 10, cave: 14 },
+    chapterScale: 0.5, floorScale: 0.15
+  };
+  // Weather keywords matched against a wth_ record's name and realWorld text, tried in order; the first wth_ is the fallback.
+  var WEATHER_HINTS = {
+    snow: ['snow', 'blizzard', 'frost', 'ice', 'hail'], tundra: ['snow', 'frost', 'cold', 'wind'], mountain: ['wind', 'snow', 'clear'],
+    rainforest: ['rain', 'storm', 'mist', 'fog'], swamp: ['fog', 'mist', 'rain'], forest: ['mist', 'rain', 'clear'],
+    desert: ['sand', 'dust', 'heat', 'sun', 'clear'], volcanic: ['ash', 'ember', 'smoke', 'heat'], steppe: ['wind', 'dust', 'clear'],
+    coast: ['wind', 'fog', 'rain', 'clear'], ocean: ['storm', 'rain', 'wind'], grassland: ['clear', 'sun', 'fair'],
+    interior: ['clear', 'calm', 'still', 'none'], default: ['clear', 'fair', 'sun']
+  };
+  function znNum(v, d, a, b) { v = v == null || v === '' ? NaN : Number(v); return isFinite(v) ? clamp(v, a, b) : d; }
+  function znSettings(s) {
+    var z = s && s.zones || {}, rates = {}, ir = {}, sl = Array.isArray(z.slots) && z.slots.length === 4 ? z.slots.map(function (v) { return Math.floor(znNum(v, 0, 0, 16)); }) : ZN_DEFAULTS.slots.slice();
+    each(ZN_DEFAULTS.rates, function (v, k) { rates[k] = v; });
+    each(z.rates, function (v, k) { rates[k] = Math.floor(znNum(v, rates[k] == null ? ZN_DEFAULTS.rates.default : rates[k], 0, 255)); });
+    each(ZN_DEFAULTS.interiorRates, function (v, k) { ir[k] = v; });
+    each(z.interiorRates, function (v, k) { ir[k] = Math.floor(znNum(v, ir[k] == null ? ZN_DEFAULTS.interiorRates.dungeon : ir[k], 0, 255)); });
+    return { slots: sl, rates: rates, interiorRates: ir, chapterScale: znNum(z.chapterScale, ZN_DEFAULTS.chapterScale, 0, 4), floorScale: znNum(z.floorScale, ZN_DEFAULTS.floorScale, 0, 2) };
+  }
+  function fieldKey(continent, chapter, biomeKey) { return 'zone|field|' + continent + '|' + chapter + '|' + biomeKey; }
+  function interiorKey(siteKey, floor) { return 'zone|' + siteKey + '|' + floor; }
+  function round(v) { return Math.floor(v + 0.5); }
+
+  // A troop's strength: the sum of its members' levels (tier x 5 when a level is missing), then hit points to break ties.
+  function troopPower(trp, enm) {
+    var lv = 0, hp = 0;
+    ((trp && trp.members) || []).forEach(function (m) {
+      var e = enm && m && enm[m.enm];
+      if (!e) return;
+      lv += Number(e.level) > 0 ? Number(e.level) : (Number(e.tier) > 0 ? Number(e.tier) * 5 : 1);
+      hp += Number(e.stats && e.stats.hp) > 0 ? Number(e.stats.hp) : 0;
+    });
+    return lv * 100000 + Math.min(hp, 99999);
+  }
+  function troopIsBoss(trp, enm) { return ((trp && trp.members) || []).some(function (m) { return !!(enm && m && enm[m.enm] && enm[m.enm].isBoss); }); }
+  function byPower(a, b) { return b.power - a.power || (a.troop < b.troop ? -1 : a.troop > b.troop ? 1 : 0); }
+
+  // slots(troops [{troop, power}], key, settings) -> {slots [4 troop IDs], troops [{troop, weight}], rare}.
+  function znSlots(troops, key, S) {
+    S = S || znSettings({});
+    var list = (troops || []).slice().sort(byPower);
+    if (!list.length) return { slots: [], troops: [], rare: null };
+    var rare = list[0].troop, pool = list.slice(1).map(function (t) { return t.troop; }).sort();
+    if (!pool.length) pool = [rare];
+    var order = rng(hashStr('zone|' + key)).shuffle(pool), slots = [];
+    for (var k = 0; k < 3; k++) slots.push(order[k % order.length]);
+    slots.push(rare);
+    var weights = {}, seen = [];
+    slots.forEach(function (t, k) { if (weights[t] == null) { weights[t] = 0; seen.push(t); } weights[t] += S.slots[k]; });
+    return { slots: slots, troops: seen.map(function (t) { return { troop: t, weight: weights[t] }; }).filter(function (x) { return x.weight > 0; }), rare: rare };
+  }
+  // weatherFor(hintKey, weather [{weather, name, text}]) -> wth_ ID or null.
+  function weatherFor(hint, weather) {
+    weather = weather || [];
+    if (!weather.length) return null;
+    var words = WEATHER_HINTS[hint] || WEATHER_HINTS.default;
+    for (var k = 0; k < words.length; k++) {
+      for (var j = 0; j < weather.length; j++) {
+        var hay = (String(weather[j].name || '') + ' ' + String(weather[j].text || '')).toLowerCase();
+        if (hay.indexOf(words[k]) >= 0) return weather[j].weather;
+      }
+    }
+    return weather[0].weather;
+  }
+  // The field zone a cell of a built overworld belongs to, or null when it carries no flag 2 (water, walls, stamps).
+  // biomes: {tileset ID: biome key}. Day 150 uses this at run time to find the table for the cell a party steps on.
+  function znCellKey(ow, i, biomes) {
+    var g = ow.ground[i];
+    if (!g || String(g).indexOf(':') >= 0 || !((ow.flags[g] | 0) & 2)) return null;
+    var r = ow.region[i];
+    if (r == null || r < 0 || !ow.regions[r]) return null;
+    var reg = ow.regions[r];
+    return fieldKey(reg.continent, reg.chapter, biomes && biomes[g] || g);
+  }
+  // Field zone tallies of a built overworld: [{key, continent, chapter, region (region key), biome, biomeKey, cells}].
+  function znFieldCells(ow, biomes) {
+    var tally = {}, n = ow.ground.length;
+    for (var i = 0; i < n; i++) {
+      var k = znCellKey(ow, i, biomes);
+      if (!k) continue;
+      var z = tally[k];
+      if (!z) { var reg = ow.regions[ow.region[i]]; z = tally[k] = { key: k, continent: reg.continent, chapter: reg.chapter, region: reg.key, biome: ow.ground[i], biomeKey: biomes && biomes[ow.ground[i]] || ow.ground[i], cells: 0 }; }
+      z.cells++;
+    }
+    return keys(tally).map(function (k) { return tally[k]; });
+  }
+  // Cells of an interior floor that carry flag 2 (the decoration's flags when there is one, as the walk does).
+  function znFloorCells(fl, flags) {
+    var c = 0;
+    for (var i = 0; i < fl.ground.length; i++) { var r = fl.deco[i] || fl.ground[i]; if (r && ((flags[r] | 0) & 2)) c++; }
+    return c;
+  }
+
+  // build(spec) -> {field [zone], interior [zone], bosses [encounter], warnings, digest}.
+  // spec: {settings (world.settings), chapters [{chapter, continent, troops [{troop, power}] (non boss), bosses [trp_]}]
+  //   in story order, field (fieldCells output, plus region (the reg_ ID) and ref (biome:<key>)), interiors [{key (site
+  //   key), site, map, kind, chapter, floor, floors, cells, ref (interior:<kind> of the tileset drawn with)}],
+  //   backgrounds {subject ref: bgd_}, weather [{weather, name, text}] in rules order, bossSites [{site, map, at, troop,
+  //   chapter, ref, finale}], spareSlots [{chapter, site, map, at, ref, kind}] in preference order, overrides {zone key:
+  //   {rate, weights {trp_: n}}}}.
+  // zone: {key, kind 'field' | 'interior', continent, chapter, region, biome, biomeKey, site, map, floor, cells, rate,
+  //   baseRate, slots, troops [{troop, weight}], rare, background, weather, music 'battle', empty, overridden}.
+  function znBuild(spec) {
+    var S = znSettings(spec.settings), chap = {}, N = (spec.chapters || []).length, warnings = [], bg = spec.backgrounds || {}, ov = spec.overrides || {};
+    (spec.chapters || []).forEach(function (c, k) { chap[c.chapter] = { index: k, c: c }; });
+    function scale(chapter) { var ci = chap[chapter]; return 1 + S.chapterScale * (ci && N > 1 ? ci.index / (N - 1) : 0); }
+    function zone(base, kind, hint, rateBase, floor) {
+      var ci = chap[base.chapter], troops = ci ? ci.c.troops || [] : [], sl = znSlots(troops, base.key, S);
+      var rate = clamp(round(rateBase * scale(base.chapter) * (1 + S.floorScale * ((floor || 1) - 1))), 0, 255);
+      var bgd = bg[base.ref] || null;
+      if (!bgd && kind === 'interior' && bg['interior:dungeon']) bgd = bg['interior:dungeon'];
+      var z = { key: base.key, kind: kind, continent: base.continent || (ci ? ci.c.continent : null), chapter: base.chapter, region: base.region || null,
+        biome: base.biome || null, biomeKey: base.biomeKey || null, site: base.site || null, map: base.map || null, floor: floor || null,
+        cells: base.cells | 0, rate: rate, baseRate: rateBase, slots: sl.slots, troops: sl.troops, rare: sl.rare, background: bgd,
+        weather: weatherFor(hint, spec.weather), music: 'battle', empty: !sl.troops.length, overridden: false };
+      var o = ov[base.key];
+      if (o && typeof o === 'object') {
+        if (o.rate != null && isFinite(Number(o.rate))) { z.rate = clamp(Math.floor(Number(o.rate)), 0, 255); z.overridden = true; }
+        if (o.weights && typeof o.weights === 'object') {
+          z.troops = z.troops.map(function (t) { var w = o.weights[t.troop]; return w == null || !isFinite(Number(w)) ? t : { troop: t.troop, weight: clamp(Math.floor(Number(w)), 0, 255) }; });
+          z.overridden = true;
+        }
+      }
+      if (!ci) warnings.push({ code: 'no-chapter', zone: z.key, message: 'Zone ' + z.key + ' belongs to no chapter of the Charter.' });
+      else if (z.empty) warnings.push({ code: 'no-troops', zone: z.key, chapter: z.chapter, message: 'Chapter ' + z.chapter + ' has no troop without a boss for zone ' + z.key + ', so it never triggers a battle. Add troops in Saga Forge (Day 146).' });
+      if (!z.background) warnings.push({ code: 'no-background', zone: z.key, message: 'No battle background has the role ' + base.ref + ' for zone ' + z.key + '.' });
+      return z;
+    }
+    var field = (spec.field || []).slice().sort(function (a, b) { return a.key < b.key ? -1 : 1; }).map(function (f) {
+      var r = S.rates[f.biomeKey]; return zone(f, 'field', WEATHER_HINTS[f.biomeKey] ? f.biomeKey : 'default', r == null ? S.rates.default : r, null);
+    });
+    var interior = (spec.interiors || []).map(function (m) {
+      var r = S.interiorRates[m.kind]; return zone({ key: interiorKey(m.key, m.floor), chapter: m.chapter, site: m.site, map: m.map, cells: m.cells, ref: m.ref }, 'interior', 'interior', r == null ? S.interiorRates.dungeon : r, m.floor);
+    }).sort(function (a, b) { return a.key < b.key ? -1 : 1; });
+    // Bosses: each boss feature keeps its troop. Spare boss troops of a chapter (more than one) guard its optional caves'
+    // treasure, then its key dungeon's prize, in the order the slots arrive.
+    var bosses = [], used = {};
+    (spec.bossSites || []).forEach(function (s) {
+      if (s.troop) used[s.troop] = 1;
+      bosses.push({ role: 'boss', site: s.site, map: s.map, at: s.at, troop: s.troop || null, chapter: s.chapter, background: bg[s.ref] || bg['interior:dungeon'] || null, music: 'boss', finale: !!s.finale });
+    });
+    (spec.chapters || []).forEach(function (c) {
+      var spare = (c.bosses || []).filter(function (t) { return !used[t]; }).sort();
+      var slots = (spec.spareSlots || []).filter(function (s) { return s.chapter === c.chapter; });
+      spare.forEach(function (t, k) {
+        var s = slots[k];
+        if (!s) { warnings.push({ code: 'spare-boss', chapter: c.chapter, troop: t, message: 'Boss troop ' + t + ' of chapter ' + c.chapter + ' has nowhere to stand: the chapter has no free cave or key dungeon chest to guard.' }); return; }
+        used[t] = 1;
+        bosses.push({ role: 'guardian', site: s.site, map: s.map, at: s.at, troop: t, chapter: c.chapter, background: bg[s.ref] || bg['interior:dungeon'] || null, music: 'boss', finale: false, guards: s.kind });
+      });
+    });
+    var parts = [];
+    field.concat(interior).forEach(function (z) { parts.push(z.key, z.rate, z.background || '-', z.weather || '-', z.troops.map(function (t) { return t.troop + '*' + t.weight; }).join(',')); });
+    bosses.forEach(function (x) { parts.push(x.role, x.site, x.map, String(x.at), x.troop || '-'); });
+    return { field: field, interior: interior, bosses: bosses, warnings: warnings, digest: digest(parts) };
+  }
+
+  // givers(spec) -> {assign {sdq_: npc_}, warnings}. spec: {chapters [chp_ in story order], quests [{quest, chapter,
+  //   keep (an npc_ to leave in place, or null)}], people [{npc, chapter, town (order of its town), slot, role}]}.
+  // Each quest takes a person in a town of its own chapter, residents first, then anyone but innkeepers, merchants,
+  // and the priest, then anyone; within those, the person giving the fewest quests so far, then the earliest town and
+  // slot. A chapter with no townsfolk borrows the nearest chapter's, earlier first. Quests go in ID order.
+  function slotCmp(a, b) {
+    var ma = /^(.*?)(\d+)$/.exec(a), mb = /^(.*?)(\d+)$/.exec(b);
+    if (ma && mb && ma[1] === mb[1]) return Number(ma[2]) - Number(mb[2]);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+  var POSTED = { innkeeper: 1, priest: 1 };
+  function tier(p) { return p.role === 'resident' ? 0 : POSTED[p.role] || /^shop:/.test(p.role || '') ? 2 : 1; }
+  function znGivers(spec) {
+    var order = spec.chapters || [], at = {}, people = (spec.people || []).slice(), count = {}, assign = {}, warnings = [];
+    order.forEach(function (c, k) { at[c] = k; });
+    people.sort(function (a, b) { return tier(a) - tier(b) || (a.town | 0) - (b.town | 0) || slotCmp(String(a.slot), String(b.slot)) || (a.npc < b.npc ? -1 : 1); });
+    people.forEach(function (p) { count[p.npc] = 0; });
+    (spec.quests || []).forEach(function (q) { if (q.keep && count[q.keep] != null) count[q.keep]++; });
+    function poolFor(ch) {
+      var own = people.filter(function (p) { return p.chapter === ch; });
+      if (own.length || at[ch] == null) return own;
+      for (var d = 1; d < order.length; d++) {
+        var e = order[at[ch] - d], l = order[at[ch] + d];
+        var pe = e ? people.filter(function (p) { return p.chapter === e; }) : [], pl = l ? people.filter(function (p) { return p.chapter === l; }) : [];
+        if (pe.length) return pe;
+        if (pl.length) return pl;
+      }
+      return [];
+    }
+    (spec.quests || []).slice().sort(function (a, b) { return a.quest < b.quest ? -1 : 1; }).forEach(function (q) {
+      if (q.keep) return;
+      var ch = q.chapter && at[q.chapter] != null ? q.chapter : order[0];
+      if (ch !== q.chapter) warnings.push({ code: 'quest-chapter', quest: q.quest, message: 'Side quest ' + q.quest + ' names no chapter of the Charter, so its giver stands in the first chapter.' });
+      var pool = poolFor(ch);
+      if (!pool.length) { warnings.push({ code: 'no-giver', quest: q.quest, message: 'No town has anyone to give side quest ' + q.quest + '.' }); return; }
+      if (pool[0].chapter !== ch) warnings.push({ code: 'borrowed-giver', quest: q.quest, message: 'Chapter ' + ch + ' has no townsfolk, so side quest ' + q.quest + ' is given in chapter ' + pool[0].chapter + '.' });
+      var best = null;
+      pool.forEach(function (p) { if (!best || tier(p) < tier(best) || tier(p) === tier(best) && count[p.npc] < count[best.npc]) best = p; });
+      assign[q.quest] = best.npc; count[best.npc]++;
+    });
+    return { assign: assign, warnings: warnings };
+  }
+
+  W.zones = { DEFAULTS: ZN_DEFAULTS, WEATHER_HINTS: WEATHER_HINTS, settings: znSettings, fieldKey: fieldKey, interiorKey: interiorKey,
+    power: troopPower, isBoss: troopIsBoss, slots: znSlots, weatherFor: weatherFor, cellKey: znCellKey, fieldCells: znFieldCells,
+    floorCells: znFloorCells, build: znBuild, givers: znGivers };
+
   // ---------------------------------------------------------------- later phases insert sections above this line
   function freeze(o) { Object.freeze(o); keys(o).forEach(function (k) { var v = o[k]; if (v && (typeof v === 'object' || typeof v === 'function') && !Object.isFrozen(v)) freeze(v); }); return o; }
   return freeze(W);
@@ -5752,6 +6053,144 @@ var ENGINE_WORLD = (function () {
     });
   });
 
+  // ---------------------------------------------------------------- encounter zones (Phase 5)
+  // world.zones holds the encounter tables (no record prefix: zones are data the maps point at by key, not records Day 149
+  // references by ID): field zones per continent, chapter, and biome over flag 2 overworld cells, one interior zone per
+  // dungeon, castle, and cave floor, boss and guardian encounters, and the sdq_ givers this forge wrote. Like the maps it
+  // keeps the hash of what it was made from, so a stale table is caught. Sparse edits live in world.overrides.zones
+  // {zone key: {rate, weights {trp_: n}}} and survive every regeneration. Filling sdq_.giver is the one write this forge
+  // makes outside world; a giver someone else set (resolving, and not the one this forge last wrote) is kept.
+  var ZNE = ENGINE_WORLD.zones;
+  function zoneData(b) { var z = b && b.world && b.world.zones; return U.isObj(z) && Array.isArray(z.field) ? z : null; }
+  function tilesets(b) { return (b.art && b.art.records && b.art.records.til_) || {}; }
+  function biomeKeys(b) { var o = {}, t = tilesets(b); Object.keys(t).sort().forEach(function (id) { if (t[id] && t[id].kind === 'biome') o[id] = t[id].key || id; }); return o; }
+  function subjectRef(b, tilId) { var t = tilesets(b)[tilId]; return t && t.subject && t.subject.ref || null; }
+  function backgrounds(b) {
+    var o = {}, recs = (b.art && b.art.records && b.art.records.bgd_) || {};
+    Object.keys(recs).sort().forEach(function (id) { var g = recs[id]; if (g && g.subject && g.subject.kind === 'role' && g.subject.ref && !o[g.subject.ref]) o[g.subject.ref] = id; });
+    return o;
+  }
+  function weatherList(b) {
+    var w = (b.rules && b.rules.wth_) || {};
+    return Object.keys(w).map(function (id) { return { weather: id, name: w[id].name || '', text: w[id].realWorld || '' }; });
+  }
+  function siteKeyOfMap(m) { return String(m.key || '').replace(/^map\|/, '').replace(/\|\d+$/, ''); }
+  function znSpec(b) {
+    var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b);
+    if (!ow || !g) return null;
+    var bk = biomeKeys(b), regId = {}, trp = (b.rules && b.rules.trp_) || {}, enm = (b.rules && b.rules.enm_) || {};
+    g.regions.forEach(function (r) { regId[r.key] = r.record || ENGINE_WORLD.ids.structural('reg_', r.key); });
+    var field = ZNE.fieldCells(ow, bk).map(function (f) { return Object.assign({}, f, { region: regId[f.region], ref: subjectRef(b, f.biome) }); });
+    var chapters = WORLD.chapters(b).map(function (c) {
+      var troops = [], bosses = [];
+      Object.keys(trp).sort().forEach(function (id) {
+        var t = trp[id];
+        if (!t || t.chapter !== c.id) return;
+        if (ZNE.isBoss(t, enm)) bosses.push(id); else troops.push({ troop: id, power: ZNE.power(t, enm) });
+      });
+      return { chapter: c.id, continent: WORLD.continentSlug(c), troops: troops, bosses: bosses };
+    });
+    var flags = INE.palette(b.art).flags, interiors = [], bossSites = [], caves = [], keys2 = [];
+    interiorMaps(b).filter(function (m) { return m.kind !== 'town'; }).sort(function (a, c) { return a.key < c.key ? -1 : 1; }).forEach(function (m) {
+      var sk = siteKeyOfMap(m), site = WORLD.interiors.site(sk, b), fl = site && site.floors[(m.floor || 1) - 1], siteRec = WORLD.records.get(m.site, b) || {};
+      var ref = subjectRef(b, m.tileset) || 'interior:' + m.kind;
+      interiors.push({ key: sk, site: m.site, map: m.id, kind: m.kind, chapter: m.chapter, floor: m.floor || 1, floors: m.floors || 1, cells: fl ? ZNE.floorCells(fl, flags) : 0, ref: ref });
+      (m.features || []).forEach(function (ft) {
+        if (ft.kind === 'boss') bossSites.push({ site: m.site, map: m.id, at: ft.at, troop: ft.troop || null, chapter: m.chapter, ref: ref, finale: !!ft.finale });
+        else if (ft.kind === 'chest' && ft.treasure && /^cave/.test(siteRec.role || '')) caves.push({ chapter: m.chapter, site: m.site, map: m.id, at: ft.at, ref: ref, kind: 'cave', order: sk });
+        else if (ft.kind === 'chest' && ft.prize) keys2.push({ chapter: m.chapter, site: m.site, map: m.id, at: ft.at, ref: ref, kind: 'key', order: sk });
+      });
+    });
+    var ovr = b.world.overrides && U.isObj(b.world.overrides.zones) ? b.world.overrides.zones : {};
+    var sp = { settings: b.world.settings, chapters: chapters, field: field, interiors: interiors, backgrounds: backgrounds(b), weather: weatherList(b),
+      bossSites: bossSites, spareSlots: caves.concat(keys2), overrides: ovr };
+    sp.hash = ENGINE_WORLD.util.digest([ENGINE_WORLD.version, (WORLD.overworld.record(b) || {}).paramHash || '-', canon(interiorMaps(b).map(function (m) { return m.id + '=' + m.paramHash; }).sort()),
+      canon(chapters), canon(sp.backgrounds), canon(sp.weather), canon(b.world.settings && b.world.settings.zones || {}), canon(ovr)]);
+    return sp;
+  }
+  function znGivers(b, prior) {
+    var people = [], towns = {};
+    WORLD.records.list('twn_', b).forEach(function (t) { towns[t.id] = t; });
+    WORLD.records.list('npc_', b).forEach(function (p) {
+      var t = towns[p.site];
+      if (t) people.push({ npc: p.id, chapter: p.chapter, town: t.order | 0, slot: p.slot || '', role: p.role || '' });
+    });
+    var quests = [], sdq = (b.rules && b.rules.sdq_) || {};
+    Object.keys(sdq).sort().forEach(function (id) {
+      var q = sdq[id], g0 = q.giver, live = g0 && WORLD.records.get(g0, b);
+      // Someone else's choice stays: a giver that resolves and is not the one this forge last wrote.
+      quests.push({ quest: id, chapter: q.chapter || null, keep: live && g0 !== prior[id] ? g0 : null });
+    });
+    var r = ZNE.givers({ chapters: WORLD.chapters(b).map(function (c) { return c.id; }), quests: quests, people: people });
+    r.kept = quests.filter(function (q) { return q.keep; }).map(function (q) { return q.quest; });
+    return r;
+  }
+
+  WORLD.zones = {
+    data: function (b) { return zoneData(b || cur()); },
+    generated: function (b) { return !!zoneData(b || cur()); },
+    spec: function (b) { b = b || cur(); WORLD.ensure(b); return znSpec(b); },
+    // The field zone of an overworld cell index, by the engine's rule (null for water, walls, and stamps).
+    cellKey: function (i, b) { b = b || cur(); var ow = WORLD.overworld.generate(b); return ow ? ZNE.cellKey(ow, i, biomeKeys(b)) : null; },
+    zone: function (key, b) { var z = zoneData(b || cur()); return z ? z.field.concat(z.interior).filter(function (x) { return x.key === key; })[0] || null : null; },
+    stale: function (b) {
+      b = b || cur();
+      var z = zoneData(b);
+      if (!z) return false;
+      if (WORLD.interiors.stale(b)) return true;
+      var sp = znSpec(b);
+      return !sp || sp.hash !== z.paramHash;
+    },
+    // Generates the interiors first when they are missing or stale, then the tables, bosses, and givers.
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      if (!WORLD.interiors.generated(b) || WORLD.interiors.stale(b)) WORLD.interiors.apply(b);
+      var t0 = Date.now(), sp = znSpec(b), r = ZNE.build(sp), old = zoneData(b), prior = old && U.isObj(old.givers) ? old.givers : {};
+      var gv = znGivers(b, prior), sdq = (b.rules && b.rules.sdq_) || {}, wrote = {}, filled = 0;
+      WORLD.batching = true;
+      try {
+        Object.keys(gv.assign).sort().forEach(function (q) { if (sdq[q].giver !== gv.assign[q]) { sdq[q].giver = gv.assign[q]; filled++; } wrote[q] = gv.assign[q]; });
+        // Every generated person who gives a quest lists it in quests (a giver set by hand is marked too).
+        var giving = {};
+        Object.keys(sdq).sort().forEach(function (q) { var n = sdq[q].giver; if (n) (giving[n] = giving[n] || []).push(q); });
+        WORLD.records.list('npc_', b).forEach(function (p) {
+          if (p.origin === 'user') return;
+          var qs = giving[p.id] || [];
+          if (qs.length) p.quests = qs; else delete p.quests;
+        });
+      } finally { WORLD.batching = false; }
+      var stats = { field: r.field.length, interior: r.interior.length, bosses: r.bosses.filter(function (x) { return x.role === 'boss'; }).length,
+        guardians: r.bosses.filter(function (x) { return x.role === 'guardian'; }).length, givers: Object.keys(wrote).length, kept: gv.kept.length,
+        cells: r.field.reduce(function (s, z) { return s + z.cells; }, 0) };
+      b.world.zones = { version: 1, generatorVersion: ENGINE_WORLD.version, paramHash: sp.hash, digest: r.digest, field: r.field, interior: r.interior,
+        bosses: r.bosses, givers: wrote, warnings: r.warnings.concat(gv.warnings), stats: stats };
+      if (b === cur()) { Kit.index.invalidate(); Kit.bundle.touch('zones'); }
+      return { zones: b.world.zones, filled: filled, kept: gv.kept, ms: Date.now() - t0 };
+    }
+  };
+
+  Kit.validate.register('world.zones', function (b, ctx) {
+    var z = zoneData(b), trp = (b.rules && b.rules.trp_) || {}, bg = (b.art && b.art.records && b.art.records.bgd_) || {}, wth = (b.rules && b.rules.wth_) || {};
+    if (!z) {
+      if (WORLD.interiors.generated(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The world has no encounter zones yet. Generate them on the Encounters tab.', level: 'warning' });
+      return;
+    }
+    if (WORLD.zones.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The maps, troops, art, or settings changed after the encounter zones were made. Generate them again on the Encounters tab.', level: 'warning' });
+    z.field.concat(z.interior).forEach(function (q) {
+      q.troops.forEach(function (t) { if (!trp[t.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' draws troop ' + t.troop + ', which does not exist.', level: 'error' }); });
+      if (q.background && !bg[q.background]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses battle background ' + q.background + ', which does not exist.', level: 'error' });
+      if (q.weather && !wth[q.weather]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses weather ' + q.weather + ', which does not exist.', level: 'error' });
+      if (q.map && !WORLD.records.get(q.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' is on a map that does not exist.', level: 'error' });
+    });
+    z.bosses.forEach(function (x) {
+      if (x.troop && !trp[x.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The ' + x.role + ' on ' + x.map + ' is troop ' + x.troop + ', which does not exist.', level: 'error' });
+      if (!WORLD.records.get(x.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'A ' + x.role + ' stands on map ' + x.map + ', which does not exist.', level: 'error' });
+    });
+    // Empty tables and missing backgrounds are warnings here; Phase 6's reference check decides what blocks export.
+    (z.warnings || []).forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+  });
+
   // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);
@@ -5789,7 +6228,9 @@ var ENGINE_WORLD = (function () {
       if (reroll) { b.world.seed = (Math.random() * 4294967295) >>> 0; Kit.bundle.touch('seed'); }
       var had = WORLD.interiors && WORLD.interiors.generated(b), r = WORLD.overworld.apply(b);
       // Interiors hang off the overworld's sites, so once they exist they are generated again with it.
+      var hadZones = WORLD.zones && WORLD.zones.generated(b);
       if (had && !r.kept) WORLD.interiors.apply(b);
+      if (had && hadZones && !r.kept) WORLD.zones.apply(b);
       Kit.rerender();
       Kit.ui.toast(r.kept ? 'The overworld record is marked as user made, so it was kept.' : 'Overworld generated: ' + r.ow.w + ' by ' + r.ow.h + ', ' + r.ow.sites.length + ' sites, ' + r.ow.gates.length + ' gates, in ' + r.ow.ms + ' ms.', r.kept ? 'warn' : 'ok');
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
@@ -5961,6 +6402,7 @@ var ENGINE_WORLD = (function () {
   function generate(b) {
     try {
       var r = WORLD.interiors.apply(b);
+      if (WORLD.zones && WORLD.zones.generated(b)) WORLD.zones.apply(b);
       Kit.rerender();
       Kit.ui.toast('Interiors generated: ' + r.sites + ' sites, ' + r.floors + ' floors, ' + r.people + ' people, in ' + r.ms + ' ms.' + (r.kept.length ? ' ' + r.kept.length + ' user records kept.' : ''), r.kept.length ? 'warn' : 'ok');
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
@@ -6108,6 +6550,128 @@ var ENGINE_WORLD = (function () {
   WORLD.sitesUi = ui;
 })();
 // === WS:SITES END ===
+// === WS:ENCOUNTERS BEGIN ===
+(function () {
+  'use strict';
+  // The Encounters tab. Phase 5: generate the encounter zones and read them back: field zones by chapter, continent,
+  // and biome; one table per dungeon, castle, and cave floor; the bosses and guardians; and who gives each side quest.
+  // Phase 7 makes weights and rates editable (sparse overrides in world.overrides.zones, already honored here).
+  var U = Kit.util, el = U.el, esc = U.esc;
+  function cur() { return Kit.bundle.current(); }
+  function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
+  function nameOf(b, id) {
+    if (!id) return '';
+    var r = (b.rules && (b.rules.trp_ || {})[id]) || (b.rules && (b.rules.wth_ || {})[id]) || (b.rules && (b.rules.sdq_ || {})[id]) ||
+      (b.art && b.art.records && ((b.art.records.bgd_ || {})[id] || (b.art.records.til_ || {})[id])) || WORLD.records.get(id, b);
+    return r && r.name ? r.name : id;
+  }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id || 'No chapter'; }
+  function steps(rate) { return rate > 0 ? 'about 1 in ' + Math.round(256 / rate) : 'never'; }
+  function troopsCell(b, z) {
+    if (!z.troops.length) return '<span class="chip chip-warning">No troops</span>';
+    return z.troops.map(function (t) { return '<span class="w8-troop' + (t.troop === z.rare ? ' w8-rare' : '') + '">' + esc(nameOf(b, t.troop)) + ' <b>' + t.weight + '/16</b></span>'; }).join('');
+  }
+
+  function generate(b) {
+    try {
+      var r = WORLD.zones.apply(b), s = r.zones.stats;
+      Kit.rerender();
+      Kit.ui.toast('Encounter zones generated: ' + s.field + ' field, ' + s.interior + ' interior, ' + s.bosses + ' bosses' + (s.guardians ? ', ' + s.guardians + ' guardians' : '') +
+        (s.givers ? ', ' + s.givers + ' quest givers' : '') + ', in ' + r.ms + ' ms.', 'ok');
+    } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+  }
+
+  function table(head, rows) {
+    var t = el('table', 'tbl w8-enc');
+    t.innerHTML = '<thead><tr>' + head.map(function (h, k) { return '<th scope="col"' + (h.num ? ' class="num"' : '') + '>' + esc(h.t || h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody>';
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t);
+    return wrap;
+  }
+
+  function render(host) {
+    var b = cur();
+    WORLD.ensure(b);
+    var head = el('section', 'panel'), z = WORLD.zones.data(b), stale = z && WORLD.zones.stale(b);
+    head.innerHTML = '<h2 class="panel-title">Encounters</h2><p class="muted">Random battles come from zones. On the overworld each continent, chapter, and biome is its own zone, built only from ground that carries the encounter flag; every dungeon, castle, and cave floor has its own table; towns have none. Each table fills four slots the way Final Fantasy VI did, weighted 5, 5, 5, and 1 in sixteenths, with the chapter\'s strongest troop in the rare slot. Rates are chances in 256 per step. Bosses keep their rooms, spare boss troops guard optional treasure, and each side quest gets a giver in a town of its chapter.</p>';
+    if (!WORLD.interiors.generated(b)) head.appendChild(el('p', 'muted', 'The interiors have not been generated yet. Generating the zones generates the overworld and interiors first.'));
+    if (z) {
+      var s = z.stats || {};
+      head.appendChild(el('p', 'w8-chips', (stale ? '<span class="chip chip-warning">Out of date</span>' : '<span class="chip chip-ok">Up to date</span>') +
+        '<span class="chip chip-accent">' + s.field + ' field zones</span><span class="chip chip-accent">' + s.interior + ' interior zones</span>' +
+        '<span class="chip chip-muted">' + s.bosses + ' bosses</span>' + (s.guardians ? '<span class="chip chip-muted">' + s.guardians + ' guardians</span>' : '') +
+        '<span class="chip chip-muted">' + (s.cells || 0) + ' encounter cells</span>' + (s.givers + s.kept ? '<span class="chip chip-muted">' + (s.givers + s.kept) + ' quest givers</span>' : '') +
+        (z.warnings.length ? '<span class="chip chip-warning">' + z.warnings.length + ' warning' + (z.warnings.length === 1 ? '' : 's') + '</span>' : '')));
+      if (stale) head.appendChild(el('p', 'msg msg-warning', 'The maps, troops, art, or settings changed since the zones were made. Generate them again to store the new tables.'));
+    }
+    var row = el('div', 'btn-row');
+    row.appendChild(btn(z ? 'Generate again' : 'Generate encounter zones', 'spark', !z || stale ? 'btn-primary' : '', function () { generate(b); }));
+    head.appendChild(row);
+    host.appendChild(head);
+    if (!z) return;
+
+    if (z.warnings.length) {
+      var wp = el('section', 'panel');
+      wp.appendChild(el('h3', 'section-h', 'Warnings'));
+      wp.appendChild(el('ul', 'w8-lines', z.warnings.map(function (w) { return '<li>' + esc(w.message) + '</li>'; }).join('')));
+      host.appendChild(wp);
+    }
+
+    // Field zones by chapter.
+    var fp = el('section', 'panel');
+    fp.id = 'enc-field';
+    fp.appendChild(el('h3', 'section-h', 'Overworld zones'));
+    var rows = [];
+    WORLD.chapters(b).forEach(function (c) {
+      z.field.filter(function (q) { return q.chapter === c.id; }).sort(function (a, d) { return d.cells - a.cells || (a.key < d.key ? -1 : 1); }).forEach(function (q) {
+        rows.push('<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(nameOf(b, q.biome)) + '<small class="w8-sub">' + esc(chName(b, c.id) + ', ' + (c.continentLabel || 'Default')) + '</small></th>' +
+          '<td class="num">' + q.cells + '</td><td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td>' +
+          '<td>' + esc(nameOf(b, q.background) || 'None') + '<small class="w8-sub">' + esc(nameOf(b, q.weather) || 'No weather') + '</small></td></tr>');
+      });
+    });
+    fp.appendChild(table(['Zone', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background and weather'], rows));
+    host.appendChild(fp);
+
+    // Interior zones.
+    var ip = el('section', 'panel');
+    ip.id = 'enc-interior';
+    ip.appendChild(el('h3', 'section-h', 'Dungeon, castle, and cave floors'));
+    ip.appendChild(table(['Floor', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background'], z.interior.map(function (q) {
+      var m = WORLD.records.get(q.map, b);
+      return '<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(m ? m.name : q.map) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td class="num">' + q.cells + '</td>' +
+        '<td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td><td>' + esc(nameOf(b, q.background) || 'None') + '</td></tr>';
+    })));
+    host.appendChild(ip);
+
+    // Bosses and guardians.
+    var bp = el('section', 'panel');
+    bp.id = 'enc-bosses';
+    bp.appendChild(el('h3', 'section-h', 'Bosses and guardians'));
+    bp.appendChild(table(['Where', 'Troop', 'Role'], z.bosses.map(function (x) {
+      var m = WORLD.records.get(x.map, b);
+      return '<tr><th scope="row">' + esc(m ? m.name : x.map) + '<small class="w8-sub">' + esc(chName(b, x.chapter) + (x.at ? ', cell ' + x.at.join(',') : '')) + '</small></th>' +
+        '<td>' + (x.troop ? esc(nameOf(b, x.troop)) : '<span class="chip chip-warning">Empty slot for Day 149</span>') + '</td><td>' + esc(x.role === 'guardian' ? 'Guards the ' + (x.guards === 'cave' ? 'cave treasure' : 'prize chest') : x.finale ? 'Final boss' : 'Chapter boss') + '</td></tr>';
+    })));
+    host.appendChild(bp);
+
+    // Side quest givers.
+    var quests = (b.rules && b.rules.sdq_) || {}, qids = Object.keys(quests).sort();
+    if (qids.length) {
+      var qp = el('section', 'panel');
+      qp.id = 'enc-givers';
+      qp.appendChild(el('h3', 'section-h', 'Side quest givers'));
+      qp.appendChild(table(['Quest', 'Giver', 'Set by'], qids.map(function (id) {
+        var q = quests[id], p = q.giver && WORLD.records.get(q.giver, b);
+        return '<tr><th scope="row">' + esc(q.name || id) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td>' + (p ? esc(p.name) : '<span class="chip chip-warning">No giver</span>') + '</td>' +
+          '<td>' + esc(!q.giver ? 'Nobody yet' : z.givers[id] === q.giver ? 'World Forge' : 'Kept as set') + '</td></tr>';
+      })));
+      host.appendChild(qp);
+    }
+  }
+
+  WORLD.WS = WORLD.WS || {};
+  WORLD.WS.encounters = { render: render };
+})();
+// === WS:ENCOUNTERS END ===
 // === WS:WORLD148 BEGIN ===
 (function () {
   'use strict';

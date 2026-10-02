@@ -24,6 +24,7 @@
   function generate(b) {
     try {
       var r = WORLD.interiors.apply(b);
+      if (WORLD.zones && WORLD.zones.generated(b)) WORLD.zones.apply(b);
       Kit.rerender();
       Kit.ui.toast('Interiors generated: ' + r.sites + ' sites, ' + r.floors + ' floors, ' + r.people + ' people, in ' + r.ms + ' ms.' + (r.kept.length ? ' ' + r.kept.length + ' user records kept.' : ''), r.kept.length ? 'warn' : 'ok');
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }

@@ -24,7 +24,9 @@
       if (reroll) { b.world.seed = (Math.random() * 4294967295) >>> 0; Kit.bundle.touch('seed'); }
       var had = WORLD.interiors && WORLD.interiors.generated(b), r = WORLD.overworld.apply(b);
       // Interiors hang off the overworld's sites, so once they exist they are generated again with it.
+      var hadZones = WORLD.zones && WORLD.zones.generated(b);
       if (had && !r.kept) WORLD.interiors.apply(b);
+      if (had && hadZones && !r.kept) WORLD.zones.apply(b);
       Kit.rerender();
       Kit.ui.toast(r.kept ? 'The overworld record is marked as user made, so it was kept.' : 'Overworld generated: ' + r.ow.w + ' by ' + r.ow.h + ', ' + r.ow.sites.length + ' sites, ' + r.ow.gates.length + ' gates, in ' + r.ow.ms + ' ms.', r.kept ? 'warn' : 'ok');
     } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }

@@ -328,6 +328,74 @@ SESSION 4 / PHASE 4 (2026-10-02, Opus): INTERIORS. COMPLETE.
     one table per dungeon, castle, and cave map_ (none for towns), boss troops on boss features, and the sdq_.giver fill
     from npc_ records in a town of the quest's chapter (prefer role resident).
 === END SESSION 4 ===
+SESSION 5 / PHASE 5 (2026-10-02, Opus): ENCOUNTER ZONES. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53.
+  ENGINE:WORLD section src/engine-zones.js: ENGINE_WORLD.zones {DEFAULTS, WEATHER_HINTS, settings, fieldKey, interiorKey,
+    power, isBoss, slots, weatherFor, cellKey, fieldCells, floorCells, build(spec), givers(spec)}. Pure: spec = {settings,
+    chapters [{chapter, continent, troops [{troop, power}] (non boss), bosses}], field (fieldCells plus region reg_ ID and
+    ref), interiors [{key, site, map, kind, chapter, floor, floors, cells, ref}], backgrounds {subject ref: bgd_}, weather
+    [{weather, name, text}] in rules order, bossSites, spareSlots, overrides}.
+  Field zones: built only from overworld cells whose ground is a biome carrying flag 2 (ocean, mountain walls, gate cells,
+    and site stamps never count). DECISION: keyed zone|field|<continent slug>|<chp ID>|<biome key>, the chapter included
+    because troops belong to chapters, so Westland (shared by two chapters) has one table per chapter and biome; the
+    cell's region names its chapter. cellKey(ow, i, biomes) gives the zone of any cell, for Day 150 at run time.
+  Interior zones: one per dungeon, castle, and cave floor map_ (zone|<site key>|<floor>); towns have none. Cells counted
+    are the floor cells carrying flag 2 (decoration flags first, as the walk reads them).
+  Tables: four slots weighted 5 5 5 1 in sixteenths (settings zones.slots). The rare slot is the chapter's strongest non
+    boss troop (power = sum of member levels, tier x 5 when a level is missing, then hit points, then ID); the three common
+    slots cycle through the rest in an order shuffled by rng(hash.str('zone|' + zone key)). DECISION: the shuffle uses the
+    zone key, never the seed, so a reroll moves cells but keeps every table's troops (and any override). Duplicates merge:
+    one troop 16; two 15 and 1; three 10, 5, 1. A chapter with no non boss troop gives an empty table and a warning.
+  Rates in 256ths per step: grassland 8, steppe 8, coast 6, forest 12, rainforest 14, swamp 14, desert 12, tundra 10, snow
+    12, volcanic 16, mountain 6, default 10; dungeon 12, castle 10, cave 14; times 1 + chapterScale (0.5) x chapter index /
+    (chapters - 1), times 1 + floorScale (0.15) x (floor - 1), rounded, 0 to 255. All under settings.zones.
+  Background: the bgd_ whose role subject equals the biome tileset's (biome:<key>), and for interiors the tileset drawn with
+    (interior:dungeon fallback). Missing is a warning here; Phase 6 decides what blocks export. Weather: keywords per biome
+    (snow, frost; rain, mist; sand, heat; ash, ember; clear for grassland and interiors) matched against wth_ name and
+    realWorld text, first wth_ as fallback, null with no weather. Music: zones 'battle', bosses 'boss'.
+  Bosses: each boss feature on a last floor keeps its troop (null in a bossless chapter, shown as an empty slot for Day 149);
+    the finale is marked. DECISION, spare boss troops (a chapter with more than one): they guard the chapter's optional
+    cave treasure chests first, then its key dungeon's prize chest, as role 'guardian' on that cell; any left over is a
+    warning (spare-boss). Boss and guardian troops never appear in a random table.
+  Overrides: world.overrides.zones {zone key: {rate, weights {trp_: n}}}, sparse, applied after generation and marked
+    overridden; part of the zones hash, so editing one makes the zones stale until applied. Phase 7 edits them.
+  Givers (the one write outside world): each sdq_ in ID order takes a person in a town of its own chapter: residents first,
+    then anyone but innkeepers, merchants, and the priest, then anyone; the one giving fewest quests so far, then the
+    earliest town and slot (natural order). A chapter with no townsfolk borrows the nearest chapter's (earlier first) with a
+    warning; a quest naming no chapter goes to the first chapter with a warning. DECISION: a giver that resolves and is not
+    the one this forge last wrote (world.zones.givers) was set by someone else and is kept; dangling or forge written givers
+    are rewritten. Every generated npc_ giving quests lists them in quests [sdq_]; others lose the field.
+  WORLD side (WORLD:GENERATE): WORLD.zones {data, generated, spec, cellKey, zone, stale, apply}. world.zones = {version 1,
+    generatorVersion, paramHash (engine version, overworld paramHash, every interior map's paramHash, chapters and troops,
+    backgrounds, weather, settings.zones, overrides), digest, field, interior, bosses, givers {sdq_: npc_ written here},
+    warnings, stats}. No field named id anywhere, so Kit.index files nothing from it. apply generates the interiors first
+    when missing or stale. The World tab's Generate again and the Sites tab's Generate carry the zones along once they
+    exist. Validator world.zones: none yet (once interiors exist) and stale are warnings; a missing troop, background,
+    weather, or map is an error; the engine's warnings are warnings. With the givers filled WORLD.canOpen is true, so a
+    Final export now opens world.
+  Encounters tab (WS:ENCOUNTERS, src/ws-encounters.js, CSS src/world-encounters.css): Generate encounter zones (or again),
+    chips (field and interior zone counts, bosses, guardians, encounter cells, givers, warnings, out of date), warnings,
+    Overworld zones by chapter (biome, chapter and continent, cells, rate with steps per battle, troops as weight chips with
+    the rare slot outlined, background and weather), floors, bosses and guardians, and side quest givers (set by World
+    Forge or kept as set). Tables scroll inside their wrap at 390.
+  Tests: test/phase5.js 58 of 58 (identical zones in two vm contexts and the plain context; a reroll moves cells but keeps
+    every shared key's troops, interior keys, and bosses; field cells equal the flag 2 cells on seed 42 and six more seeds
+    for each fixture, each in its region's chapter, continent, and biome; Westland split by chapter; no town zones, one per
+    floor; 5 5 5 1 sums, no boss troops, strongest rare; one to seven troop cases; empty table warning; rates by biome,
+    kind, chapter, floor; settings; backgrounds by role; weather keywords and fallbacks; missing background warning;
+    music; overrides; bosses, the Marches empty slot, the finale; three spare bosses (cave, key prize, warning); givers
+    (order, spread, borrowing, no chapter, kept, guard before innkeeper); 0.6 ms per build; the page matches the engine's
+    digest, cellKey, rules differ only in the two givers, each a resident of its chapter's town marked with its quest,
+    validation clean but the Marches warning, canOpen true, stale on a reroll and on an override, IDs kept, a hand set
+    giver kept, a dangling one replaced, the World and Sites tabs carry the zones; Draft round trip into 146 and 147
+    identical with the givers as forward; Final opens world and Days 146 and 147 open it with 0 broken and 0 forward; the
+    Encounters tab). phase0 63, phase1 37 (the static scan covers the new section), phase2 40, phase3 61, phase4 53 (its
+    validation check now allows Phase 5's zones not yet warning); layout.js 30 views pass (Encounters generated added).
+    Pictures: test/out/phase5-encounters-390.png, phase5-encounters-1280.png.
+  Next: Phase 6, validation (src/engine-checks.js): world.refs (chapters, troops, biomes, tilesets, interior keys, backgrounds,
+    music roles, weather, NPC archetype sprites), world.progression flood fill per chapter with held keys, world.flags,
+    and world.zones (decide whether an empty table or a missing background blocks export).
+=== END SESSION 5 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

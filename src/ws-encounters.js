@@ -1,0 +1,122 @@
+// === WS:ENCOUNTERS BEGIN ===
+(function () {
+  'use strict';
+  // The Encounters tab. Phase 5: generate the encounter zones and read them back: field zones by chapter, continent,
+  // and biome; one table per dungeon, castle, and cave floor; the bosses and guardians; and who gives each side quest.
+  // Phase 7 makes weights and rates editable (sparse overrides in world.overrides.zones, already honored here).
+  var U = Kit.util, el = U.el, esc = U.esc;
+  function cur() { return Kit.bundle.current(); }
+  function btn(label, icon, cls, fn) { return WORLD.ui.button(label, icon, cls, fn); }
+  function nameOf(b, id) {
+    if (!id) return '';
+    var r = (b.rules && (b.rules.trp_ || {})[id]) || (b.rules && (b.rules.wth_ || {})[id]) || (b.rules && (b.rules.sdq_ || {})[id]) ||
+      (b.art && b.art.records && ((b.art.records.bgd_ || {})[id] || (b.art.records.til_ || {})[id])) || WORLD.records.get(id, b);
+    return r && r.name ? r.name : id;
+  }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id || 'No chapter'; }
+  function steps(rate) { return rate > 0 ? 'about 1 in ' + Math.round(256 / rate) : 'never'; }
+  function troopsCell(b, z) {
+    if (!z.troops.length) return '<span class="chip chip-warning">No troops</span>';
+    return z.troops.map(function (t) { return '<span class="w8-troop' + (t.troop === z.rare ? ' w8-rare' : '') + '">' + esc(nameOf(b, t.troop)) + ' <b>' + t.weight + '/16</b></span>'; }).join('');
+  }
+
+  function generate(b) {
+    try {
+      var r = WORLD.zones.apply(b), s = r.zones.stats;
+      Kit.rerender();
+      Kit.ui.toast('Encounter zones generated: ' + s.field + ' field, ' + s.interior + ' interior, ' + s.bosses + ' bosses' + (s.guardians ? ', ' + s.guardians + ' guardians' : '') +
+        (s.givers ? ', ' + s.givers + ' quest givers' : '') + ', in ' + r.ms + ' ms.', 'ok');
+    } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+  }
+
+  function table(head, rows) {
+    var t = el('table', 'tbl w8-enc');
+    t.innerHTML = '<thead><tr>' + head.map(function (h, k) { return '<th scope="col"' + (h.num ? ' class="num"' : '') + '>' + esc(h.t || h) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody>';
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t);
+    return wrap;
+  }
+
+  function render(host) {
+    var b = cur();
+    WORLD.ensure(b);
+    var head = el('section', 'panel'), z = WORLD.zones.data(b), stale = z && WORLD.zones.stale(b);
+    head.innerHTML = '<h2 class="panel-title">Encounters</h2><p class="muted">Random battles come from zones. On the overworld each continent, chapter, and biome is its own zone, built only from ground that carries the encounter flag; every dungeon, castle, and cave floor has its own table; towns have none. Each table fills four slots the way Final Fantasy VI did, weighted 5, 5, 5, and 1 in sixteenths, with the chapter\'s strongest troop in the rare slot. Rates are chances in 256 per step. Bosses keep their rooms, spare boss troops guard optional treasure, and each side quest gets a giver in a town of its chapter.</p>';
+    if (!WORLD.interiors.generated(b)) head.appendChild(el('p', 'muted', 'The interiors have not been generated yet. Generating the zones generates the overworld and interiors first.'));
+    if (z) {
+      var s = z.stats || {};
+      head.appendChild(el('p', 'w8-chips', (stale ? '<span class="chip chip-warning">Out of date</span>' : '<span class="chip chip-ok">Up to date</span>') +
+        '<span class="chip chip-accent">' + s.field + ' field zones</span><span class="chip chip-accent">' + s.interior + ' interior zones</span>' +
+        '<span class="chip chip-muted">' + s.bosses + ' bosses</span>' + (s.guardians ? '<span class="chip chip-muted">' + s.guardians + ' guardians</span>' : '') +
+        '<span class="chip chip-muted">' + (s.cells || 0) + ' encounter cells</span>' + (s.givers + s.kept ? '<span class="chip chip-muted">' + (s.givers + s.kept) + ' quest givers</span>' : '') +
+        (z.warnings.length ? '<span class="chip chip-warning">' + z.warnings.length + ' warning' + (z.warnings.length === 1 ? '' : 's') + '</span>' : '')));
+      if (stale) head.appendChild(el('p', 'msg msg-warning', 'The maps, troops, art, or settings changed since the zones were made. Generate them again to store the new tables.'));
+    }
+    var row = el('div', 'btn-row');
+    row.appendChild(btn(z ? 'Generate again' : 'Generate encounter zones', 'spark', !z || stale ? 'btn-primary' : '', function () { generate(b); }));
+    head.appendChild(row);
+    host.appendChild(head);
+    if (!z) return;
+
+    if (z.warnings.length) {
+      var wp = el('section', 'panel');
+      wp.appendChild(el('h3', 'section-h', 'Warnings'));
+      wp.appendChild(el('ul', 'w8-lines', z.warnings.map(function (w) { return '<li>' + esc(w.message) + '</li>'; }).join('')));
+      host.appendChild(wp);
+    }
+
+    // Field zones by chapter.
+    var fp = el('section', 'panel');
+    fp.id = 'enc-field';
+    fp.appendChild(el('h3', 'section-h', 'Overworld zones'));
+    var rows = [];
+    WORLD.chapters(b).forEach(function (c) {
+      z.field.filter(function (q) { return q.chapter === c.id; }).sort(function (a, d) { return d.cells - a.cells || (a.key < d.key ? -1 : 1); }).forEach(function (q) {
+        rows.push('<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(nameOf(b, q.biome)) + '<small class="w8-sub">' + esc(chName(b, c.id) + ', ' + (c.continentLabel || 'Default')) + '</small></th>' +
+          '<td class="num">' + q.cells + '</td><td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td>' +
+          '<td>' + esc(nameOf(b, q.background) || 'None') + '<small class="w8-sub">' + esc(nameOf(b, q.weather) || 'No weather') + '</small></td></tr>');
+      });
+    });
+    fp.appendChild(table(['Zone', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background and weather'], rows));
+    host.appendChild(fp);
+
+    // Interior zones.
+    var ip = el('section', 'panel');
+    ip.id = 'enc-interior';
+    ip.appendChild(el('h3', 'section-h', 'Dungeon, castle, and cave floors'));
+    ip.appendChild(table(['Floor', { t: 'Cells', num: 1 }, { t: 'Rate', num: 1 }, 'Troops', 'Background'], z.interior.map(function (q) {
+      var m = WORLD.records.get(q.map, b);
+      return '<tr data-zone="' + esc(q.key) + '"><th scope="row">' + esc(m ? m.name : q.map) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td class="num">' + q.cells + '</td>' +
+        '<td class="num">' + q.rate + '<small class="w8-sub">' + esc(steps(q.rate)) + '</small></td><td>' + troopsCell(b, q) + '</td><td>' + esc(nameOf(b, q.background) || 'None') + '</td></tr>';
+    })));
+    host.appendChild(ip);
+
+    // Bosses and guardians.
+    var bp = el('section', 'panel');
+    bp.id = 'enc-bosses';
+    bp.appendChild(el('h3', 'section-h', 'Bosses and guardians'));
+    bp.appendChild(table(['Where', 'Troop', 'Role'], z.bosses.map(function (x) {
+      var m = WORLD.records.get(x.map, b);
+      return '<tr><th scope="row">' + esc(m ? m.name : x.map) + '<small class="w8-sub">' + esc(chName(b, x.chapter) + (x.at ? ', cell ' + x.at.join(',') : '')) + '</small></th>' +
+        '<td>' + (x.troop ? esc(nameOf(b, x.troop)) : '<span class="chip chip-warning">Empty slot for Day 149</span>') + '</td><td>' + esc(x.role === 'guardian' ? 'Guards the ' + (x.guards === 'cave' ? 'cave treasure' : 'prize chest') : x.finale ? 'Final boss' : 'Chapter boss') + '</td></tr>';
+    })));
+    host.appendChild(bp);
+
+    // Side quest givers.
+    var quests = (b.rules && b.rules.sdq_) || {}, qids = Object.keys(quests).sort();
+    if (qids.length) {
+      var qp = el('section', 'panel');
+      qp.id = 'enc-givers';
+      qp.appendChild(el('h3', 'section-h', 'Side quest givers'));
+      qp.appendChild(table(['Quest', 'Giver', 'Set by'], qids.map(function (id) {
+        var q = quests[id], p = q.giver && WORLD.records.get(q.giver, b);
+        return '<tr><th scope="row">' + esc(q.name || id) + '<small class="w8-sub">' + esc(chName(b, q.chapter)) + '</small></th><td>' + (p ? esc(p.name) : '<span class="chip chip-warning">No giver</span>') + '</td>' +
+          '<td>' + esc(!q.giver ? 'Nobody yet' : z.givers[id] === q.giver ? 'World Forge' : 'Kept as set') + '</td></tr>';
+      })));
+      host.appendChild(qp);
+    }
+  }
+
+  WORLD.WS = WORLD.WS || {};
+  WORLD.WS.encounters = { render: render };
+})();
+// === WS:ENCOUNTERS END ===

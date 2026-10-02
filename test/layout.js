@@ -45,6 +45,10 @@ const ROOT = require('path').join(__dirname, '..');
     await pg.evaluate(() => { const b = Array.prototype.find.call(document.querySelectorAll('.w8-pick'), (x) => /start/.test(x.dataset.site)); if (b) b.click(); }); await pg.waitForTimeout(200);
     report.push(Object.assign({ w }, await audit('sites (town)')));
     await (await pg.$('.w8-site')).screenshot({ path: ROOT + '/test/out/phase4-sites-town-' + w + '.png' });
+    // The Encounters tab once the zones exist (Phase 5): the zone tables, bosses, and side quest givers.
+    await pg.evaluate(() => { window.WORLD.zones.apply(); window.Kit.go('encounters'); window.Kit.rerender(); }); await pg.waitForTimeout(250);
+    report.push(Object.assign({ w }, await audit('encounters (generated)')));
+    await pg.screenshot({ path: ROOT + '/test/out/phase5-encounters-' + w + '.png', fullPage: false });
     await pg.evaluate(() => window.Kit.openExport()); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('export dialog')));
     await pg.evaluate(() => window.Kit.ui.closeTop()); await pg.waitForTimeout(100);

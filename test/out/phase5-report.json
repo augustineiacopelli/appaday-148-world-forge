@@ -1,0 +1,340 @@
+{
+  "when": "2026-10-02T14:26:28.275Z",
+  "pass": 58,
+  "total": 58,
+  "zoneMs": 0.7,
+  "results": [
+    {
+      "name": "one seed gives identical zones, bosses, and digests in two vm contexts and the plain context (58 field, 24 interior)",
+      "ok": true
+    },
+    {
+      "name": "another seed moves the cells: a different digest and different cell counts",
+      "ok": true
+    },
+    {
+      "name": "a zone key present under both seeds draws the same troops with the same weights (tables never depend on the seed)",
+      "ok": true
+    },
+    {
+      "name": "interior zone keys and boss placements by site never depend on the seed",
+      "ok": true
+    },
+    {
+      "name": "field zone cells sum to the overworld cells whose ground carries flag 2 (15928), each cell in the zone of its region's chapter, continent, and biome",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no zone for ocean, mountains, lakes, gates, or site stamps",
+      "ok": true
+    },
+    {
+      "name": "the same holds for demo and four on six more seeds each",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "a continent shared by two chapters (Westland) has separate tables per chapter, each drawing only its own chapter's troops",
+      "ok": true
+    },
+    {
+      "name": "towns have no zone; every dungeon, castle, and cave floor has exactly one",
+      "ok": true
+    },
+    {
+      "name": "interior cells count the floor cells carrying flag 2, every dungeon and cave floor has some",
+      "ok": true
+    },
+    {
+      "name": "every table's weights sum to 16 over four slots, in slot weights 5 5 5 1",
+      "ok": true
+    },
+    {
+      "name": "no zone draws a troop with a boss member; at most four troops per table",
+      "ok": true
+    },
+    {
+      "name": "the rare slot holds the chapter's strongest non boss troop",
+      "ok": true
+    },
+    {
+      "name": "one troop takes all 16; two give 15 and 1; three give 10, 5, and 1; four give 5, 5, 5, 1",
+      "ok": true
+    },
+    {
+      "name": "with seven troops each table draws three of the six commons, and different zone keys draw different mixes (7 of 8)",
+      "ok": true
+    },
+    {
+      "name": "the empty case: no troops makes an empty table and a warning",
+      "ok": true
+    },
+    {
+      "name": "field rates are the biome default scaled by chapter (one and a half times by the last chapter)",
+      "ok": true
+    },
+    {
+      "name": "interior rates come from the kind (dungeon 12, castle 10, cave 14), rising by floor",
+      "ok": true
+    },
+    {
+      "name": "settings take effect: a grassland rate, a silent cave, no chapter scaling, and custom slot weights",
+      "ok": true
+    },
+    {
+      "name": "every field zone's background has the role of its biome tileset; every interior uses the dungeon background",
+      "ok": true
+    },
+    {
+      "name": "weather by biome keyword: snow and tundra Snow, swamp and rainforest Rain, grassland and desert Clear, interiors Clear",
+      "ok": true
+    },
+    {
+      "name": "with no keyword match the first wth_ is used, and with no weather at all it is null",
+      "ok": true
+    },
+    {
+      "name": "a missing background is a warning, never a crash",
+      "ok": true
+    },
+    {
+      "name": "zones play the battle music; bosses the boss music",
+      "ok": true
+    },
+    {
+      "name": "a sparse override sets one zone's rate and a troop weight and marks it; other zones are untouched",
+      "ok": true
+    },
+    {
+      "name": "every boss dungeon and the castle has its boss on the boss feature; the Marches slot is empty for Day 149",
+      "ok": true
+    },
+    {
+      "name": "three spare boss troops in chapter one: one guards the cave treasure, one the key dungeon prize, the third is a warning; the boss keeps the first",
+      "ok": true
+    },
+    {
+      "name": "givers: residents first in slot order, spread before repeated, a townless chapter borrows the earlier chapter, a quest with no chapter goes to the first, a kept giver stays",
+      "ok": true,
+      "detail": {
+        "assign": {
+          "sdq_a": "npc_r2",
+          "sdq_b": "npc_r10",
+          "sdq_c": "npc_r2",
+          "sdq_d": "npc_r10",
+          "sdq_e": "npc_r2"
+        },
+        "warnings": [
+          {
+            "code": "borrowed-giver",
+            "quest": "sdq_d",
+            "message": "Chapter c2 has no townsfolk, so side quest sdq_d is given in chapter c1."
+          },
+          {
+            "code": "quest-chapter",
+            "quest": "sdq_e",
+            "message": "Side quest sdq_e names no chapter of the Charter, so its giver stands in the first chapter."
+          }
+        ]
+      }
+    },
+    {
+      "name": "with no residents a guard gives the quest before the innkeeper",
+      "ok": true
+    },
+    {
+      "name": "zone tables for the four fixture build in 0.7 ms in the plain context",
+      "ok": true
+    },
+    {
+      "name": "before anything is generated the Encounters tab offers to generate, and zones are absent",
+      "ok": true
+    },
+    {
+      "name": "apply generates the overworld and interiors first, then the zones",
+      "ok": true
+    },
+    {
+      "name": "the page builds exactly the engine's zones from the fixture (digest 141a8a38:440)",
+      "ok": true,
+      "detail": {
+        "page": "141a8a38:440",
+        "engine": "141a8a38:440"
+      }
+    },
+    {
+      "name": "WORLD.zones.cellKey and zone(key) find the table for an overworld cell",
+      "ok": true
+    },
+    {
+      "name": "the only write outside world is sdq_.giver on the two side quests; charter, codex, and art are untouched",
+      "ok": true,
+      "detail": [
+        "sdq_.sdq_frozen_lantern_l6q4:giver",
+        "sdq_.sdq_lost_ring_r3q1:giver"
+      ]
+    },
+    {
+      "name": "each giver is a resident of a town of the quest's own chapter, marked with the quest, and recorded as written by this forge",
+      "ok": true
+    },
+    {
+      "name": "no other person carries quests",
+      "ok": true
+    },
+    {
+      "name": "no field named id anywhere in world.zones, so Kit.index files nothing from it",
+      "ok": true
+    },
+    {
+      "name": "the generated four fixture validates with no errors, no broken references, and only the Marches boss warning",
+      "ok": true,
+      "detail": {
+        "s": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 2,
+          "warnings": 1
+        },
+        "w": [
+          "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
+        ],
+        "e": []
+      }
+    },
+    {
+      "name": "World can now open: every giver resolves",
+      "ok": true
+    },
+    {
+      "name": "after a reroll the zones are stale and validation says so",
+      "ok": true
+    },
+    {
+      "name": "generating again regenerates the maps, keeps every world ID and interior zone key, keeps both givers (filled 0), and matches the engine for seed 43",
+      "ok": true
+    },
+    {
+      "name": "an override makes the zones stale; applying honors it and it survives another generate",
+      "ok": true
+    },
+    {
+      "name": "a giver set by hand is kept and marked; a dangling giver is replaced",
+      "ok": true
+    },
+    {
+      "name": "clearing it hands the quest back to a resident chosen here",
+      "ok": true
+    },
+    {
+      "name": "Generate again on the World tab regenerates the interiors and the zones with it",
+      "ok": true
+    },
+    {
+      "name": "Generate again on the Sites tab regenerates the zones too (back to seed 42, so the overworld comes along)",
+      "ok": true
+    },
+    {
+      "name": "Draft keeps world closed, lists nothing unresolved, and carries the zones",
+      "ok": true,
+      "detail": {
+        "unresolved": []
+      }
+    },
+    {
+      "name": "Day 146 opens the Draft with every namespace identical and no new errors; the givers read as forward",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 2,
+          "warnings": 1
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "Day 147 opens the Draft with every namespace identical, coverage green, and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 2,
+          "warnings": 0
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        }
+      }
+    },
+    {
+      "name": "Final is allowed and opens world: the givers resolve, nothing unresolved, forge 148 final, 146 and 147 untouched",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Day 146 opens the 148 Final: the givers resolve, 0 broken, 0 forward, its own Final still allowed",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "blocked": null,
+        "fwd": 0
+      }
+    },
+    {
+      "name": "Day 147 opens the 148 Final with 0 errors and 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "the Encounters tab offers Generate encounter zones before anything exists",
+      "ok": true
+    },
+    {
+      "name": "after Generate: chips, a row per overworld zone and per floor, the bosses, and no givers table (the demo has no side quests)",
+      "ok": true,
+      "detail": "EncountersRandom battles come from zones. On the overworld each continent, chapter, and biome is its own zone, built only from ground that carries the encounter flag; every dungeon, castle, and cave floor has its own table; towns have none. Each table fills four slots the way Final Fantasy VI did, w"
+    },
+    {
+      "name": "the demo's bossless first chapter shows an empty slot for Day 149",
+      "ok": true
+    },
+    {
+      "name": "with side quests the tab lists each quest and its giver, set by World Forge",
+      "ok": true,
+      "detail": "Lowlands, cell 35,3Slime KingChapter bossThe Marches: Boss dungeon, floor 2The Marches, cell 20,18Empty slot for Day 149Chapter bossThe Sunken Coast: Boss dungeon, floor 2The Sunken Coast, cell 6,18Tide WispChapter bossSide quest giversQuestGiverSet byThe frozen lanternThe Frost ReachThe Frost Reach: Start town: MerchantWorld ForgeThe lost ringThe LowlandsThe Lowlands: Start town: ElderWorld Forge"
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

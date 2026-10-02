@@ -1,0 +1,9 @@
+/* === WORLD:ENCOUNTERS CSS BEGIN === */
+.w8-enc td { vertical-align: top; }
+.w8-enc th .w8-sub, .w8-enc td .w8-sub { display: block; }
+.w8-enc td.num .w8-sub { white-space: nowrap; }
+.w8-troop { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; border: 1px solid var(--line2); border-radius: 999px; white-space: nowrap; font-size: 0.92em; }
+.w8-troop b { font-weight: 700; color: var(--ink2); }
+.w8-troop.w8-rare { border-color: var(--accent2); }
+.w8-troop.w8-rare b { color: var(--accent2); }
+/* === WORLD:ENCOUNTERS CSS END === */
