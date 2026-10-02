@@ -1,0 +1,533 @@
+{
+  "results": [
+    {
+      "name": "index.html is pure ASCII",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "inline script parses",
+      "ok": true,
+      "detail": true
+    },
+    {
+      "name": "script fences in order: KIT:CORE, WORLD:STORE, WORLD:DEMO, ENGINE:WORLD, WS:WORLD148, APP:BOOT",
+      "ok": true,
+      "detail": [
+        1,
+        139593,
+        162018,
+        530011,
+        542678,
+        568065
+      ]
+    },
+    {
+      "name": "every fence opens and closes exactly once",
+      "ok": true
+    },
+    {
+      "name": "CSS fences KIT:CORE CSS then WORLD:SHELL CSS",
+      "ok": true
+    },
+    {
+      "name": "KIT:CORE JS and CSS byte for byte equal to Day 146",
+      "ok": true
+    },
+    {
+      "name": "vendored engine-render.js and engine-audio.js byte equal to Day 147",
+      "ok": true,
+      "detail": [
+        true,
+        true
+      ]
+    },
+    {
+      "name": "page loads both vendored engines by relative script tags before the inline script",
+      "ok": true
+    },
+    {
+      "name": "backlink appears in header and footer",
+      "ok": true
+    },
+    {
+      "name": "no forbidden APIs (roundRect, ellipse, confirm, bare remove)",
+      "ok": true
+    },
+    {
+      "name": "engine-world.js is the ENGINE:WORLD fence byte for byte under its header",
+      "ok": true
+    },
+    {
+      "name": "engine-world.js loads alone in a bare context and declares one frozen global",
+      "ok": true,
+      "detail": [
+        "ENGINE_WORLD"
+      ]
+    },
+    {
+      "name": "boots with no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "ENGINE_RENDER and ENGINE_AUDIO present from the vendored files",
+      "ok": true
+    },
+    {
+      "name": "tabs mounted: start, world, sites, encounters, validation, export, dev; all but start and dev locked without a bundle",
+      "ok": true,
+      "detail": "start world(locked) sites(locked) encounters(locked) validation(locked) export(locked) dev"
+    },
+    {
+      "name": "active tab is start",
+      "ok": true
+    },
+    {
+      "name": "fresh bundle gets a world skeleton",
+      "ok": true,
+      "detail": {
+        "version": "1.0.0",
+        "generator": {
+          "name": "appaday-148-world",
+          "version": "1.0.0"
+        },
+        "seed": 3430632776,
+        "settings": {
+          "mapSize": {
+            "base": 96,
+            "perContinent": 32,
+            "max": 256
+          },
+          "thresholds": {
+            "temp": [
+              0.2,
+              0.4,
+              0.6,
+              0.8
+            ],
+            "moist": [
+              0.2,
+              0.4,
+              0.6,
+              0.8
+            ]
+          },
+          "noise": {
+            "octaves": 5,
+            "lacunarity": 2,
+            "gain": 0.5,
+            "scale": 28
+          },
+          "airshipAt": 0.67,
+          "cavesPerChapter": 1,
+          "secondTownInChapterOne": true,
+          "featureCoverage": 0.35,
+          "bake": false
+        },
+        "records": {
+          "map_": {},
+          "reg_": {},
+          "npc_": {},
+          "twn_": {},
+          "dgn_": {}
+        },
+        "progression": {},
+        "zones": {},
+        "overrides": {},
+        "baked": {}
+      }
+    },
+    {
+      "name": "five world prefixes reserved by KIT:CORE for forge 148 in namespace world",
+      "ok": true
+    },
+    {
+      "name": "structural IDs are valid KIT IDs and seed independent",
+      "ok": true,
+      "detail": "dgn_dgn_ch2_boss_4cqw"
+    },
+    {
+      "name": "import refuses a Day 146 bundle without art, with a readable reason",
+      "ok": true,
+      "detail": "This bundle has no Day 147 art. Open it in Art and Audio Forge (Day 147) and run Quick Build so the world has tilesets to be drawn with."
+    },
+    {
+      "name": "import refuses an unlocked Charter, a bundle with no chapters, no interiors, non bundles, and bad JSON",
+      "ok": true,
+      "detail": {
+        "notJson": "That file is not valid JSON.",
+        "notSaga": "This file is not a Saga Forge bundle.",
+        "noArt": "This bundle has no Day 147 art. Open it in Art and Audio Forge (Day 147) and run Quick Build so the world has tilesets to be drawn with.",
+        "unlocked": "This bundle has no locked Charter. Lock the Charter in Saga Forge (Day 146), then dress it in Art and Audio Forge (Day 147), before building its world.",
+        "noInterior": "This bundle's art has no interior tilesets. Run Quick Build in Art and Audio Forge (Day 147) so towns and dungeons have tiles.",
+        "noChapters": "This bundle's Charter has no chapters. World Forge lays out one region per chapter, so add chapters in Saga Forge (Day 146) first."
+      }
+    },
+    {
+      "name": "a refused import leaves the draft untouched",
+      "ok": true
+    },
+    {
+      "name": "a Day 147 Final export imports with its hash verified",
+      "ok": true
+    },
+    {
+      "name": "import leaves charter, codex, rules, and art canonically identical",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "import adds the world skeleton and nothing else",
+      "ok": true
+    },
+    {
+      "name": "the demo validates with no errors or broken references here",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "the four continent fixture imports too",
+      "ok": true
+    },
+    {
+      "name": "Start lists four continents, shared labels, and the chapter with no boss troop",
+      "ok": true,
+      "detail": "StartLoad a Day 147 bundle or the demo. World Forge reads the Charter, the Rules, and the art, writes only the world namespace (and later each side quest's giver), and exports a bundle Days 146 and 14"
+    },
+    {
+      "name": "Start shows the climate table: 109 exact cells and 16 nearest for the default biomes",
+      "ok": true
+    },
+    {
+      "name": "later tabs unlock once a ready bundle is loaded",
+      "ok": true
+    },
+    {
+      "name": "world records are indexed by KIT:CORE",
+      "ok": true,
+      "detail": "world.records.twn_.twn_twn_chp_the_lowlands_auem_start_c7hb"
+    },
+    {
+      "name": "world records validate with the envelope types (chapter refs resolve)",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "WORLD.records.put refuses non world prefixes",
+      "ok": true
+    },
+    {
+      "name": "a record whose key no longer derives its ID is a warning",
+      "ok": true,
+      "detail": [
+        "World record twn_twn_chp_the_lowlands_auem_start_c7hb does not match the ID its structural key derives."
+      ]
+    },
+    {
+      "name": "Draft export: three files (bundle, world manifest, engine-world.js)",
+      "ok": true,
+      "detail": [
+        "demo-saga-bundle.json",
+        "demo-saga-world-manifest.json",
+        "engine-world.js"
+      ]
+    },
+    {
+      "name": "Draft stamps forge 148 and leaves forges 146 and 147 untouched",
+      "ok": true,
+      "detail": {
+        "146": {
+          "status": "final",
+          "exportedAt": "2026-10-01T18:12:57.142Z",
+          "charterVersion": 1
+        },
+        "147": {
+          "status": "final",
+          "exportedAt": "2026-10-02T12:44:00.761Z",
+          "artVersion": "1.0.0",
+          "charterVersion": 1
+        },
+        "148": {
+          "status": "draft",
+          "exportedAt": "2026-10-02T12:56:02.732Z",
+          "worldVersion": "1.0.0",
+          "generatorVersion": "1.0.0",
+          "charterVersion": 1
+        }
+      }
+    },
+    {
+      "name": "Draft leaves world out of kit.opened",
+      "ok": true,
+      "detail": [
+        "charter",
+        "rules",
+        "art"
+      ]
+    },
+    {
+      "name": "manifest hash equals the bundle hash and lists the created world IDs",
+      "ok": true,
+      "detail": {
+        "forge": 148,
+        "bundleHash": "3c31da577af3a4b9a54f53a93a5717d309f78052e2b5a08e650d3c0114dc6e96",
+        "worldVersion": "1.0.0",
+        "generator": {
+          "name": "appaday-148-world",
+          "version": "1.0.0"
+        },
+        "seed": 2934546999,
+        "charterVersion": 1,
+        "artVersion": "1.0.0",
+        "exportedAt": "2026-10-02T12:56:02.756Z",
+        "created": [
+          "npc_npc_chp_the_lowlands_auem_start_innkeepe_kos2",
+          "twn_twn_chp_the_lowlands_auem_start_c7hb"
+        ],
+        "referenced": [
+          "chp_the_lowlands_auem",
+          "twn_twn_chp_the_lowlands_auem_start_c7hb"
+        ],
+        "unresolved": [],
+        "forward": [],
+        "worldOpened": false,
+        "counts": {
+          "map_": 0,
+          "reg_": 0,
+          "npc_": 1,
+          "twn_": 1,
+          "dgn_": 0
+        },
+        "validation": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        },
+        "engines": [
+          {
+            "key": "world",
+            "global": "ENGINE_WORLD",
+            "file": "engine-world.js",
+            "version": "1.0.0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "exported engine-world.js is the page fence under a header carrying the bundle hash",
+      "ok": true
+    },
+    {
+      "name": "Final is refused until the world is generated, with a readable reason",
+      "ok": true,
+      "detail": "Final export is blocked: the world has not been generated yet."
+    },
+    {
+      "name": "Day 146 opens the 148 Draft: hash verified, prior namespaces and world identical",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Day 146 sees no new errors, broken, or forward references",
+      "ok": true,
+      "detail": {
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "Day 146 re-export keeps world and forge 148 untouched, and Day 146 Final stays allowed",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Day 147 opens the 148 Draft: hash verified, prior namespaces and world identical, coverage still green",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Day 147 sees no new errors, broken, or forward references",
+      "ok": true,
+      "detail": {
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        }
+      }
+    },
+    {
+      "name": "Day 147 re-export keeps world and forge 148 untouched",
+      "ok": true
+    },
+    {
+      "name": "148 reopens the Day 146 re-export: hash verified, every namespace identical to the 148 Draft",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "148 reopens the Day 147 re-export: hash verified, every namespace identical to the 148 Draft",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "forward refs: one resolving giver, one missing; world cannot open",
+      "ok": true
+    },
+    {
+      "name": "with world closed both givers read as forward here, never broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 2,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "Draft keeps world closed and the manifest lists the missing giver as unresolved",
+      "ok": true,
+      "detail": [
+        "npc_missing_zz99"
+      ]
+    },
+    {
+      "name": "Day 146 imports it: 0 broken, both givers forward and owed by 148",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 2,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "forward": [
+          "npc_missing_zz99",
+          "npc_npc_chp_the_lowlands_auem_start_elder_6z5i"
+        ]
+      }
+    },
+    {
+      "name": "Final opens world, stamps forge 148 final, leaves 146 and 147 alone",
+      "ok": true,
+      "detail": [
+        "charter",
+        "rules",
+        "art",
+        "world"
+      ]
+    },
+    {
+      "name": "Day 146 opens the 148 Final: givers resolve, 0 broken, 0 forward, its own Final still allowed",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "blocked": null,
+        "forward": 0
+      }
+    },
+    {
+      "name": "Day 147 opens the 148 Final with 0 errors and 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "control: an opened world with a missing giver is broken in Day 146 (why world opens only on Final)",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 1,
+        "forward": 0,
+        "warnings": 1
+      }
+    },
+    {
+      "name": "148 keeps its own draft and offers the Day 147 draft on Start",
+      "ok": true,
+      "detail": {
+        "title": "Untitled Saga",
+        "active": "start",
+        "offer": true
+      }
+    },
+    {
+      "name": "Open the Day 147 draft copies it in and leaves art147:draft and kit:draft untouched",
+      "ok": true
+    },
+    {
+      "name": "storage banner shows on a refused save and clears on success",
+      "ok": true
+    },
+    {
+      "name": "a refused localStorage save moves the draft to IndexedDB with a marker",
+      "ok": true,
+      "detail": {
+        "where": "idb",
+        "keys": [
+          "world148:ui",
+          "world148:where:world148:draft"
+        ]
+      }
+    },
+    {
+      "name": "the next boot restores the draft from IndexedDB",
+      "ok": true,
+      "detail": "Demo Saga"
+    },
+    {
+      "name": "WORLD_DEMO fixtures are the Day 147 exports, verbatim",
+      "ok": true
+    },
+    {
+      "name": "Dev loads a fixture into a fresh draft",
+      "ok": true
+    }
+  ]
+}

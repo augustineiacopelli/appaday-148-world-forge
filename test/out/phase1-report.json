@@ -1,0 +1,274 @@
+{
+  "results": [
+    {
+      "name": "no Math.random in ENGINE:WORLD",
+      "ok": true
+    },
+    {
+      "name": "no for in loops in ENGINE:WORLD",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "every Object.keys is sorted, and it appears only in the keys helper",
+      "ok": true,
+      "detail": {
+        "all": 1,
+        "sorted": 1
+      }
+    },
+    {
+      "name": "no host globals (window, document, self, globalThis, Kit, WORLD, ENGINE_RENDER, ENGINE_AUDIO, localStorage)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no transcendental Math (sin, cos, tan, asin, acos, atan, exp, log, pow, hypot, cbrt)",
+      "ok": true
+    },
+    {
+      "name": "no Date or performance clocks",
+      "ok": true
+    },
+    {
+      "name": "identical output for identical seeds across two vm contexts (rng, helpers, hashes, sub seeds, simplex, fbm, ridge, thresholds, bands)",
+      "ok": true,
+      "detail": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "the page computes the same digests as a bare vm context",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "different seeds give different output in every probe",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "sub seeds: same master and key agree; the key or the master changes them",
+      "ok": true
+    },
+    {
+      "name": "engine is frozen, version 1.0.0, one global",
+      "ok": true
+    },
+    {
+      "name": "mulberry32 stays in [0, 1) and fills ten buckets evenly (within 4 percent)",
+      "ok": true,
+      "detail": [
+        5148,
+        4963,
+        4961,
+        4920,
+        4971,
+        4862,
+        5078,
+        5146,
+        4996,
+        4955
+      ]
+    },
+    {
+      "name": "rng.range is inclusive and complete; shuffle is a permutation on a copy",
+      "ok": true
+    },
+    {
+      "name": "weighted picks follow 5, 5, 5, 1 (FF6 sixteenths) within 5 percent",
+      "ok": true,
+      "detail": [
+        5026,
+        5039,
+        4956,
+        979
+      ]
+    },
+    {
+      "name": "simplex stays inside [-1, 1], spans most of it, and centers near 0",
+      "ok": true,
+      "detail": {
+        "smin": -0.9930458424239709,
+        "smax": 0.9976697619268479,
+        "mean": 0.0005222186947774664
+      }
+    },
+    {
+      "name": "simplex is continuous (neighboring samples a hundredth apart differ by under 0.1)",
+      "ok": true
+    },
+    {
+      "name": "fbm field stays in [-1, 1]; ridge field stays in [0, 1]",
+      "ok": true,
+      "detail": {
+        "f": [
+          -0.7400747676984875,
+          0.798435011865019
+        ],
+        "rg": [
+          0.04374396982211917,
+          0.971991662820425
+        ]
+      }
+    },
+    {
+      "name": "octaves add detail: the 5 octave field differs from the 1 octave field, lacunarity and gain change it again",
+      "ok": true
+    },
+    {
+      "name": "band() counts the thresholds reached: 0 to 4, monotone",
+      "ok": true
+    },
+    {
+      "name": "quantile cut points split a field into five near equal bands",
+      "ok": true,
+      "detail": [
+        "0.200",
+        "0.200",
+        "0.200",
+        "0.200",
+        "0.200"
+      ]
+    },
+    {
+      "name": "normalize maps a field onto [0, 1]; a flat field becomes zeros",
+      "ok": true
+    },
+    {
+      "name": "util.keys and util.each walk keys in sorted order",
+      "ok": true
+    },
+    {
+      "name": "structural IDs match KIT:CORE ID_RE for 1500 arbitrary keys (empty, symbols, long)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "structural IDs depend only on prefix and key",
+      "ok": true
+    },
+    {
+      "name": "structural IDs refuse a prefix outside world",
+      "ok": true,
+      "detail": "Not a world prefix: chr_"
+    },
+    {
+      "name": "no ID collisions across every structural key of the four continent fixture",
+      "ok": true
+    },
+    {
+      "name": "climate.table refuses to run without the render engine passed in",
+      "ok": true
+    },
+    {
+      "name": "climate table: 125 cells, identical in two contexts",
+      "ok": true,
+      "detail": "c350ee20:137 c350ee20:137"
+    },
+    {
+      "name": "every cell equals ENGINE_RENDER.tiles.matchClimate over the biomes in prioList order",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "default biomes: 109 exact, 16 nearest, as Day 147 reported",
+      "ok": true,
+      "detail": {
+        "exact": 109
+      }
+    },
+    {
+      "name": "volcanic is listed as a feature biome and never fills a cell",
+      "ok": true,
+      "detail": [
+        {
+          "id": "til_volcanic_q8yo",
+          "key": "volcanic",
+          "feature": "volcanic",
+          "temp": [
+            2,
+            4
+          ],
+          "moist": [
+            0,
+            4
+          ],
+          "elev": [
+            3,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "name": "elevation 0 is ocean everywhere; elevation 4 is mountains except snowfield at temperature 0",
+      "ok": true
+    },
+    {
+      "name": "editing a biome box in the art changes the table (the render engine stays authoritative)",
+      "ok": true,
+      "detail": {
+        "exact": 125
+      }
+    },
+    {
+      "name": "a deleted biome falls back to the nearest box, never to nothing",
+      "ok": true,
+      "detail": 11
+    },
+    {
+      "name": "the four continent fixture resolves every cell to the same biome keys as the demo (same boxes, same order)",
+      "ok": true
+    },
+    {
+      "name": "the page builds the same table from the vendored render engine",
+      "ok": true
+    },
+    {
+      "name": "a 256 by 256 five octave field takes under 400 ms here; the climate table under 20 ms",
+      "ok": true,
+      "detail": {
+        "fieldMs": "214.8",
+        "tableMs": "1.56"
+      }
+    }
+  ],
+  "nearest": [
+    "coast@001",
+    "coast@011",
+    "coast@021",
+    "coast@031",
+    "coast@041",
+    "swamp@142",
+    "forest@143",
+    "forest@243",
+    "forest@343",
+    "grassland@412",
+    "grassland@413",
+    "grassland@422",
+    "grassland@423",
+    "swamp@432",
+    "forest@433",
+    "swamp@443"
+  ],
+  "fieldMs": 214.78823,
+  "tableMs": 1.5550150999999999,
+  "digests42": {
+    "rng": "73c77abc:2000",
+    "helpers": "bbf93afb:16",
+    "hash": "1ebbbfa3:5",
+    "sub": "933e9c0b:3",
+    "simplex": "80340dc4:1600",
+    "fbm": "239cb4c7:3072",
+    "ridge": "9ae641f5:3072",
+    "thresholds": "0e6f93cc:4",
+    "bands": "3d36d393:3072",
+    "norm": "4988b114:3072"
+  }
+}

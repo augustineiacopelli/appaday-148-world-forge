@@ -1,0 +1,119 @@
+=== BUILD LOG: APPADAY 148 WORLD FORGE ===
+Each session reads this log first and appends to it last. Day 146's log lives in Day 146's index.html; Day 147's in its
+  src/build-log.txt. The Planning session's "What the repos change about the brief" decisions are the plan of record.
+
+SESSION 0 / PHASE 0 (2026-10-02, Opus): SCAFFOLD AND COMPATIBILITY PROOF. COMPLETE.
+  Repo layout (Day 147's pattern): sources in src/, build.js assembles index.html, tests in test/ under jsdom, day146.js and
+    day147.js locate sibling clones of the Day 146 and Day 147 repos (never committed; app146.html or app147/ also work).
+  Fences, in order: KIT:CORE CSS (verbatim from 146), WORLD:SHELL CSS, then in the inline script KIT:CORE (verbatim),
+    WORLD:STORE, WORLD:DEMO, ENGINE:WORLD, optional later fences (world-generate, ws-world, ws-sites, ws-encounters,
+    ws-validation, picked up by build.js when the file exists), WS:WORLD148, APP:BOOT. build.js fails if KIT:CORE drifts.
+  Vendored engines: engine-render.js and engine-audio.js sit at the repo root as byte copies of Day 147's files and load
+    through relative script tags before the inline script. build.js compares them with the Day 147 clone on every build and
+    stops if they differ (node build.js --revendor takes Day 147's copy). This forge never edits them. Tests supply them to
+    jsdom by evaluating both files before the page parses (test/world.js boot148).
+  KIT:CORE is never edited. Day 148 layers on with public hooks only: Kit.codex.register for five world types (WorldMap,
+    WorldRegion, WorldNpc, WorldTown, WorldDungeon; envelope fields key, chapter ref chp_, origin, tags),
+    Kit.validate.register('world.envelope'), Kit.jump.register, wrappers around Kit.store get/set/del (own keys) and
+    Kit.bundle.importText (the import gate), and reassigned Kit.buildExport and Kit.openExport.
+  Codex: unlike Day 147, nothing is written to bundle.codex. Day 146 already ships codex.prefixes entries for map_ reg_ npc_
+    twn_ dgn_ (ns world, forge 148, type null), so codex stays byte identical through a round trip.
+  World namespace: world = {version '1.0.0', generator {name 'appaday-148-world', version = ENGINE_WORLD.version}, seed
+    (uint32, random on first ensure), settings, records {map_, reg_, npc_, twn_, dgn_}, progression, zones, overrides, baked}.
+    WORLD.ensure fills what is missing and never overwrites; Kit.on('load') runs it, so an imported bundle gains only the
+    skeleton. Settings defaults: mapSize {base 96, perContinent 32, max 256}, thresholds {temp, moist: cumulative fractions
+    0.2 0.4 0.6 0.8}, noise {octaves 5, lacunarity 2, gain 0.5, scale 28}, airshipAt 0.67, cavesPerChapter 1,
+    secondTownInChapterOne true, featureCoverage 0.35, bake false. Phases 2 to 5 may add keys; ensure fills them in.
+  Records: WORLD.records list (sorted by ID)/get/put/del, keyed at world.records[prefix][id]. WORLD.envelope(prefix, key,
+    name, body) derives the ID from the structural key through ENGINE_WORLD.ids.structural (never Kit.ids.mint, never
+    Claude) and stores key and origin 'generated'. DECISION: references inside a world record never use a field named id
+    (use map, to, npc, town, giver), because Kit.index files any object with an id as a record. world.envelope warns when
+    a generated record's key no longer derives its ID.
+  Reading helpers: WORLD.chapters, WORLD.continentSlug (U.slug of continentLabel, 'default' when blank, the same slug Day
+    147 uses for field:<slug>), WORLD.continents [{slug, label, chapters, minutes}], WORLD.art {biomes, interiors,
+    interior(key) by subject interior:<key>, musicRoles}, WORLD.bossTroops (any trp_ with an isBoss member).
+  Import gate: Kit.bundle.importText refuses, with a reason a person can act on, a non bundle, bad JSON, an unlocked
+    Charter, no chapters, no Day 147 art, no biome tileset with climate keys, or no interior tileset. Kit.bundle.load (demo,
+    slots, the Day 147 draft) is not gated; the Day 147 draft is checked with WORLD.importable before it loads.
+  Open policy (Day 147's exact pattern): world stays out of kit.opened while drafting. Kit.buildExport('final') refuses
+    while there are errors or broken references, while no map_ record of kind 'overworld' exists (WORLD.isGenerated; Phase
+    3 makes the real one), or while WORLD.canOpen is false (every sdq_.giver and every world ID in rmr_/sdq_ refs must
+    resolve); then it opens world. A Draft closes world when canOpen is false. Proven: Day 146 reads a dangling giver as
+    forward while world is closed and as broken once world is open (control check in phase0).
+  Forward field: WORLD.FORWARD_FIELDS = sdq_.giver -> npc_. The save schema's location (map_) lives in the schema, not in
+    a record, so there is nothing to fill. Filling sdq_.giver (Phase 5) is the only write outside world.
+  Export: forges['148'] = {status, exportedAt, worldVersion, generatorVersion, charterVersion}, then Kit.bundle.exportFile
+    without a status so forges['146'] and ['147'] are untouched. Files: <slug>-bundle.json, <slug>-world-manifest.json
+    {forge, bundleHash, worldVersion, generator, seed, charterVersion, artVersion, exportedAt, created, referenced,
+    unresolved, forward, worldOpened, counts, validation, engines}, engine-world.js (the page's own ENGINE:WORLD fence cut
+    at run time under a header carrying the bundle hash; build.js writes the repo copy without a hash).
+  Storage (Day 147's decision, reused): own keys world148:draft, world148:slots, world148:suspend, world148:ui; kit:settings
+    (API key) stays shared. IndexedDB fallback in database appaday-148 with world148:where: markers and an in-memory mirror;
+    APP:BOOT awaits WORLD.storage.ready(). Start offers "Open the Day 147 draft" when art147:draft exists (read from
+    localStorage, or from Day 147's appaday-147 database when its marker says so); Day 147's keys are never written.
+  Demo: WORLD_DEMO embeds two real Day 147 Final exports made by test/make-demo.js, which boots the Day 147 page, runs
+    Quick Build, and exports Final with fill. demo: the Day 146 demo (Westland, Eastland). four: six chapters on four
+    continents (Westland x2, Eastland, Northreach, Southmere x2), target minutes 60 45 90 60 75 120, boss troops in every
+    chapter but The Marches (chapter 2), two sdq_ records with no giver. Both validate clean in 146 and 147 (coverage 173/173
+    for four). Embedded JSON escapes '</' and anything outside ASCII. ?dev=1 adds the Dev tab with both loaders.
+  UI: header (theme, settings), topbar (title, size chip, validation badge, Save, Slots, Import, Export). Tabs: Start,
+    World, Sites, Encounters, Validation, Export, and Dev with ?dev=1. Start: load buttons, Project card, Chapters and
+    continents table (troops, boss troop or "none yet"), Art the world uses (biomes, interiors, field:<slug> chips green
+    when scored), World namespace card with the seed field and Reroll, and the Climate table card (five 5 by 5 grids,
+    nearest cells hatched, legend). Export: form (Draft or Final with the reason it is blocked, engine toggle), manifest
+    preview, size. World, Sites, Encounters, Validation are stubs naming their phase; a later fence registers
+    WORLD.WS[key] = {render, focus} and the mount picks it up.
+  Tests: test/phase0.js 63 of 63 (static contract, boot, skeleton, gate, records, Draft export and manifest, Final refused
+    until generated, round trip into 146 and 147 and back with charter, codex, rules, art, and world canonically identical
+    and no new errors, the giver forward field and open policy, own keys, IndexedDB fallback, fixtures).
+    test/layout.js (needs Playwright, see its header): 18 views at 390 and 1280, no horizontal scroll, no target under 44 px.
+=== END SESSION 0 ===
+SESSION 1 / PHASE 1 (2026-10-02, Opus): THE DETERMINISTIC CORE IN ENGINE:WORLD. COMPLETE.
+  ENGINE:WORLD: var ENGINE_WORLD, deep frozen, version 1.0.0, one global, reads no host global. The render engine is passed
+    in as an argument wherever it is needed (climate.table(art, render)), so Day 150 loads engine-world.js beside
+    engine-render.js unchanged. Later phases add src/engine-<part>.js sections spliced above the freeze line by build.js
+    (engine-progression, engine-overworld, engine-interiors, engine-zones, engine-checks, in that order when present).
+  Determinism rules (static scan in phase1): no Math.random; no for in; Object.keys only inside util.keys, which sorts;
+    no Date or performance; DECISION: no transcendental Math (sin, cos, tan, exp, log, pow, atan, hypot, cbrt and kin),
+    because their last bits may differ between browsers and a world must regenerate identically on any device when it is
+    not baked. sqrt, floor, abs, imul, and the four basic operations are exact under IEEE 754.
+  API: util {keys, each, clamp, digest (FNV-1a over numbers rounded to 1e-9 or strings)}; hash {xmur3, str (first output),
+    seed(master, key) = str(master + '|' + key)}; mulberry32; rng(seed) -> fn with int, range (inclusive), float, chance,
+    pick, shuffle (Fisher-Yates on a copy), weighted (weights or {w}; index or -1); ids {PREFIXES, slug,
+    structural(prefix, key) = prefix + slug(key, 40) + '_' + 4 base36 chars of str(prefix + key), always valid for
+    ID_RE, refuses non world prefixes}; noise {simplex(seed) -> {noise2} (Gustavson 2D, permutation shuffled by
+    rng(seed), 12 gradients, output in [-1, 1]), fbm(gen, x, y, o), ridge(gen, x, y, o) (octaves of (1 - |n|)^2, in
+    [0, 1]), field(w, h, seed, o) -> Float64Array, o {octaves 4, lacunarity 2, gain 0.5, frequency 1, scale 32, ridge}};
+    each octave is offset (k * 19.19, k * -7.31) so octaves never line up at the origin; quantize {band(v, th) = number
+    of the four cut points v reaches, bands, quantile(arr, fractions) cut points by sorted rank, normalize to [0, 1]};
+    climate {index(t, m, e) = t*25 + m*5 + e, inBox, table(art, render), lookup(table, t, m, e)}.
+  Climate table: calls render.tiles.matchClimate(tils, t, m, e) for all 125 cells over the biome tilesets in
+    render.tiles.prioList(art) order, recording each cell's tileset ID and whether the point lies inside that box.
+    Returns {order, cells, exact, exactCount, nearestCount, features [{id, key, feature, temp, moist, elev}], keys, digest}.
+    Default biomes: 109 exact, 16 nearest (coast at temperature 0 elevation 1; swamp, forest, grassland at a few wet or hot
+    corners). Feature biomes (volcanic) never fill a cell; they are listed for Phase 3's placement pass. Editing a box in
+    the art changes the table, and a deleted biome falls back to the nearest box, never to nothing.
+  FINDING for Phase 3: at temperature 0 the table gives Snowfield, not Mountains, for elevation 4 (the snow box is tighter
+    and wins), and Snowfield is passable (flags 3). Walls, region ridges, and landing beach rings must therefore be placed
+    with the mountain biome directly (the tileset whose box is elevation 4 and flags 0), not looked up through the table,
+    or a cold ridge would leak. Elevation 0 is Ocean in every column.
+  Speed: a 256 by 256 five octave field takes about 150 ms in Node here; the climate table about 2 ms. Phase 3 runs several
+    layers, so the Web Worker (importScripts engine-world.js) is likely needed on mobile; measure in Phase 3 before adding.
+  Tests: test/phase1.js 37 of 37 (static scan; identical digests for six seeds in two vm contexts and in the page; every
+    probe differs between seeds; sub seeds; uniformity of mulberry32; range, shuffle, weighted 5 5 5 1; simplex range,
+    mean, continuity; fbm and ridge ranges; octave, lacunarity, gain sensitivity; band, quantile, normalize; sorted
+    iteration; 1500 arbitrary keys give valid IDs, prefix and key only, no collisions in the four continent fixture; the
+    climate table against matchClimate cell by cell, in two contexts and the page, 109 exact, volcanic as feature, the
+    snowfield finding, box edits, deleted biome; timing). test/phase0.js still 63 of 63.
+  Next: Phase 2, the progression graph before geometry (src/engine-progression.js plus the WORLD side that turns the graph
+    into twn_, dgn_, and reg_ records).
+=== END SESSION 1 ===
+DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
+  World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
+  world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
+  lookup caches matchClimate in prioList order. Caves and castles use interior:dungeon unless the bundle has
+  interior:cave or interior:castle. Towns carry no zone table and building floors are flag 1. Boss troops are found by
+  enm_.isBoss; a chapter without one gets a warning and an empty boss slot. IDs are structural and seed independent; each
+  map's sub seed is hash.seed(master, key). Generators ship as engine-world.js. Default overworld 96 plus 32 per
+  continent, capped at 256 square.
+=== END BUILD LOG ===

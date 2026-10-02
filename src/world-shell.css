@@ -1,0 +1,30 @@
+/* === WORLD:SHELL CSS BEGIN === */
+.size-btn { padding: 0 8px; }
+.size-btn .chip { pointer-events: none; }
+.store-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; background: color-mix(in srgb, var(--danger) 16%, var(--bg2)); border-bottom: 1px solid var(--danger); color: var(--ink); font-weight: 700; }
+.store-banner[hidden] { display: none; }
+.store-banner span { flex: 1 1 240px; min-width: 0; }
+.w8-hero .btn-row { margin-top: 10px; }
+.w8-grid { margin-top: 14px; margin-bottom: 14px; }
+.w8-grid .card .section-h { margin-top: 0; }
+.w8-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.w8-meter { height: 14px; border-radius: 99px; background: var(--bg2); border: 1px solid var(--line2); overflow: hidden; margin: 4px 0 8px; }
+.w8-meter i { display: block; height: 100%; background: var(--ok); }
+.w8-meter.w8-amber i { background: var(--warn); }
+.w8-meter.w8-red i { background: var(--danger); }
+.w8-seed { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.w8-seed .inp { flex: 1 1 160px; min-width: 0; max-width: 220px; font-variant-numeric: tabular-nums; }
+.w8-climate { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.w8-climate figure { margin: 0; min-width: 0; }
+.w8-climate figcaption { font-size: .78rem; color: var(--ink2); margin-bottom: 2px; }
+.w8-cgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line2); border: 1px solid var(--line2); border-radius: 6px; overflow: hidden; }
+.w8-cgrid span { aspect-ratio: 1; display: block; }
+.w8-cgrid span.near { background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.35) 0 2px, transparent 2px 5px); }
+.w8-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: .85rem; }
+.w8-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line2); }
+.w8-fixtures { margin: 10px 0 14px; }
+.w8-opts { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+.tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.brand-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 520px) { .brand-title { font-size: 1.02rem; letter-spacing: .03em; } .brand-num { display: none; } .w8-climate { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* === WORLD:SHELL CSS END === */
