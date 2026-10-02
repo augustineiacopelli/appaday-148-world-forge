@@ -10,8 +10,8 @@ Live: https://augustineiacopelli.github.io/appaday-148-world-forge/ (add `?dev=1
 | --- | --- | --- |
 | 0 | Scaffold, world namespace, import gate, export, storage, Day 146 and 147 round trip | Done |
 | 1 | Deterministic core in ENGINE:WORLD: seeded generators, simplex noise, octaves, bands, IDs, climate table | Done |
-| 2 | Progression graph | Next |
-| 3 | Continents and the overworld | |
+| 2 | Progression graph: golden path per chapter, ship and airship, optional branches, reg_ twn_ dgn_ records | Done |
+| 3 | Continents and the overworld | Next |
 | 4 | Interiors | |
 | 5 | Encounter zones and side quest givers | |
 | 6 | Validation | |
@@ -28,7 +28,7 @@ Clone this repo next to `appaday-146-saga-forge` and `appaday-147-art-and-audio-
 node build.js
 cd test && npm install
 node make-demo.js   # only when the fixtures need rebuilding from Day 147
-node phase0.js && node phase1.js
+node phase0.js && node phase1.js && node phase2.js
 ```
 
 `build.js` copies KIT:CORE from Day 146 byte for byte and checks the vendored `engine-render.js` and `engine-audio.js` against Day 147 byte for byte. World Forge never edits either engine.

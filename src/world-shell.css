@@ -24,6 +24,13 @@
 .w8-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line2); }
 .w8-fixtures { margin: 10px 0 14px; }
 .w8-opts { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+.w8-prog { margin-bottom: 14px; }
+.w8-prog .section-h { margin-top: 0; }
+.w8-prog .btn-row { margin-top: 10px; }
+.w8-path { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.w8-arrow { color: var(--ink2); font-weight: 700; }
+.w8-sub { display: block; font-weight: 400; font-size: .82rem; color: var(--ink2); margin-top: 2px; }
+.w8-prog .tbl th[scope=row] { min-width: 8.5em; }
 .tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
 .brand-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 520px) { .brand-title { font-size: 1.02rem; letter-spacing: .03em; } .brand-num { display: none; } .w8-climate { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

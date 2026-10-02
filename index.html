@@ -109,6 +109,62 @@ SESSION 1 / PHASE 1 (2026-10-02, Opus): THE DETERMINISTIC CORE IN ENGINE:WORLD. 
   Next: Phase 2, the progression graph before geometry (src/engine-progression.js plus the WORLD side that turns the graph
     into twn_, dgn_, and reg_ records).
 === END SESSION 1 ===
+SESSION 2 / PHASE 2 (2026-10-02, Opus): THE PROGRESSION GRAPH BEFORE GEOMETRY. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37 before any change.
+  ENGINE:WORLD section src/engine-progression.js (spliced above the freeze line): ENGINE_WORLD.progression {DEFAULTS,
+    settings(s), build(spec, settings), walk(graph), check(graph), gate {chapter(id), seal(id), SHIP, AIRSHIP}}. Pure data
+    in, plain data out: the engine reads plain specs, never the bundle. DECISION: the graph uses no randomness and never
+    reads the seed, so a reroll moves terrain, never the story's order, and every graph regenerates identically anywhere.
+  Spec (WORLD.progression.spec): chapters in Charter order as {chapter, name, continent slug, label, minutes, bosses}, with
+    bosses = sorted trp_ IDs that have an isBoss member and that chapter.
+  Gate keys (world local, Day 149 binds them): chapter:<chp>, item:seal:<chp>, vehicle:ship, vehicle:airship. DECISION: the
+    chapter local golden item is named item:seal:<chp ID>. Chapter 1's key is held at the start (graph.start).
+  Golden path per chapter, in order: twn start (needs chapter key), dgn key (grants item:seal), gate lock (needs chapter key
+    and seal), dgn boss (needs chapter key and seal; grants the next chapter's key and any vehicle), gate exit (needs the
+    next chapter's key, plus the ship for a landing; via 'pass' or 'landing'; to the next region). The finale has no exit
+    and its boss interior is 'castle'; other bosses and key dungeons are 'dungeon', caves 'cave', towns 'town' (Phase 4
+    hints). Lock and exit are gates, not sites: they make no records; Phase 3 places them (the lock in front of the boss
+    dungeon, the exit as the pass ridge or landing ring). DECISION: every site, golden or optional, needs its own chapter's
+    key, so neither the airship nor an open pass can break sequence; Phase 6's flood fill must treat a site's entrance as
+    closed until its chapter key is held (the airship reaches every land cell, not every site).
+  Ship: with the boss of the chapter before the first chapter on a new continent (none when there is one continent).
+    Airship: with the boss of chapter round(airshipAt x N), clamped to 1..N-1, only when later than the ship; airshipAt 0
+    disables it. DECISION: 'landing' means the continent differs from the previous chapter's, even when it returns to an
+    earlier continent, and every landing needs the ship (always held by then). Region entry is start, pass, or landing.
+  Optional branches after the golden path: cavesPerChapter caves (dgn role cave, or cave1..caveN when more than one), plus
+    twn role town in chapter one when secondTownInChapterOne. They grant nothing.
+  Bosses: the boss node takes the first sorted boss troop; others ride in spareBosses for Phase 5. A chapter with none gets
+    one graph warning (code no-boss) and troop null.
+  walk: a topological walk from graph.start, one node at a time in graph order, collecting grants; returns order, held,
+    stuck, grantedAt, openedAt. check: unreachable, never-granted, key-after-lock, optional-golden, key-chapter (chapter n's
+    key granted anywhere but chapter n - 1), seal-chapter, ungated.
+  Structural keys use chapter IDs, not indexes (twn|<chp>|start, dgn|<chp>|key, dgn|<chp>|boss, dgn|<chp>|cave,
+    twn|<chp>|town, reg|<chp>), so inserting or reordering chapters never renames a site Day 149 may reference.
+  WORLD side, new fence src/world-generate.js (WORLD:GENERATE): WORLD.progression {spec, preview, graph, stale, apply}.
+    apply builds, refuses an unsolvable graph, writes one reg_ per chapter {chapter, continent, continentLabel, part (1, 2..
+    within a shared continent), entry, order, sites [ids], next (reg_ id or null), exitGate {gate, kind, requires}} and a
+    twn_ or dgn_ per site {chapter, continent, region (reg_ id), role, golden, optional, interior, requires, grants, order;
+    boss adds troop, spareBosses, finale}. world.progression holds the whole graph; each site node gains record (its ID),
+    each gate node regionRecord. A record with origin 'user' is never overwritten; a generated reg_, twn_, or dgn_ the
+    graph no longer has is removed. map_ and npc_ are not touched. Counts: demo 2 reg_, 3 twn_, 6 dgn_; four 6, 7, 18.
+  Validator world.graph (runs once a graph exists): check() problems as errors, no-boss as warnings, a stale graph (Charter
+    or settings changed since layout, by digest) as a warning, and a site record missing from the records as an error.
+  UI: Start gains a Progression card above the climate table: Lay out progression (or Lay out again), a solvable chip with
+    the walk length, ship and airship chips, a stale chip, and one row per region (entry and optional sites under the name,
+    golden path as chips with requires and grants in the tooltip). Checked at 390 and 1280 with no horizontal scroll.
+  Tests: test/phase2.js 40 of 40 (fixture specs; 8 layouts x 6 settings = 48 graphs solvable with no problems; every key
+    strictly before its lock; chapter keys only from the previous chapter's boss; seals only from their own key dungeon;
+    optional grants nothing; every site gated by its chapter; golden path shape; ship, airship, gate kinds for four, demo,
+    returning continent, one continent, one chapter; airshipAt 0 and 1; branch settings; boss warnings; the checker catches
+    four kinds of broken graph; identical graphs in two vm contexts and the page; record counts, IDs, fields, regions;
+    no field named id in the graph; prior namespaces untouched; KIT:CORE indexes the records; validation clean but the
+    Marches warning; idempotent after a reroll; user record kept and a dropped chapter's records removed and restored; Draft
+    manifest 31 created, 0 unresolved; Day 146 and 147 open the Draft with every namespace identical and no new errors;
+    the Start card). phase0 63 of 63, phase1 37 of 37, layout 18 views pass. Screenshots: test/out/phase2-progression-*.png.
+  Next: Phase 3, continents and the overworld (src/engine-overworld.js). It reads world.progression.regions and gates:
+    region split ridges with one pass cell per 'pass' gate, landing rings with one pass per 'landing' gate, sites placed per
+    region from the graph's site nodes, and the mountain biome placed directly (the Phase 1 snowfield finding).
+=== END SESSION 2 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -443,6 +499,13 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line2); }
 .w8-fixtures { margin: 10px 0 14px; }
 .w8-opts { display: flex; flex-direction: column; gap: 2px; margin: 10px 0; }
+.w8-prog { margin-bottom: 14px; }
+.w8-prog .section-h { margin-top: 0; }
+.w8-prog .btn-row { margin-top: 10px; }
+.w8-path { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.w8-arrow { color: var(--ink2); font-weight: 700; }
+.w8-sub { display: block; font-weight: 400; font-size: .82rem; color: var(--ink2); margin-top: 2px; }
+.w8-prog .tbl th[scope=row] { min-width: 8.5em; }
 .tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
 .brand-title { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 520px) { .brand-title { font-size: 1.02rem; letter-spacing: .03em; } .brand-num { display: none; } .w8-climate { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -3749,12 +3812,244 @@ var ENGINE_WORLD = (function () {
   function climateLookup(table, t, m, e) { return table.cells[cIndex(clamp(t | 0, 0, 4), clamp(m | 0, 0, 4), clamp(e | 0, 0, 4))]; }
   W.climate = { index: cIndex, inBox: inBox, table: climateTable, lookup: climateLookup };
 
+  // ---------------------------------------------------------------- progression graph (Phase 2)
+  // The progression graph is laid out before any geometry, so the overworld is drawn around a path already proven
+  // solvable. It uses no randomness and never reads the seed: a reroll moves terrain, never the order of the story.
+  //
+  // build(spec, settings) -> graph.
+  //   spec.chapters: [{chapter (chp_ ID), name, continent (slug), label, minutes, bosses [trp_ IDs, sorted]}], in story order.
+  //   settings: {airshipAt 0.67, cavesPerChapter 1, secondTownInChapterOne true}.
+  // Gate keys are world local strings Day 149 binds to flg_ and itm_ records later:
+  //   chapter:<chp ID>   held from the moment the chapter opens (chapter 1's is held at the start)
+  //   item:seal:<chp ID> the key dungeon's prize, which opens that chapter's lock
+  //   vehicle:ship, vehicle:airship
+  // Golden path, per chapter: start town, key dungeon, lock, boss dungeon, exit. The exit of chapter n is the pass or
+  // landing into chapter n + 1 and needs chapter n + 1's key, which chapter n's boss grants, so the key for chapter n is
+  // always placed in chapter n - 1. The lock and the exit are gates, not sites; towns and dungeons become twn_ and dgn_.
+  // Structural keys use the chapter ID (twn|<chp>|start), so reordering or inserting chapters never renames a site.
+  var PROG_DEFAULTS = { airshipAt: 0.67, cavesPerChapter: 1, secondTownInChapterOne: true };
+  function gateChapter(c) { return 'chapter:' + c; }
+  function gateSeal(c) { return 'item:seal:' + c; }
+  var SHIP = 'vehicle:ship', AIRSHIP = 'vehicle:airship';
+  function progSettings(s) {
+    s = s || {};
+    var a = s.airshipAt == null ? PROG_DEFAULTS.airshipAt : Number(s.airshipAt);
+    return {
+      airshipAt: isFinite(a) ? clamp(a, 0, 1) : PROG_DEFAULTS.airshipAt,
+      cavesPerChapter: clamp(Math.floor(s.cavesPerChapter == null ? PROG_DEFAULTS.cavesPerChapter : Number(s.cavesPerChapter) || 0), 0, 4),
+      secondTownInChapterOne: s.secondTownInChapterOne == null ? PROG_DEFAULTS.secondTownInChapterOne : !!s.secondTownInChapterOne
+    };
+  }
+  function progBuild(spec, settings) {
+    var st = progSettings(settings), chs = (spec && spec.chapters || []).filter(function (c) { return c && c.chapter; });
+    var N = chs.length, nodes = [], gates = [], regions = [], warnings = [], seen = {}, firstNew = -1, i;
+    // Which chapters open a continent for the first time; the first of those after chapter 1 needs the ship. A chapter
+    // on a different continent from the one before it arrives by sea (a landing), even when it returns to a continent
+    // seen earlier; the ship is held by then, because every change of continent comes at or after the first new one.
+    var opens = chs.map(function (c, k) { var o = !seen[c.continent]; seen[c.continent] = 1; if (o && k > 0 && firstNew < 0) firstNew = k; return o; });
+    var lands = chs.map(function (c, k) { return k > 0 && c.continent !== chs[k - 1].continent; });
+    // The ship arrives with the boss of the chapter before the first new continent. The airship arrives with the boss of
+    // chapter round(airshipAt * N), only when that is later than the ship (or there is no ship) and before the finale.
+    var shipAt = firstNew > 0 ? firstNew - 1 : -1;
+    var airAt = st.airshipAt > 0 && N >= 2 ? clamp(Math.round(st.airshipAt * N), 1, N - 1) - 1 : -1;
+    if (airAt >= 0 && airAt <= shipAt) airAt = -1;
+    var perCont = {};
+    function node(c, k, kind, role, extra) {
+      var n = {
+        key: kind + '|' + c.chapter + '|' + role, kind: kind, role: role, chapter: c.chapter, index: k, continent: c.continent,
+        region: 'reg|' + c.chapter, golden: role === 'start' || role === 'key' || role === 'boss' || role === 'lock' || role === 'exit',
+        requires: [gateChapter(c.chapter)], grants: [], troop: null, interior: null
+      };
+      each(extra || {}, function (v, f) { n[f] = v; });
+      nodes.push(n);
+      return n;
+    }
+    for (i = 0; i < N; i++) {
+      var c = chs[i], last = i === N - 1, next = last ? null : chs[i + 1];
+      perCont[c.continent] = (perCont[c.continent] || 0) + 1;
+      regions.push({ key: 'reg|' + c.chapter, chapter: c.chapter, index: i, continent: c.continent, label: c.label || c.continent,
+        part: perCont[c.continent], opensContinent: opens[i], entry: i === 0 ? 'start' : lands[i] ? 'landing' : 'pass' });
+      node(c, i, 'twn', 'start', { interior: 'town' });
+      node(c, i, 'dgn', 'key', { interior: 'dungeon', grants: [gateSeal(c.chapter)] });
+      node(c, i, 'gate', 'lock', { requires: [gateChapter(c.chapter), gateSeal(c.chapter)] });
+      var bosses = Array.isArray(c.bosses) ? c.bosses.slice().sort() : [];
+      if (!bosses.length) warnings.push({ chapter: c.chapter, code: 'no-boss', message: 'Chapter ' + (c.name || c.chapter) + ' has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill.' });
+      var bg = next ? [gateChapter(next.chapter)] : [];
+      if (i === shipAt) bg.push(SHIP);
+      if (i === airAt) bg.push(AIRSHIP);
+      node(c, i, 'dgn', 'boss', { interior: last ? 'castle' : 'dungeon', requires: [gateChapter(c.chapter), gateSeal(c.chapter)], grants: bg, troop: bosses[0] || null, spareBosses: bosses.slice(1), finale: last });
+      if (next) {
+        // The exit sits on chapter n's side and leads into chapter n + 1's region. A landing also needs the ship.
+        var landing = lands[i + 1], req = [gateChapter(next.chapter)];
+        if (landing) req.push(SHIP);
+        node(c, i, 'gate', 'exit', { requires: req, to: 'reg|' + next.chapter, via: landing ? 'landing' : 'pass' });
+        gates.push({ key: gateChapter(next.chapter), kind: landing ? 'landing' : 'pass', from: 'reg|' + c.chapter, to: 'reg|' + next.chapter,
+          continent: next.continent, requires: req.slice() });
+      }
+    }
+    // Optional branches, added after the golden path. They need only their chapter's key and never hold a golden key.
+    for (i = 0; i < N; i++) {
+      for (var v = 1; v <= st.cavesPerChapter; v++) node(chs[i], i, 'dgn', 'cave' + (st.cavesPerChapter > 1 ? v : ''), { interior: 'cave', optional: true });
+      if (i === 0 && st.secondTownInChapterOne) node(chs[i], i, 'twn', 'town', { interior: 'town', optional: true });
+    }
+    nodes.forEach(function (n) { n.optional = !!n.optional; });
+    var vehicles = {
+      ship: shipAt >= 0 ? { chapter: chs[shipAt].chapter, node: 'dgn|' + chs[shipAt].chapter + '|boss' } : null,
+      airship: airAt >= 0 ? { chapter: chs[airAt].chapter, node: 'dgn|' + chs[airAt].chapter + '|boss' } : null
+    };
+    var g = { version: 1, settings: st, start: N ? [gateChapter(chs[0].chapter)] : [], chapters: chs.map(function (c) { return c.chapter; }),
+      regions: regions, nodes: nodes, gates: gates, vehicles: vehicles, warnings: warnings };
+    g.digest = digest(nodes.map(function (n) { return n.key + '>' + n.requires.join(',') + '>' + n.grants.join(','); }).concat(gates.map(function (x) { return x.key + '@' + x.kind; })));
+    return g;
+  }
+  // Walks the graph the way a player would: from the start keys, visit every node whose requirements are all held,
+  // collect what it grants, and repeat until nothing new opens. Ties go in graph order, so the walk is deterministic.
+  // Returns {ok, order [node keys], held [gate keys], stuck [node keys], grantedAt {gate: order index}, openedAt {node: index}}.
+  function progWalk(g) {
+    var held = {}, done = {}, order = [], grantedAt = {}, openedAt = {}, moved = true;
+    (g.start || []).forEach(function (k) { held[k] = 1; grantedAt[k] = -1; });
+    while (moved) {
+      moved = false;
+      for (var i = 0; i < g.nodes.length; i++) {
+        var n = g.nodes[i];
+        if (done[n.key] || !n.requires.every(function (r) { return held[r]; })) continue;
+        done[n.key] = 1; openedAt[n.key] = order.length; order.push(n.key); moved = true;
+        n.grants.forEach(function (k) { if (!held[k]) { held[k] = 1; grantedAt[k] = openedAt[n.key]; } });
+        break;
+      }
+    }
+    var stuck = g.nodes.filter(function (n) { return !done[n.key]; }).map(function (n) { return n.key; });
+    return { ok: !stuck.length, order: order, held: keys(held), stuck: stuck, grantedAt: grantedAt, openedAt: openedAt };
+  }
+  // Structural problems a graph must never have. Returns a list of {code, message, node}; empty when sound.
+  function progCheck(g) {
+    var out = [], w = progWalk(g), byKey = {}, chIndex = {};
+    g.chapters.forEach(function (c, k) { chIndex[c] = k; });
+    g.nodes.forEach(function (n) { byKey[n.key] = n; });
+    if (!w.ok) w.stuck.forEach(function (k) { out.push({ code: 'unreachable', node: k, message: 'No path opens ' + k + '.' }); });
+    // Every key is granted before the first node that needs it opens.
+    g.nodes.forEach(function (n) {
+      n.requires.forEach(function (r) {
+        if (!(r in w.grantedAt)) out.push({ code: 'never-granted', node: n.key, message: n.key + ' needs ' + r + ', which nothing grants.' });
+        else if (n.key in w.openedAt && w.grantedAt[r] >= w.openedAt[n.key]) out.push({ code: 'key-after-lock', node: n.key, message: r + ' is granted after ' + n.key + ' opens.' });
+      });
+      // Golden keys live on the golden path only, and chapter n's key is granted in chapter n - 1.
+      n.grants.forEach(function (k) {
+        if (n.optional) out.push({ code: 'optional-golden', node: n.key, message: 'Optional ' + n.key + ' grants ' + k + '.' });
+        if (k.indexOf('chapter:') === 0 && chIndex[k.slice(8)] !== n.index + 1) out.push({ code: 'key-chapter', node: n.key, message: k + ' is granted in chapter ' + (n.index + 1) + ', not the chapter before it.' });
+        if (k.indexOf('item:seal:') === 0 && k.slice(10) !== n.chapter) out.push({ code: 'seal-chapter', node: n.key, message: k + ' is granted outside its chapter.' });
+      });
+      // No golden site of a chapter opens without that chapter's key, so neither a vehicle nor a pass breaks sequence.
+      if (n.kind !== 'gate' && n.requires.indexOf(gateChapter(n.chapter)) < 0) out.push({ code: 'ungated', node: n.key, message: n.key + ' does not need its chapter key.' });
+    });
+    return out;
+  }
+  W.progression = { DEFAULTS: PROG_DEFAULTS, settings: progSettings, build: progBuild, walk: progWalk, check: progCheck,
+    gate: { chapter: gateChapter, seal: gateSeal, SHIP: SHIP, AIRSHIP: AIRSHIP } };
+
   // ---------------------------------------------------------------- later phases insert sections above this line
   function freeze(o) { Object.freeze(o); keys(o).forEach(function (k) { var v = o[k]; if (v && (typeof v === 'object' || typeof v === 'function') && !Object.isFrozen(v)) freeze(v); }); return o; }
   return freeze(W);
 })();
 // === ENGINE:WORLD END ===
+// === WORLD:GENERATE BEGIN ===
+(function () {
+  'use strict';
+  // Turns the engine's generators into world records. Phase 2: the progression graph becomes one reg_ per chapter and a
+  // twn_ or dgn_ per site, and the graph itself is kept in world.progression (node.record names each site's record).
+  // Record IDs come from structural keys, so laying the graph out again rewrites the same IDs. A record whose origin is
+  // 'user' is never overwritten; a generated record whose key the new graph no longer has is removed.
+  var U = Kit.util, PG = ENGINE_WORLD.progression;
+  var ROLE_NAMES = { start: 'Start town', town: 'Second town', key: 'Key dungeon', boss: 'Boss dungeon', cave: 'Cave' };
+  var PREFIX_OF = { twn: 'twn_', dgn: 'dgn_' };
+  function cur() { return Kit.bundle.current(); }
 
+  // The engine reads plain data, never the bundle: chapters in Charter order with their continent slug and boss troops.
+  function spec(b) {
+    var bossBy = {};
+    WORLD.bossTroops(b).forEach(function (t) { if (t.chapter) (bossBy[t.chapter] = bossBy[t.chapter] || []).push(t.id); });
+    return {
+      chapters: WORLD.chapters(b).map(function (c) {
+        return { chapter: c.id, name: c.name || c.id, continent: WORLD.continentSlug(c), label: (c.continentLabel || '').trim() || 'Default',
+          minutes: Number(c.targetMinutes) || 60, bosses: (bossBy[c.id] || []).slice().sort() };
+      })
+    };
+  }
+  function roleName(n, chName) {
+    var base = n.role.replace(/\d+$/, ''), num = n.role.slice(base.length);
+    var label = n.role === 'boss' && n.interior === 'castle' ? 'Castle' : ROLE_NAMES[base] || n.role;
+    return chName + ': ' + label + (num ? ' ' + num : '');
+  }
+  function sameKeys(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  WORLD.progression = {
+    spec: spec,
+    // The graph the current Charter would produce, without writing anything.
+    preview: function (b) { b = b || cur(); WORLD.ensure(b); return PG.build(spec(b), b.world.settings); },
+    graph: function (b) { b = b || cur(); var g = b && b.world && b.world.progression; return U.isObj(g) && Array.isArray(g.nodes) ? g : null; },
+    // True when the Charter or settings have changed since the graph was laid out.
+    stale: function (b) { b = b || cur(); var g = WORLD.progression.graph(b); return !!g && g.digest !== WORLD.progression.preview(b).digest; },
+    apply: function (b) {
+      b = b || cur();
+      WORLD.ensure(b);
+      var g = PG.build(spec(b), b.world.settings), problems = PG.check(g);
+      if (problems.length) throw new Error('The progression graph is not solvable: ' + problems[0].message);
+      var chName = {}, made = {}, kept = [], written = 0, removed = 0, regId = {};
+      spec(b).chapters.forEach(function (c) { chName[c.chapter] = c.name; });
+      WORLD.batching = true;
+      try {
+        function put(rec) {
+          var old = WORLD.records.get(rec.id, b);
+          made[rec.id] = 1;
+          if (old && old.origin === 'user') { kept.push(rec.id); return old; }
+          WORLD.records.put(rec, b); written++;
+          return rec;
+        }
+        g.regions.forEach(function (r) { regId[r.key] = ENGINE_WORLD.ids.structural('reg_', r.key); });
+        g.nodes.forEach(function (n) {
+          if (n.kind === 'gate') return;
+          var rec = WORLD.envelope(PREFIX_OF[n.kind], n.key, roleName(n, chName[n.chapter]), {
+            chapter: n.chapter, continent: n.continent, region: regId[n.region], role: n.role, golden: n.golden, optional: n.optional,
+            interior: n.interior, requires: n.requires.slice(), grants: n.grants.slice(), order: n.index
+          });
+          if (n.role === 'boss') { rec.troop = n.troop; rec.spareBosses = (n.spareBosses || []).slice(); rec.finale = !!n.finale; }
+          n.record = put(rec).id;
+        });
+        g.nodes.forEach(function (n) { if (n.kind === 'gate') n.regionRecord = regId[n.region]; });
+        g.regions.forEach(function (r) {
+          var exit = g.gates.filter(function (x) { return x.from === r.key; })[0] || null;
+          var sites = g.nodes.filter(function (n) { return n.region === r.key && n.record; }).map(function (n) { return n.record; });
+          var rec = WORLD.envelope('reg_', r.key, r.label + ': ' + chName[r.chapter], {
+            chapter: r.chapter, continent: r.continent, continentLabel: r.label, part: r.part, entry: r.entry, order: r.index,
+            sites: sites, next: exit ? regId[exit.to] : null, exitGate: exit ? { gate: exit.key, kind: exit.kind, requires: exit.requires.slice() } : null
+          });
+          r.record = put(rec).id;
+        });
+        // Generated twn_, dgn_, and reg_ records the graph no longer holds are removed; user records stay.
+        ['reg_', 'twn_', 'dgn_'].forEach(function (p) {
+          WORLD.records.list(p, b).forEach(function (rec) {
+            if (!made[rec.id] && rec.origin !== 'user') { WORLD.records.del(rec.id, b); removed++; }
+          });
+        });
+      } finally { WORLD.batching = false; }
+      var old = WORLD.progression.graph(b), changed = !old || !sameKeys(old, g) || written > 0 || removed > 0;
+      b.world.progression = g;
+      if (b === cur()) { Kit.index.invalidate(); if (changed) Kit.bundle.touch('progression'); }
+      return { graph: g, written: written, removed: removed, kept: kept, warnings: g.warnings.slice() };
+    }
+  };
+
+  // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
+  Kit.validate.register('world.graph', function (b, ctx) {
+    var g = WORLD.progression.graph(b);
+    if (!g) return;
+    PG.check(g).forEach(function (p) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: p.message, level: 'error' }); });
+    g.warnings.forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: w.message, level: 'warning' }); });
+    if (WORLD.progression.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'The Charter\'s chapters or the progression settings changed after the graph was laid out. Lay it out again on the Start tab.', level: 'warning' });
+    g.nodes.forEach(function (n) { if (n.record && !WORLD.records.get(n.record, b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'Site ' + n.record + ' is missing from the world records.', level: 'error' }); });
+  });
+})();
+// === WORLD:GENERATE END ===
 // === WS:WORLD148 BEGIN ===
 (function () {
   'use strict';
@@ -4067,8 +4362,51 @@ var ENGINE_WORLD = (function () {
     wd.appendChild(seedRow(b));
     grid.appendChild(wd);
 
+    if (ok) host.appendChild(progressionCard(b));
     if (ok) host.appendChild(climateCard(b));
   }
+
+  // ---------------------------------------------------------------- Progression (Phase 2)
+  var STEP_LABEL = { start: 'Start town', key: 'Key dungeon', lock: 'Lock', boss: 'Boss', exit: 'Exit' };
+  function progressionCard(b) {
+    var card = el('section', 'card w8-prog'), g = WORLD.progression.graph(b), PG = ENGINE_WORLD.progression;
+    card.appendChild(el('h3', 'section-h', 'Progression'));
+    var row = el('div', 'btn-row');
+    row.appendChild(button(g ? 'Lay out again' : 'Lay out progression', 'spark', g ? '' : 'btn-primary', function () {
+      try {
+        var r = WORLD.progression.apply(b);
+        Kit.rerender();
+        Kit.ui.toast('Progression laid out: ' + r.graph.nodes.filter(function (n) { return n.record; }).length + ' sites in ' + r.graph.regions.length + ' regions' + (r.kept.length ? ', ' + r.kept.length + ' user records kept' : '') + '.', r.warnings.length ? 'warn' : 'ok');
+      } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+    }));
+    if (!g) {
+      card.appendChild(el('p', 'muted', 'The golden path is laid out before any terrain: for each chapter a start town, a key dungeon, the lock it opens, the boss dungeon, and the exit that needs the next chapter\'s key. Optional caves and a second town in chapter one come after. It never reads the seed.'));
+      card.appendChild(row);
+      return card;
+    }
+    var w = PG.walk(g), probs = PG.check(g), stale = WORLD.progression.stale(b);
+    card.appendChild(el('p', null, '<span class="chip ' + (probs.length ? 'chip-broken' : 'chip-ok') + '">' + (probs.length ? probs.length + ' problems' : 'Solvable in ' + w.order.length + ' steps') + '</span> ' +
+      (stale ? '<span class="chip chip-warning">Charter changed since layout</span> ' : '') +
+      (g.vehicles.ship ? '<span class="chip chip-accent">Ship after ' + esc(chName(b, g.vehicles.ship.chapter)) + '</span> ' : '') +
+      (g.vehicles.airship ? '<span class="chip chip-accent">Airship after ' + esc(chName(b, g.vehicles.airship.chapter)) + '</span>' : '')));
+    var t = el('table', 'tbl');
+    t.innerHTML = '<thead><tr><th scope="col">Region</th><th scope="col">Golden path</th></tr></thead><tbody>' +
+      g.regions.map(function (r) {
+        var ns = g.nodes.filter(function (n) { return n.region === r.key; });
+        var gold = ns.filter(function (n) { return n.golden; }).map(function (n) {
+          var cls = n.role === 'boss' && !n.troop ? 'chip-warning' : n.kind === 'gate' ? 'chip-muted' : 'chip-accent';
+          var tip = (n.record || n.key) + ' needs ' + n.requires.join(', ') + (n.grants.length ? '; grants ' + n.grants.join(', ') : '');
+          return '<span class="chip ' + cls + '" title="' + esc(tip) + '">' + esc(n.role === 'boss' && n.interior === 'castle' ? 'Castle' : STEP_LABEL[n.role]) + '</span>';
+        }).join('<span class="w8-arrow" aria-hidden="true">&rsaquo;</span>');
+        var opt = ns.filter(function (n) { return n.optional; }).map(function (n) { return n.kind === 'twn' ? 'Town' : 'Cave'; });
+        return '<tr><th scope="row">' + esc(r.label + ': ' + chName(b, r.chapter)) + '<small class="w8-sub">Entry: ' + esc(r.entry) + (opt.length ? '. Optional: ' + esc(opt.join(', ')) : '') + '</small></th><td><div class="w8-path">' + gold + '</div></td></tr>';
+      }).join('') + '</tbody>';
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); card.appendChild(wrap);
+    probs.concat(g.warnings).forEach(function (p) { card.appendChild(el('p', 'msg ' + (p.code === 'no-boss' ? 'msg-warning' : 'msg-error'), esc(p.message))); });
+    card.appendChild(row);
+    return card;
+  }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id; }
 
   // ---------------------------------------------------------------- Export
   function renderExport(host) {

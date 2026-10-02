@@ -108,6 +108,62 @@ SESSION 1 / PHASE 1 (2026-10-02, Opus): THE DETERMINISTIC CORE IN ENGINE:WORLD. 
   Next: Phase 2, the progression graph before geometry (src/engine-progression.js plus the WORLD side that turns the graph
     into twn_, dgn_, and reg_ records).
 === END SESSION 1 ===
+SESSION 2 / PHASE 2 (2026-10-02, Opus): THE PROGRESSION GRAPH BEFORE GEOMETRY. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37 before any change.
+  ENGINE:WORLD section src/engine-progression.js (spliced above the freeze line): ENGINE_WORLD.progression {DEFAULTS,
+    settings(s), build(spec, settings), walk(graph), check(graph), gate {chapter(id), seal(id), SHIP, AIRSHIP}}. Pure data
+    in, plain data out: the engine reads plain specs, never the bundle. DECISION: the graph uses no randomness and never
+    reads the seed, so a reroll moves terrain, never the story's order, and every graph regenerates identically anywhere.
+  Spec (WORLD.progression.spec): chapters in Charter order as {chapter, name, continent slug, label, minutes, bosses}, with
+    bosses = sorted trp_ IDs that have an isBoss member and that chapter.
+  Gate keys (world local, Day 149 binds them): chapter:<chp>, item:seal:<chp>, vehicle:ship, vehicle:airship. DECISION: the
+    chapter local golden item is named item:seal:<chp ID>. Chapter 1's key is held at the start (graph.start).
+  Golden path per chapter, in order: twn start (needs chapter key), dgn key (grants item:seal), gate lock (needs chapter key
+    and seal), dgn boss (needs chapter key and seal; grants the next chapter's key and any vehicle), gate exit (needs the
+    next chapter's key, plus the ship for a landing; via 'pass' or 'landing'; to the next region). The finale has no exit
+    and its boss interior is 'castle'; other bosses and key dungeons are 'dungeon', caves 'cave', towns 'town' (Phase 4
+    hints). Lock and exit are gates, not sites: they make no records; Phase 3 places them (the lock in front of the boss
+    dungeon, the exit as the pass ridge or landing ring). DECISION: every site, golden or optional, needs its own chapter's
+    key, so neither the airship nor an open pass can break sequence; Phase 6's flood fill must treat a site's entrance as
+    closed until its chapter key is held (the airship reaches every land cell, not every site).
+  Ship: with the boss of the chapter before the first chapter on a new continent (none when there is one continent).
+    Airship: with the boss of chapter round(airshipAt x N), clamped to 1..N-1, only when later than the ship; airshipAt 0
+    disables it. DECISION: 'landing' means the continent differs from the previous chapter's, even when it returns to an
+    earlier continent, and every landing needs the ship (always held by then). Region entry is start, pass, or landing.
+  Optional branches after the golden path: cavesPerChapter caves (dgn role cave, or cave1..caveN when more than one), plus
+    twn role town in chapter one when secondTownInChapterOne. They grant nothing.
+  Bosses: the boss node takes the first sorted boss troop; others ride in spareBosses for Phase 5. A chapter with none gets
+    one graph warning (code no-boss) and troop null.
+  walk: a topological walk from graph.start, one node at a time in graph order, collecting grants; returns order, held,
+    stuck, grantedAt, openedAt. check: unreachable, never-granted, key-after-lock, optional-golden, key-chapter (chapter n's
+    key granted anywhere but chapter n - 1), seal-chapter, ungated.
+  Structural keys use chapter IDs, not indexes (twn|<chp>|start, dgn|<chp>|key, dgn|<chp>|boss, dgn|<chp>|cave,
+    twn|<chp>|town, reg|<chp>), so inserting or reordering chapters never renames a site Day 149 may reference.
+  WORLD side, new fence src/world-generate.js (WORLD:GENERATE): WORLD.progression {spec, preview, graph, stale, apply}.
+    apply builds, refuses an unsolvable graph, writes one reg_ per chapter {chapter, continent, continentLabel, part (1, 2..
+    within a shared continent), entry, order, sites [ids], next (reg_ id or null), exitGate {gate, kind, requires}} and a
+    twn_ or dgn_ per site {chapter, continent, region (reg_ id), role, golden, optional, interior, requires, grants, order;
+    boss adds troop, spareBosses, finale}. world.progression holds the whole graph; each site node gains record (its ID),
+    each gate node regionRecord. A record with origin 'user' is never overwritten; a generated reg_, twn_, or dgn_ the
+    graph no longer has is removed. map_ and npc_ are not touched. Counts: demo 2 reg_, 3 twn_, 6 dgn_; four 6, 7, 18.
+  Validator world.graph (runs once a graph exists): check() problems as errors, no-boss as warnings, a stale graph (Charter
+    or settings changed since layout, by digest) as a warning, and a site record missing from the records as an error.
+  UI: Start gains a Progression card above the climate table: Lay out progression (or Lay out again), a solvable chip with
+    the walk length, ship and airship chips, a stale chip, and one row per region (entry and optional sites under the name,
+    golden path as chips with requires and grants in the tooltip). Checked at 390 and 1280 with no horizontal scroll.
+  Tests: test/phase2.js 40 of 40 (fixture specs; 8 layouts x 6 settings = 48 graphs solvable with no problems; every key
+    strictly before its lock; chapter keys only from the previous chapter's boss; seals only from their own key dungeon;
+    optional grants nothing; every site gated by its chapter; golden path shape; ship, airship, gate kinds for four, demo,
+    returning continent, one continent, one chapter; airshipAt 0 and 1; branch settings; boss warnings; the checker catches
+    four kinds of broken graph; identical graphs in two vm contexts and the page; record counts, IDs, fields, regions;
+    no field named id in the graph; prior namespaces untouched; KIT:CORE indexes the records; validation clean but the
+    Marches warning; idempotent after a reroll; user record kept and a dropped chapter's records removed and restored; Draft
+    manifest 31 created, 0 unresolved; Day 146 and 147 open the Draft with every namespace identical and no new errors;
+    the Start card). phase0 63 of 63, phase1 37 of 37, layout 18 views pass. Screenshots: test/out/phase2-progression-*.png.
+  Next: Phase 3, continents and the overworld (src/engine-overworld.js). It reads world.progression.regions and gates:
+    region split ridges with one pass cell per 'pass' gate, landing rings with one pass per 'landing' gate, sites placed per
+    region from the graph's site nodes, and the mountain biome placed directly (the Phase 1 snowfield finding).
+=== END SESSION 2 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

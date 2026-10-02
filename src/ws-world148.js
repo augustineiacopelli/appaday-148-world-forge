@@ -310,8 +310,51 @@
     wd.appendChild(seedRow(b));
     grid.appendChild(wd);
 
+    if (ok) host.appendChild(progressionCard(b));
     if (ok) host.appendChild(climateCard(b));
   }
+
+  // ---------------------------------------------------------------- Progression (Phase 2)
+  var STEP_LABEL = { start: 'Start town', key: 'Key dungeon', lock: 'Lock', boss: 'Boss', exit: 'Exit' };
+  function progressionCard(b) {
+    var card = el('section', 'card w8-prog'), g = WORLD.progression.graph(b), PG = ENGINE_WORLD.progression;
+    card.appendChild(el('h3', 'section-h', 'Progression'));
+    var row = el('div', 'btn-row');
+    row.appendChild(button(g ? 'Lay out again' : 'Lay out progression', 'spark', g ? '' : 'btn-primary', function () {
+      try {
+        var r = WORLD.progression.apply(b);
+        Kit.rerender();
+        Kit.ui.toast('Progression laid out: ' + r.graph.nodes.filter(function (n) { return n.record; }).length + ' sites in ' + r.graph.regions.length + ' regions' + (r.kept.length ? ', ' + r.kept.length + ' user records kept' : '') + '.', r.warnings.length ? 'warn' : 'ok');
+      } catch (e) { Kit.ui.toast(e.message, 'error', 8000); }
+    }));
+    if (!g) {
+      card.appendChild(el('p', 'muted', 'The golden path is laid out before any terrain: for each chapter a start town, a key dungeon, the lock it opens, the boss dungeon, and the exit that needs the next chapter\'s key. Optional caves and a second town in chapter one come after. It never reads the seed.'));
+      card.appendChild(row);
+      return card;
+    }
+    var w = PG.walk(g), probs = PG.check(g), stale = WORLD.progression.stale(b);
+    card.appendChild(el('p', null, '<span class="chip ' + (probs.length ? 'chip-broken' : 'chip-ok') + '">' + (probs.length ? probs.length + ' problems' : 'Solvable in ' + w.order.length + ' steps') + '</span> ' +
+      (stale ? '<span class="chip chip-warning">Charter changed since layout</span> ' : '') +
+      (g.vehicles.ship ? '<span class="chip chip-accent">Ship after ' + esc(chName(b, g.vehicles.ship.chapter)) + '</span> ' : '') +
+      (g.vehicles.airship ? '<span class="chip chip-accent">Airship after ' + esc(chName(b, g.vehicles.airship.chapter)) + '</span>' : '')));
+    var t = el('table', 'tbl');
+    t.innerHTML = '<thead><tr><th scope="col">Region</th><th scope="col">Golden path</th></tr></thead><tbody>' +
+      g.regions.map(function (r) {
+        var ns = g.nodes.filter(function (n) { return n.region === r.key; });
+        var gold = ns.filter(function (n) { return n.golden; }).map(function (n) {
+          var cls = n.role === 'boss' && !n.troop ? 'chip-warning' : n.kind === 'gate' ? 'chip-muted' : 'chip-accent';
+          var tip = (n.record || n.key) + ' needs ' + n.requires.join(', ') + (n.grants.length ? '; grants ' + n.grants.join(', ') : '');
+          return '<span class="chip ' + cls + '" title="' + esc(tip) + '">' + esc(n.role === 'boss' && n.interior === 'castle' ? 'Castle' : STEP_LABEL[n.role]) + '</span>';
+        }).join('<span class="w8-arrow" aria-hidden="true">&rsaquo;</span>');
+        var opt = ns.filter(function (n) { return n.optional; }).map(function (n) { return n.kind === 'twn' ? 'Town' : 'Cave'; });
+        return '<tr><th scope="row">' + esc(r.label + ': ' + chName(b, r.chapter)) + '<small class="w8-sub">Entry: ' + esc(r.entry) + (opt.length ? '. Optional: ' + esc(opt.join(', ')) : '') + '</small></th><td><div class="w8-path">' + gold + '</div></td></tr>';
+      }).join('') + '</tbody>';
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); card.appendChild(wrap);
+    probs.concat(g.warnings).forEach(function (p) { card.appendChild(el('p', 'msg ' + (p.code === 'no-boss' ? 'msg-warning' : 'msg-error'), esc(p.message))); });
+    card.appendChild(row);
+    return card;
+  }
+  function chName(b, id) { var c = WORLD.chapters(b).filter(function (x) { return x.id === id; })[0]; return c ? c.name || id : id; }
 
   // ---------------------------------------------------------------- Export
   function renderExport(host) {

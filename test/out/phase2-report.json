@@ -1,0 +1,535 @@
+{
+  "results": [
+    {
+      "name": "the demo spec reads 2 chapters on 2 continents; the four fixture 6 chapters on 4",
+      "ok": true,
+      "detail": [
+        "westland",
+        "westland",
+        "eastland",
+        "northreach",
+        "southmere",
+        "southmere"
+      ]
+    },
+    {
+      "name": "boss troops are found by enm_.isBoss and filed by chapter",
+      "ok": true,
+      "detail": [
+        [
+          "trp_slime_king_k4t2"
+        ],
+        [],
+        [
+          "trp_the_warden_n1yb"
+        ],
+        [
+          "trp_frost_wolf_f8b9"
+        ],
+        [
+          "trp_tide_wisp_t2b7"
+        ],
+        [
+          "trp_hollow_one_h9b2"
+        ]
+      ]
+    },
+    {
+      "name": "every fixture under six settings is solvable by topological walk with no structural problems (48 graphs)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "every key is granted strictly before the first node that needs it opens",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "chapter n's key is granted only by chapter n - 1's boss; each seal only by its own key dungeon",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "optional branches grant nothing, and every site needs its own chapter's key (no vehicle breaks sequence)",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "each chapter's golden path is start town, key dungeon, lock, boss dungeon, exit (the finale has no exit)",
+      "ok": true
+    },
+    {
+      "name": "four: ship with The Marches' boss (before Eastland, the first new continent); airship with chapter 4 (round(0.67 x 6))",
+      "ok": true,
+      "detail": {
+        "ship": {
+          "chapter": "chp_the_marches_m4r2",
+          "node": "dgn|chp_the_marches_m4r2|boss"
+        },
+        "airship": {
+          "chapter": "chp_the_frost_reach_f7k1",
+          "node": "dgn|chp_the_frost_reach_f7k1|boss"
+        }
+      }
+    },
+    {
+      "name": "four: gates are pass, landing, landing, landing, pass, and every landing needs the ship",
+      "ok": true,
+      "detail": [
+        "pass",
+        "landing",
+        "landing",
+        "landing",
+        "pass"
+      ]
+    },
+    {
+      "name": "demo: ship after The Lowlands, no airship (round(0.67 x 2) is not later than the ship)",
+      "ok": true,
+      "detail": {
+        "ship": {
+          "chapter": "chp_the_lowlands_auem",
+          "node": "dgn|chp_the_lowlands_auem|boss"
+        },
+        "airship": null
+      }
+    },
+    {
+      "name": "a chapter returning to an earlier continent arrives by landing and needs the ship",
+      "ok": true,
+      "detail": [
+        "landing",
+        "landing",
+        "landing",
+        "landing"
+      ]
+    },
+    {
+      "name": "one continent: no ship, all passes, airship with chapter 3 of 4",
+      "ok": true,
+      "detail": {
+        "ship": null,
+        "airship": {
+          "chapter": "chp_c",
+          "node": "dgn|chp_c|boss"
+        }
+      }
+    },
+    {
+      "name": "a single chapter has no gates, no vehicles, and a castle finale",
+      "ok": true
+    },
+    {
+      "name": "airshipAt 0 disables the airship; airshipAt 1 still grants it before the finale",
+      "ok": true,
+      "detail": [
+        {
+          "ship": {
+            "chapter": "chp_the_marches_m4r2",
+            "node": "dgn|chp_the_marches_m4r2|boss"
+          },
+          "airship": null
+        },
+        {
+          "ship": {
+            "chapter": "chp_the_marches_m4r2",
+            "node": "dgn|chp_the_marches_m4r2|boss"
+          },
+          "airship": {
+            "chapter": "chp_the_sunken_coast_s2c9",
+            "node": "dgn|chp_the_sunken_coast_s2c9|boss"
+          }
+        }
+      ]
+    },
+    {
+      "name": "optional branch settings: three caves per chapter and no second town; or no caves at all",
+      "ok": true
+    },
+    {
+      "name": "a chapter with no boss troop gets one warning and an empty boss slot; the rest attach their boss troop",
+      "ok": true,
+      "detail": [
+        "trp_slime_king_k4t2",
+        null,
+        "trp_the_warden_n1yb",
+        "trp_frost_wolf_f8b9",
+        "trp_tide_wisp_t2b7",
+        "trp_hollow_one_h9b2"
+      ]
+    },
+    {
+      "name": "the long fixture warns once per bossless chapter and is still solvable",
+      "ok": true
+    },
+    {
+      "name": "the checker catches a missing grant, a golden key in an optional cave, a chapter key two chapters early, and an ungated site",
+      "ok": true,
+      "detail": {
+        "mNoGrant": [
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "unreachable",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted",
+          "never-granted"
+        ],
+        "mOptional": [
+          "optional-golden"
+        ],
+        "mEarly": [
+          "key-chapter"
+        ],
+        "mUngated": [
+          "ungated"
+        ]
+      }
+    },
+    {
+      "name": "every graph is identical in two vm contexts and in the page",
+      "ok": true
+    },
+    {
+      "name": "ENGINE_WORLD.progression is frozen with the rest of the engine",
+      "ok": true
+    },
+    {
+      "name": "four: 6 reg_, 7 twn_ (6 start towns and a second town), 18 dgn_ (key, boss, cave per chapter)",
+      "ok": true,
+      "detail": [
+        6,
+        7,
+        18
+      ]
+    },
+    {
+      "name": "every record ID derives from its structural key and every record is generated",
+      "ok": true,
+      "detail": [
+        "reg_reg_chp_the_far_shore_izf4_4k6j",
+        "reg_reg_chp_the_frost_reach_f7k1_exim"
+      ]
+    },
+    {
+      "name": "a site record carries chapter, continent, region, role, gate requirements and grants, and its boss troop",
+      "ok": true,
+      "detail": {
+        "id": "dgn_dgn_chp_the_far_shore_izf4_boss_plrq",
+        "name": "The Far Shore: Boss dungeon",
+        "key": "dgn|chp_the_far_shore_izf4|boss",
+        "origin": "generated",
+        "notes": "",
+        "tags": [],
+        "chapter": "chp_the_far_shore_izf4",
+        "continent": "eastland",
+        "region": "reg_reg_chp_the_far_shore_izf4_4k6j",
+        "role": "boss",
+        "golden": true,
+        "optional": false,
+        "interior": "dungeon",
+        "requires": [
+          "chapter:chp_the_far_shore_izf4",
+          "item:seal:chp_the_far_shore_izf4"
+        ],
+        "grants": [
+          "chapter:chp_the_frost_reach_f7k1"
+        ],
+        "order": 2,
+        "troop": "trp_the_warden_n1yb",
+        "spareBosses": [],
+        "finale": false
+      }
+    },
+    {
+      "name": "regions: one per chapter, Westland and Southmere split in two parts, each listing its sites and the next region",
+      "ok": true,
+      "detail": [
+        "westland1",
+        "westland2",
+        "eastland1",
+        "northreach1",
+        "southmere1",
+        "southmere2"
+      ]
+    },
+    {
+      "name": "the progression graph names each site's record and holds no field named id",
+      "ok": true
+    },
+    {
+      "name": "charter, codex, rules, and art are untouched by laying out the graph",
+      "ok": true
+    },
+    {
+      "name": "KIT:CORE indexes every site and region record, and no graph node",
+      "ok": true
+    },
+    {
+      "name": "the four fixture validates with no errors or broken references; the only graph message is the Marches boss warning",
+      "ok": true,
+      "detail": {
+        "s": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "graphMsgs": [
+          "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
+        ],
+        "e": []
+      }
+    },
+    {
+      "name": "laying out again after a seed reroll rewrites identical records and an identical graph",
+      "ok": true
+    },
+    {
+      "name": "removing a chapter marks the graph stale",
+      "ok": true
+    },
+    {
+      "name": "after the Charter drops a chapter: its 4 generated sites and its region are removed, the user cave is kept with its edits",
+      "ok": true,
+      "detail": {
+        "removed": 5,
+        "kept": [
+          "dgn_dgn_chp_the_far_shore_izf4_cave_wcwn"
+        ]
+      }
+    },
+    {
+      "name": "restoring the chapter brings back the same IDs",
+      "ok": true
+    },
+    {
+      "name": "Draft manifest lists 31 created world IDs, the referenced chapters and troops, and nothing unresolved",
+      "ok": true,
+      "detail": {
+        "created": 31,
+        "unresolved": []
+      }
+    },
+    {
+      "name": "Draft keeps world out of kit.opened",
+      "ok": true
+    },
+    {
+      "name": "Day 146 opens the Draft with every namespace identical and no new errors, broken, or forward references",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        }
+      }
+    },
+    {
+      "name": "Day 147 opens the Draft with every namespace identical, coverage green, and no new errors",
+      "ok": true,
+      "detail": {
+        "diff": [],
+        "now": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        },
+        "before": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 0
+        }
+      }
+    },
+    {
+      "name": "Start shows a Progression card with a Lay out button before the graph exists",
+      "ok": true
+    },
+    {
+      "name": "after Lay out: solvable chip, ship chip, two region rows with their golden paths, and the boss warning for The Lowlands",
+      "ok": true,
+      "detail": "ProgressionSolvable in 12 steps Ship after The Lowlands RegionGolden pathWestland: The LowlandsEntry: start. Optional: Cave, TownStart town›Key dungeon›Lock›Boss›ExitEastland: The Far ShoreEntry: landing. Optional: CaveStart town›Key dungeon›Lock›CastleChapter The Lowlands has no boss troop, so its "
+    },
+    {
+      "name": "the demo lays out 3 twn_, 6 dgn_, 2 reg_",
+      "ok": true
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "fourDigest": "5f9c0ac5:41",
+  "fourWalk": [
+    "twn|chp_the_lowlands_auem|start",
+    "dgn|chp_the_lowlands_auem|key",
+    "gate|chp_the_lowlands_auem|lock",
+    "dgn|chp_the_lowlands_auem|boss",
+    "gate|chp_the_lowlands_auem|exit",
+    "twn|chp_the_marches_m4r2|start",
+    "dgn|chp_the_marches_m4r2|key",
+    "gate|chp_the_marches_m4r2|lock",
+    "dgn|chp_the_marches_m4r2|boss",
+    "gate|chp_the_marches_m4r2|exit",
+    "twn|chp_the_far_shore_izf4|start",
+    "dgn|chp_the_far_shore_izf4|key",
+    "gate|chp_the_far_shore_izf4|lock",
+    "dgn|chp_the_far_shore_izf4|boss",
+    "gate|chp_the_far_shore_izf4|exit",
+    "twn|chp_the_frost_reach_f7k1|start",
+    "dgn|chp_the_frost_reach_f7k1|key",
+    "gate|chp_the_frost_reach_f7k1|lock",
+    "dgn|chp_the_frost_reach_f7k1|boss",
+    "gate|chp_the_frost_reach_f7k1|exit",
+    "twn|chp_the_sunken_coast_s2c9|start",
+    "dgn|chp_the_sunken_coast_s2c9|key",
+    "gate|chp_the_sunken_coast_s2c9|lock",
+    "dgn|chp_the_sunken_coast_s2c9|boss",
+    "gate|chp_the_sunken_coast_s2c9|exit",
+    "twn|chp_the_last_light_l9t3|start",
+    "dgn|chp_the_last_light_l9t3|key",
+    "gate|chp_the_last_light_l9t3|lock",
+    "dgn|chp_the_last_light_l9t3|boss",
+    "dgn|chp_the_lowlands_auem|cave",
+    "twn|chp_the_lowlands_auem|town",
+    "dgn|chp_the_marches_m4r2|cave",
+    "dgn|chp_the_far_shore_izf4|cave",
+    "dgn|chp_the_frost_reach_f7k1|cave",
+    "dgn|chp_the_sunken_coast_s2c9|cave",
+    "dgn|chp_the_last_light_l9t3|cave"
+  ],
+  "gates": [
+    {
+      "key": "chapter:chp_the_marches_m4r2",
+      "kind": "pass",
+      "from": "reg|chp_the_lowlands_auem",
+      "to": "reg|chp_the_marches_m4r2",
+      "continent": "westland",
+      "requires": [
+        "chapter:chp_the_marches_m4r2"
+      ]
+    },
+    {
+      "key": "chapter:chp_the_far_shore_izf4",
+      "kind": "landing",
+      "from": "reg|chp_the_marches_m4r2",
+      "to": "reg|chp_the_far_shore_izf4",
+      "continent": "eastland",
+      "requires": [
+        "chapter:chp_the_far_shore_izf4",
+        "vehicle:ship"
+      ]
+    },
+    {
+      "key": "chapter:chp_the_frost_reach_f7k1",
+      "kind": "landing",
+      "from": "reg|chp_the_far_shore_izf4",
+      "to": "reg|chp_the_frost_reach_f7k1",
+      "continent": "northreach",
+      "requires": [
+        "chapter:chp_the_frost_reach_f7k1",
+        "vehicle:ship"
+      ]
+    },
+    {
+      "key": "chapter:chp_the_sunken_coast_s2c9",
+      "kind": "landing",
+      "from": "reg|chp_the_frost_reach_f7k1",
+      "to": "reg|chp_the_sunken_coast_s2c9",
+      "continent": "southmere",
+      "requires": [
+        "chapter:chp_the_sunken_coast_s2c9",
+        "vehicle:ship"
+      ]
+    },
+    {
+      "key": "chapter:chp_the_last_light_l9t3",
+      "kind": "pass",
+      "from": "reg|chp_the_sunken_coast_s2c9",
+      "to": "reg|chp_the_last_light_l9t3",
+      "continent": "southmere",
+      "requires": [
+        "chapter:chp_the_last_light_l9t3"
+      ]
+    }
+  ],
+  "vehicles": {
+    "ship": {
+      "chapter": "chp_the_marches_m4r2",
+      "node": "dgn|chp_the_marches_m4r2|boss"
+    },
+    "airship": {
+      "chapter": "chp_the_frost_reach_f7k1",
+      "node": "dgn|chp_the_frost_reach_f7k1|boss"
+    }
+  }
+}
