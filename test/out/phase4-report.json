@@ -1,8 +1,8 @@
 {
-  "when": "2026-10-02T14:24:49.937Z",
+  "when": "2026-10-02T15:02:16.400Z",
   "pass": 53,
   "total": 53,
-  "buildMs": 41,
+  "buildMs": 39,
   "firstTry": "258/272",
   "results": [
     {
@@ -189,9 +189,9 @@
       }
     },
     {
-      "name": "all 25 interiors of the four fixture build in 41 ms in a plain context (under 1500)",
+      "name": "all 25 interiors of the four fixture build in 39 ms in a plain context (under 1500)",
       "ok": true,
-      "detail": 41
+      "detail": 39
     },
     {
       "name": "nothing is generated before apply",
@@ -207,7 +207,7 @@
         "written": 118,
         "removed": 0,
         "kept": [],
-        "ms": 201
+        "ms": 194
       }
     },
     {
@@ -291,7 +291,7 @@
         "written": 100,
         "removed": 18,
         "kept": [],
-        "ms": 144
+        "ms": 140
       }
     },
     {

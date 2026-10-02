@@ -99,7 +99,7 @@
       forge: WORLD.FORGE, bundleHash: hash || '', worldVersion: b.world.version, generator: U.clone(b.world.generator), seed: b.world.seed,
       charterVersion: b.charter.version || 0, artVersion: b.art && b.art.version || null, exportedAt: U.now(),
       created: created, referenced: referenced, unresolved: unresolved.sort(), forward: fw, worldOpened: Kit.codex.isOpened('world', b), counts: counts,
-      validation: s, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
+      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
     };
   };
 
@@ -112,7 +112,8 @@
     if (n) return 'Final export is blocked by ' + n + ' error' + (n === 1 ? '' : 's') + ' or broken reference' + (n === 1 ? '' : 's') + '.';
     if (!WORLD.isGenerated(b)) return 'Final export is blocked: the world has not been generated yet.';
     if (!WORLD.canOpen(b)) return 'Final export is blocked: a side quest giver or a world reference points at a world record that does not exist.';
-    return null;
+    // Phase 6: a generated world must be complete and current, so the records agree with what the seed regenerates.
+    return WORLD.checks ? WORLD.checks.finalBlock(b) : null;
   }
   WORLD.finalBlock = finalBlock;
   Kit.buildExport = function (status, opts) {

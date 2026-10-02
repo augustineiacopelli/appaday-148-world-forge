@@ -1,0 +1,14 @@
+/* === WORLD:VALIDATION CSS BEGIN === */
+.w8-msg-ok { color: var(--ok); }
+.w8-vcard { display: flex; flex-direction: column; }
+.w8-vcard .w8-chips { margin-top: 0; }
+.w8-vlead { margin: 6px 0 4px; font-size: .9rem; }
+.w8-vlist { list-style: none; margin: 6px 0 0; padding: 0; }
+.w8-vitem { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+.w8-vmsg { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere; }
+.w8-jump { min-height: 44px; min-width: 44px; margin-left: auto; }
+.w8-walk { margin-top: 14px; }
+.w8-tight { margin-top: 0; }
+.w8-walk-tbl td { vertical-align: top; }
+.w8-flagstats { margin-top: 8px; }
+/* === WORLD:VALIDATION CSS END === */

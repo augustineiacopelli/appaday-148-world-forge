@@ -1,0 +1,381 @@
+{
+  "when": "2026-10-02T15:03:57.741Z",
+  "pass": 75,
+  "total": 75,
+  "walkMs": 24,
+  "flagMs": 24,
+  "results": [
+    {
+      "name": "the progression and flag proofs are identical in two vm contexts and the plain context (four, seed 42)",
+      "ok": true
+    },
+    {
+      "name": "the engine exposes checks {progression, flags, refs, reach, landable} and stays frozen",
+      "ok": true
+    },
+    {
+      "name": "16 worlds (demo and four, 8 seeds each, 64 chapter walks, 1016592 cells) prove clean: every site reached and entered, every lock shut then opened by its seal, every later chapter sealed, no flag problem, not even a warning",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "the proofs take 24 ms (walk) and 24 ms (flags) per world in the plain context",
+      "ok": true,
+      "detail": {
+        "tP": 383,
+        "tF": 382
+      }
+    },
+    {
+      "name": "every chapter of the four fixture reports its held keys, vehicles, sites, lock, and sealed state",
+      "ok": true
+    },
+    {
+      "name": "before the ship no sea cell is reached; with it the party sails (32217 sea cells) and steps ashore on another continent",
+      "ok": true
+    },
+    {
+      "name": "the airship (chapter 5) reaches every one of 15922 landable cells and never lands on a shut gate; without it less is reached",
+      "ok": true
+    },
+    {
+      "name": "even with the airship every later chapter site front is reached but none can be entered, so the chapter stays sealed",
+      "ok": true
+    },
+    {
+      "name": "with the airship disabled (airshipAt 0) no chapter holds it and the walk is still clean",
+      "ok": true
+    },
+    {
+      "name": "an open pass is caught: later ground walked to early (early-ground)",
+      "ok": true,
+      "detail": [
+        "early-ground"
+      ]
+    },
+    {
+      "name": "a keyless landing or seawall on a later continent is caught (early-ground: the ship reaches its inland early)",
+      "ok": true,
+      "detail": [
+        "early-ground",
+        "early-ground",
+        "early-ground"
+      ]
+    },
+    {
+      "name": "a boss lock that does not need the seal is caught (lock-open)",
+      "ok": true
+    },
+    {
+      "name": "a boss lock no key in the game opens is caught (lock-shut)",
+      "ok": true
+    },
+    {
+      "name": "a later golden key that opens early is an error naming the chapter it leaks into (early-key)",
+      "ok": true,
+      "detail": {
+        "check": "progression",
+        "code": "early-key",
+        "level": "error",
+        "message": "The golden key in dgn|chp_the_marches_m4r2|key (chapter chp_the_marches_m4r2) can be reached and entered during chapter chp_the_lowlands_auem.",
+        "record": "dgn_dgn_chp_the_marches_m4r2_key_7zky",
+        "field": "progression",
+        "at": 34919,
+        "chapter": "chp_the_lowlands_auem"
+      }
+    },
+    {
+      "name": "a site whose entrance needs a key its chapter never holds is caught (sealed-site)",
+      "ok": true
+    },
+    {
+      "name": "a key dungeon whose prize is not its seal is caught (seal-missing)",
+      "ok": true
+    },
+    {
+      "name": "a boss that grants other than the graph says is caught (boss-grants)",
+      "ok": true
+    },
+    {
+      "name": "an interior that lost its locked door is caught through the walking proof (interior-no-lock)",
+      "ok": true
+    },
+    {
+      "name": "a site whose interior was not built is caught (no-interior); without any interiors only the overworld is proven",
+      "ok": true
+    },
+    {
+      "name": "every progression problem names its check, chapter, and record",
+      "ok": true
+    },
+    {
+      "name": "a dungeon wall that can be walked through is an error (wall-open)",
+      "ok": true
+    },
+    {
+      "name": "a dungeon floor without the encounter flag is only a warning (floor-encounter), one per floor with a count",
+      "ok": true
+    },
+    {
+      "name": "a building floor carrying the encounter flag is a warning (town-encounter)",
+      "ok": true
+    },
+    {
+      "name": "a counter without the counter flag is a warning (counter-flag); one that can be walked over is an error",
+      "ok": true
+    },
+    {
+      "name": "a lintel not drawn above the party is a warning (door-layer)",
+      "ok": true
+    },
+    {
+      "name": "walkable sea is an error (water-walkable)",
+      "ok": true
+    },
+    {
+      "name": "sea the ship cannot sail is an error (sea-not-sailable)",
+      "ok": true
+    },
+    {
+      "name": "a passable mountain ridge is an error, since a gate could be walked around (wall-open on the overworld)",
+      "ok": true
+    },
+    {
+      "name": "a tile the art no longer has is a broken reference with its map named (missing-tile)",
+      "ok": true
+    },
+    {
+      "name": "a person standing in a wall is an error (npc-blocked)",
+      "ok": true
+    },
+    {
+      "name": "without the render engine the flag check says so instead of crashing",
+      "ok": true
+    },
+    {
+      "name": "the four Phase 6 validators are registered beside the earlier ones",
+      "ok": true
+    },
+    {
+      "name": "before generation the geometric checks wait (no walk) and the references of an empty world pass",
+      "ok": true
+    },
+    {
+      "name": "with only the overworld, Final is blocked for want of interiors, with a readable reason",
+      "ok": true,
+      "detail": "Final export is blocked: the towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab."
+    },
+    {
+      "name": "the overworld alone is already walked (interiors not yet part of the proof)",
+      "ok": true
+    },
+    {
+      "name": "with interiors but no zones, Final is blocked for want of encounter zones",
+      "ok": true,
+      "detail": "Final export is blocked: the world has no encounter zones yet. Generate them on the Encounters tab."
+    },
+    {
+      "name": "the generated four fixture validates with no errors, no broken references, and only the Marches boss warning",
+      "ok": true,
+      "detail": {
+        "s": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 2,
+          "warnings": 1
+        },
+        "w": [
+          "Chapter The Marches has no boss troop, so its boss dungeon has an empty troop slot for Day 149 to fill."
+        ],
+        "e": []
+      }
+    },
+    {
+      "name": "the page proves exactly what the engine proves from the fixture alone (progression and flags identical)",
+      "ok": true
+    },
+    {
+      "name": "Final is not blocked and the summary says every chapter passed",
+      "ok": true
+    },
+    {
+      "name": "the walks are memoized: a second call returns the same object without walking again",
+      "ok": true
+    },
+    {
+      "name": "a missing troop is a broken reference naming the record, field, and ID, and it blocks Final",
+      "ok": true
+    },
+    {
+      "name": "an interior kind no generator makes is an error (interior-key)",
+      "ok": true
+    },
+    {
+      "name": "a biome the overworld paints with that the art lacks is broken (missing-biome)",
+      "ok": true
+    },
+    {
+      "name": "an interior map drawn with a missing tileset is broken (missing-tileset)",
+      "ok": true
+    },
+    {
+      "name": "a continent with no field:<slug> music role is an error naming the role (no-music)",
+      "ok": true
+    },
+    {
+      "name": "boss battles with no music:boss role are an error too",
+      "ok": true
+    },
+    {
+      "name": "a person whose sprite is gone is broken (missing-sprite)",
+      "ok": true
+    },
+    {
+      "name": "a person with no sprite whose archetype has none in the art is an error (no-sprite); with the role restored the record may leave its own sprite empty",
+      "ok": true
+    },
+    {
+      "name": "a zone naming a battle background that was deleted is broken (missing-battle background)",
+      "ok": true
+    },
+    {
+      "name": "deleting the background also makes the zones out of date, and Final names that",
+      "ok": true
+    },
+    {
+      "name": "DECISION: once regenerated, a grassland zone that can start a battle with no background is an error (no-background); the engine warning is not repeated",
+      "ok": true
+    },
+    {
+      "name": "DECISION: a zone with no background that can never start a battle (empty) passes",
+      "ok": true
+    },
+    {
+      "name": "DECISION: an empty table stays a warning (it never starts a battle) and does not block Final",
+      "ok": true,
+      "detail": {
+        "w": 13,
+        "e": [],
+        "why": null
+      }
+    },
+    {
+      "name": "a zone naming a weather state that was deleted is broken; with no weather at all the zones carry a single warning once regenerated",
+      "ok": true
+    },
+    {
+      "name": "a dungeon wall made passable in the art turns up as flag errors and progression errors (the lock can be walked around) without regenerating, and blocks Final",
+      "ok": true,
+      "detail": [
+        "interior-lock-open",
+        "interior-lock-open",
+        "interior-lock-open"
+      ]
+    },
+    {
+      "name": "restoring the flag clears them again",
+      "ok": true
+    },
+    {
+      "name": "the charter, codex, rules, and art are back as they came (only the givers were written outside world)",
+      "ok": true
+    },
+    {
+      "name": "after a reroll Final is blocked (the overworld is out of date) while validation only warns; the walks wait",
+      "ok": true,
+      "detail": "Final export is blocked: the overworld is out of date. Generate it again on the World tab."
+    },
+    {
+      "name": "generating again clears the block and the new world proves clean",
+      "ok": true
+    },
+    {
+      "name": "Jump on a dungeon record opens the Sites tab on that site",
+      "ok": true
+    },
+    {
+      "name": "Jump on a person opens the Sites tab on the site they live in",
+      "ok": true
+    },
+    {
+      "name": "Jump on a region opens the World tab",
+      "ok": true
+    },
+    {
+      "name": "Jump on the world routes by field: zones to Encounters, progression to Validation",
+      "ok": true
+    },
+    {
+      "name": "the Validation tab shows six check cards, all passing, and says the world is ready for a Final export",
+      "ok": true,
+      "detail": "ValidationBefore a Final export the world must prove itself: its references resolve, every chapter can be played in order with only the keys the chapters before it gave (the ship sails the sea, the airship lands on open ground, and every site still needs its own chapter key), every map reads the rig"
+    },
+    {
+      "name": "the Marches warning sits on the Progression card (a graph warning) and nowhere else",
+      "ok": true
+    },
+    {
+      "name": "the walk table has a row per chapter, each passing, with the ship and airship shown where they are held",
+      "ok": true
+    },
+    {
+      "name": "the flag line reports what was read",
+      "ok": true
+    },
+    {
+      "name": "a fault shows Fail on its card with the message and a Jump button, and the head names the block",
+      "ok": true
+    },
+    {
+      "name": "that Jump button opens the site with the broken reference",
+      "ok": true
+    },
+    {
+      "name": "the Draft manifest carries checks: refs clean, progression and flags ok with every chapter, no Final block",
+      "ok": true
+    },
+    {
+      "name": "Final is allowed, opens world, and its manifest records the passing checks",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Day 146 opens the 148 Final with every namespace identical, 0 broken, 0 forward, and its own Final still allowed",
+      "ok": true,
+      "detail": {
+        "matches": true,
+        "summary": {
+          "errors": 0,
+          "broken": 0,
+          "forward": 0,
+          "warnings": 1
+        },
+        "errors": [],
+        "broken": [],
+        "pageErrors": [],
+        "blocked": null,
+        "fwd": 0,
+        "diff": []
+      }
+    },
+    {
+      "name": "Day 147 opens the 148 Final with every namespace identical, 0 errors, and 0 broken",
+      "ok": true,
+      "detail": {
+        "errors": 0,
+        "broken": 0,
+        "forward": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "name": "a hand made overworld with no paramHash is not blocked by the completeness rule and is not walked",
+      "ok": true
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    }
+  ]
+}

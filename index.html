@@ -397,6 +397,87 @@ SESSION 5 / PHASE 5 (2026-10-02, Opus): ENCOUNTER ZONES. COMPLETE.
     music roles, weather, NPC archetype sprites), world.progression flood fill per chapter with held keys, world.flags,
     and world.zones (decide whether an empty table or a missing background blocks export).
 === END SESSION 5 ===
+SESSION 6 / PHASE 6 (2026-10-02, Opus): VALIDATION. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53, phase5 58/58.
+  ENGINE:WORLD section src/engine-checks.js: ENGINE_WORLD.checks {progression, flags, refs, reach, landable}. Pure: plain
+    data in, the render engine passed in for tiles, nothing else read. A problem is {check, code, level (error, broken,
+    warning), message, record (ID or 'world'), field, id, chapter, map, at}.
+  progression({ow, graph, sites, palette}): once per chapter, holding start keys plus every earlier chapter's grants. Ship:
+    sea cells walkable and the party steps ashore (overworld.reach). Airship: every landable cell (land, structurally free,
+    not a gate, passable, not sea) also seeds the fill, so it reaches every land cell and never a shut gate or a site.
+    Proven per chapter: non boss fronts reached and requires held; the boss approach reached, the lock shut without the
+    seal and open with it, the boss entrance's requires held with the seal; inside each site interiors.check plus the key
+    dungeon's prize is the chapter seal and the boss grants exactly the graph's grants. Early: holding everything up to
+    and including the chapter's seal (boss not yet beaten), no later site may be both reached and enterable (early-key for
+    golden sites, early-site otherwise); without the airship no later region's inner ground may be walked to
+    (early-ground). Without sites only the overworld is proven (interiors false). Report per chapter: held, ship,
+    airship, reach, sites [{key, record, role, golden, ok, why}], lock {shut, opens, approach}, sealed, ok.
+  flags({ow, sites, kinds, records, art, render}): by what play needs. Errors: walkable or unsailable sea, a ridge, ring,
+    or stamp wall that can be walked or sailed over, a blocked lock cell, entrance, start, door, floor, exit, arrival, or a
+    person's cell, a wall that can be walked through, a counter that can be walked over. Broken: a tile the art lacks.
+    Warnings: a wall that does not autotile to a valid blobIndex, a door without the above layer (32), a dungeon or cave
+    floor without the encounter flag, a building floor with it, a counter without 16, a chest that can be walked through.
+    One problem per map and code with a count. Stats: maps, cells, walls, doors, counters, floors.
+  refs(spec): the one authority for references (the overworld, interiors, zones, and graph validators of Phases 2 to 5 now
+    report only missing and stale). Broken (a missing ID): sites, regions, maps, people, troops, spare bosses, biomes,
+    tilesets, sprites, side quests, chapters inside world data, backgrounds, weather states, zone maps and sites, givers.
+    Errors: an interior kind no generator makes or no interior tileset builds; a map drawn with a non interior tileset;
+    a biome entry that is not a biome; a boss troop drawn at random; a person with no sprite whose archetype has no
+    npc:<archetype> role in the art (DECISION: the archetype role is what draws a person, so a record may leave sprite
+    empty when the role exists); a zone that can start a battle (not empty, rate above 0) or a boss with a troop and no
+    battle background; a music role the world plays that no track has (music:field:<slug> for every continent with
+    regions, music:town, music:dungeon, music:battle, music:boss, each only when used); an exit leading nowhere.
+    Warnings: a boss slot holding a troop with no boss member, an unknown archetype, a sprite whose role is another
+    archetype's, no weather states at all.
+  DECISIONS on zones: an empty table stays a warning (it never starts a battle) and never blocks Final; a missing battle
+    background is an error exactly when its zone or boss can start a battle, and passes otherwise; Phase 5's engine
+    no-background warning is no longer repeated by world.zones.
+  WORLD side, new fence src/world-checks.js (WORLD:CHECKS, after WORLD:GENERATE; build.js lists it): WORLD.checks {refSpec,
+    state, refs, walks, finalBlock, summary}. state: graph, overworld, generated (the overworld record has a paramHash),
+    and fresh flags for graph, overworld, interiors, zones. walks runs progression and flags only on a generated, current
+    overworld (interiors joined when they are current), memoized by the overworld paramHash, every interior hash, and a
+    digest of every tile's flags (flags are not in the maps' hashes, yet the walks read them, so an art flag edit is seen
+    at once). WORLD.interiors.built(b) added to WORLD:GENERATE. Validators: world.refs, world.progression (fieldPath
+    'progression'), world.flags (fieldPath flags.<map>); world.zones kept with the decisions above.
+  DECISION, the Final gate: finalBlock now also refuses a generated world that is incomplete or stale (progression,
+    overworld, interiors, zones all present and current), each with a reason naming the tab that fixes it, so every
+    record agrees with what Day 150 regenerates from the seed. Staleness stays a warning in validation (drafts are free).
+    A hand made overworld (no paramHash) is not held to it and is not walked. The manifest gains checks (refs counts by
+    level, state, progression ok with a row per chapter, flags ok and stats, finalBlock).
+  Jumps: any world ID jumps (twn_, dgn_, and their maps and people open the Sites tab on that site and floor; reg_ and the
+    overworld open the World tab; a missing ID opens Validation). 'world' routes by field (zones to Encounters, interiors
+    to Sites, progression, flags, refs, music to Validation, else Start) through WORLD.jumpWorld, which WORLD:STORE's
+    handler now calls.
+  Validation tab (WS:VALIDATION, src/ws-validation.js, CSS src/world-validation.css): totals, the Final status line (the
+    block reason, or Ready for a Final export), Check again and Open the validation panel; six cards (References,
+    Progression, Map flags, Encounter zones, Generation, Records), each Pass, Fail with a count, or Waiting, up to eight
+    items with 44 px Jump buttons; then the walk chapter by chapter (holding, sites reached, boss lock, later sealed,
+    result) and what the flag check read. Phase 7 polishes it.
+  Speed (plain Node): the walk 21 ms and the flags 20 ms per world, averaged over 16 worlds.
+  Tests: test/phase6.js 75 of 75 (identical proofs in two vm contexts and the plain context; 16 worlds, demo and four on 8
+    seeds, clean with not one warning; the ship reaches no sea before it is held and over a thousand cells after; the
+    airship reaches every landable cell, lands on no shut gate, and still cannot enter a later site; airshipAt 0; caught
+    with the right code: open pass, keyless later landing, lock without the seal, lock nothing opens, an early golden key
+    naming the chapter it leaks into, a site needing a key its chapter never holds, a prize that is not the seal, wrong
+    boss grants, a lost locked door, an interior not built; flags: passable dungeon wall, floor without encounter flag
+    (warning only), building floor with it, counter without 16 and walkable counter, lintel without 32, walkable sea,
+    unsailable sea, passable mountain ridge, a deleted tile, a person in a wall, no render engine; the page: validators
+    registered, waiting before generation, Final blocked for want of interiors then zones, clean four fixture but the
+    Marches warning, the page's walks equal the engine's, memoized; refs at their levels (missing troop broken with
+    record, field, and ID, interior kind, biome, tileset, field and boss music, sprite gone, no sprite and no role, deleted
+    background broken then stale, regenerated no-background error, empty zone without background passes, empty table a
+    warning that does not block, deleted weather broken then one warning); an art wall flag edit shows flag and progression
+    errors at once without regenerating and blocks Final; restoring clears; prior namespaces untouched but the givers;
+    a reroll blocks Final until regenerated; jumps; the Validation tab (six passing cards, the Marches warning on
+    Progression only, six walk rows with Ship and Airship, the flag line, a fault's Fail card and Jump); the Draft and
+    Final manifests carry checks; Days 146 and 147 open the Final with every namespace identical, 0 broken, 0 forward; a
+    hand made overworld is not blocked). test/worldspec.js holds the fixture world builder Phase 5's tests use. phase0 63,
+    phase1 37 (the static scan covers the new section), phase2 40, phase3 61, phase4 53, phase5 58; layout.js 32 views pass
+    (Validation generated added). Pictures: test/out/phase6-validation-390.png, phase6-validation-1280.png.
+  Next: Phase 7, the interface: tiles.drawMap previews with pan and pinch, overlays for zones and gates, per continent
+    controls, the tap inspector writing sparse overrides, editable zone weights and rates (world.overrides.zones), field
+    music audition, and polish of the Validation tab; measure generation on a phone before adding the Worker.
+=== END SESSION 6 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate
@@ -775,6 +856,20 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
 .w8-troop.w8-rare { border-color: var(--accent2); }
 .w8-troop.w8-rare b { color: var(--accent2); }
 /* === WORLD:ENCOUNTERS CSS END === */
+/* === WORLD:VALIDATION CSS BEGIN === */
+.w8-msg-ok { color: var(--ok); }
+.w8-vcard { display: flex; flex-direction: column; }
+.w8-vcard .w8-chips { margin-top: 0; }
+.w8-vlead { margin: 6px 0 4px; font-size: .9rem; }
+.w8-vlist { list-style: none; margin: 6px 0 0; padding: 0; }
+.w8-vitem { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; }
+.w8-vmsg { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere; }
+.w8-jump { min-height: 44px; min-width: 44px; margin-left: auto; }
+.w8-walk { margin-top: 14px; }
+.w8-tight { margin-top: 0; }
+.w8-walk-tbl td { vertical-align: top; }
+.w8-flagstats { margin-top: 8px; }
+/* === WORLD:VALIDATION CSS END === */
 </style>
 </head>
 <body>
@@ -3851,7 +3946,7 @@ code.id { color: var(--muted); background: var(--accent-soft); padding: 1px 6px;
       });
     });
   });
-  Kit.jump.register({ test: function (rid) { return rid === 'world'; }, name: function () { return 'World namespace'; }, go: function () { return Kit.go('start'); } });
+  Kit.jump.register({ test: function (rid) { return rid === 'world'; }, name: function () { return 'World namespace'; }, go: function (rid, fieldPath) { return WORLD.jumpWorld ? WORLD.jumpWorld(fieldPath) : Kit.go('start'); } });
 
   // Keep every loaded bundle shaped for this forge (an empty world gets its skeleton; nothing else is touched).
   Kit.on('load', function (b) { if (WORLD.ensure(b)) Kit.bundle.touch('world-ensure'); });
@@ -5701,6 +5796,349 @@ var ENGINE_WORLD = (function () {
     power: troopPower, isBoss: troopIsBoss, slots: znSlots, weatherFor: weatherFor, cellKey: znCellKey, fieldCells: znFieldCells,
     floorCells: znFloorCells, build: znBuild, givers: znGivers };
 
+  // ---------------------------------------------------------------- checks (Phase 6)
+  // The world's proofs, run before a Final export and reusable by Day 150 at load time. Pure: the bundle arrives as plain
+  // data, the render engine is passed in where tiles are read, and nothing outside the spec is read. Every check returns
+  // {ok, problems, ...detail}; a problem is {check, code, level ('error' | 'broken' | 'warning'), message, record (an ID
+  // or 'world'), field, id (the missing ID for a broken reference), map, at}.
+  //
+  // progression(spec): a four way flood fill over the overworld once per chapter, holding what the chapters before it
+  //   granted. The ship lets the party sail sea water and step ashore on passable land; the airship lands on any open,
+  //   passable land cell that is not a gate, so it reaches every land cell, never a site: every site's entrance still
+  //   needs its own chapter key. Proven for each chapter: every non boss site front is reachable and can be entered; the
+  //   boss lock's approach is reachable while the lock stays shut, and the lock opens with the chapter's seal; inside each
+  //   site the key chest comes before the lock, the goal sits behind it, and the key dungeon's prize is the chapter's
+  //   seal while the boss grants what the graph says. Then, holding everything up to and including the chapter's seal but
+  //   not its boss, no site of a later chapter can be entered (a golden key there is an early-key error), and, the airship
+  //   aside, no inner ground of a later region can be walked to.
+  // flags(spec): every tile of every map resolves through the render engine and carries the flags play depends on.
+  // refs(spec): every reference the world holds points at something that exists.
+  var CK_LEVEL = { error: 1, broken: 1, warning: 1 };
+  function ckItem(check, code, level, message, extra) {
+    var o = { check: check, code: code, level: CK_LEVEL[level] ? level : 'error', message: message, record: 'world', field: check };
+    each(extra || {}, function (v, k) { o[k] = v; });
+    return o;
+  }
+  function heldOf(list) { var h = {}; (list || []).forEach(function (k) { h[k] = true; }); return h; }
+  function heldList(h) { return keys(h).filter(function (k) { return h[k]; }); }
+  function covers(req, h) { return (req || []).every(function (k) { return h[k]; }); }
+
+  // Cells a party can reach holding h. Without the airship this is overworld.reach; with it, every open passable land cell
+  // that is not a gate is a landing place as well, and the party walks (and sails, with the ship) on from each one.
+  function ckLandable(ow, i) {
+    return ow.owner[i] >= 0 && ow.st[i] === ST_FREE && ow.gateAt[i] < 0 && !ow.sea[i] && owWalkable(ow, i, {}, false);
+  }
+  function ckReach(ow, h, airship) {
+    if (!airship) return owReach(ow, h);
+    var ship = !!h['vehicle:ship'], seeds = [], out = new Uint8Array(ow.w * ow.h), n = ow.w * ow.h, i;
+    if (ow.start != null) seeds.push(ow.start);
+    for (i = 0; i < n; i++) if (ckLandable(ow, i)) seeds.push(i);
+    if (!seeds.length) return out;
+    var d = bfs(ow.w, ow.h, seeds, function (j) { return owWalkable(ow, j, h, ship); });
+    for (i = 0; i < n; i++) if (d[i] >= 0) out[i] = 1;
+    return out;
+  }
+  function ckCount(a) { var c = 0; for (var i = 0; i < a.length; i++) c += a[i]; return c; }
+
+  // The walking proof inside one site, beyond interiors.check: the golden item is where the graph puts it.
+  function ckInterior(site, nd, pal, chp) {
+    var out = [], rec = nd.record || 'world';
+    if (!site) return [ckItem('progression', 'no-interior', 'error', 'The interior of ' + nd.key + ' was not built.', { record: rec, chapter: chp })];
+    inCheck(site, pal).forEach(function (p) { out.push(ckItem('progression', 'interior-' + p.code, 'error', p.message, { record: rec, chapter: chp })); });
+    var last = site.floors[site.floors.length - 1], feats = last ? last.features : [];
+    if (nd.role === 'key') {
+      var seal = (nd.grants || [])[0] || null, prize = feats.filter(function (ft) { return ft.kind === 'chest' && ft.prize; })[0];
+      if (!prize || prize.item !== seal) out.push(ckItem('progression', 'seal-missing', 'error', 'The key dungeon ' + nd.key + ' does not hold ' + (seal || 'its seal') + ' behind its lock.', { record: rec, chapter: chp }));
+    }
+    if (nd.role === 'boss') {
+      var boss = feats.filter(function (ft) { return ft.kind === 'boss'; })[0];
+      if (!boss) out.push(ckItem('progression', 'boss-missing', 'error', 'The boss dungeon ' + nd.key + ' has no boss room.', { record: rec, chapter: chp }));
+      else if ((boss.grants || []).join('|') !== (nd.grants || []).join('|')) out.push(ckItem('progression', 'boss-grants', 'error', 'The boss of ' + nd.key + ' grants ' + ((boss.grants || []).join(', ') || 'nothing') + ', not ' + ((nd.grants || []).join(', ') || 'nothing') + '.', { record: rec, chapter: chp }));
+    }
+    return out;
+  }
+
+  // spec: {ow (overworld.build output), graph (Phase 2, site nodes carrying record), sites {site key: interiors.build
+  // output} (optional: without it only the overworld is proven), palette (interiors.palette(art), with sites)}.
+  function ckProgression(spec) {
+    var ow = spec.ow, g = spec.graph, sites = spec.sites || null, pal = spec.palette || null, problems = [], chapters = [], byKey = {}, idx = {};
+    if (!ow || !g || !Array.isArray(g.chapters)) return { ok: false, problems: [ckItem('progression', 'no-map', 'error', 'There is no overworld to walk.')], chapters: [] };
+    g.chapters.forEach(function (c, k) { idx[c] = k; });
+    g.nodes.forEach(function (nd) { byKey[nd.key] = nd; });
+    var later = {};
+    ow.sites.forEach(function (s) { (later[s.chapter] = later[s.chapter] || []).push(s); });
+    g.chapters.forEach(function (chp, k) {
+      var h = heldOf(g.start);
+      g.nodes.forEach(function (nd) { if (idx[nd.chapter] < k) nd.grants.forEach(function (gk) { h[gk] = true; }); });
+      var air = !!h['vehicle:airship'], A = ckReach(ow, h, air), seal = 'item:seal:' + chp, h2 = heldOf(heldList(h).concat([seal])), B = ckReach(ow, h2, air);
+      var mine = ow.sites.filter(function (s) { return s.chapter === chp; }), rows = [], before = problems.length;
+      var report = { chapter: chp, index: k, held: heldList(h), ship: !!h['vehicle:ship'], airship: air, reach: ckCount(A), sites: rows, lock: null, sealed: true };
+      mine.forEach(function (s) {
+        var nd = byKey[s.key] || { key: s.key, requires: [], grants: [], role: s.role }, rec = s.record || nd.record || 'world', row = { key: s.key, record: rec, role: s.role, golden: !!nd.golden, ok: true, why: [] };
+        function fail(code, msg) { row.ok = false; row.why.push(msg); problems.push(ckItem('progression', code, 'error', msg, { record: rec, chapter: chp, at: s.front })); }
+        if (s.role === 'boss') {
+          var shut = !A[s.front], opens = !!B[s.front];
+          report.lock = { site: s.key, shut: shut, opens: opens, approach: !!A[s.approach] };
+          if (!A[s.approach]) fail('unreachable', 'The way to ' + s.key + ' cannot be reached in chapter ' + chp + '.');
+          if (!shut) fail('lock-open', 'The lock before ' + s.key + ' opens without the seal ' + seal + '.');
+          if (!opens) fail('lock-shut', 'The lock before ' + s.key + ' stays shut even with the seal ' + seal + '.');
+          if (!covers(nd.requires, h2)) fail('sealed-site', s.key + ' needs ' + nd.requires.filter(function (q) { return !h2[q]; }).join(', ') + ', which chapter ' + chp + ' never holds.');
+        } else {
+          if (!A[s.front]) fail('unreachable', s.key + ' cannot be reached in chapter ' + chp + '.');
+          if (!covers(nd.requires, h)) fail('sealed-site', s.key + ' needs ' + nd.requires.filter(function (q) { return !h[q]; }).join(', ') + ', which chapter ' + chp + ' does not hold on arrival.');
+        }
+        if (sites) ckInterior(sites[s.key], nd, pal, chp).forEach(function (p) { row.ok = false; row.why.push(p.message); problems.push(p); });
+        rows.push(row);
+      });
+      // Nothing of a later chapter may open while this one is still being played (seal held, boss not yet beaten).
+      ow.sites.forEach(function (s) {
+        var j = idx[s.chapter], nd = byKey[s.key];
+        if (!(j > k) || !nd) return;
+        if (B[s.role === 'boss' ? s.approach : s.front] && covers(nd.requires, h2)) {
+          report.sealed = false;
+          var gold = nd.golden || s.role === 'key' || s.role === 'boss';
+          problems.push(ckItem('progression', gold ? 'early-key' : 'early-site', 'error',
+            (gold ? 'The golden key in ' + s.key + ' (chapter ' + s.chapter + ')' : s.key + ' (chapter ' + s.chapter + ')') + ' can be reached and entered during chapter ' + chp + '.', { record: nd.record || s.record || 'world', chapter: chp, at: s.front }));
+        }
+      });
+      // Walking (and sailing) alone never reaches a later region's inner ground. The airship flies anywhere by design.
+      var G = air ? ckReach(ow, heldOf(heldList(h2).filter(function (q) { return q !== 'vehicle:airship'; })), false) : B;
+      for (var i = 0; i < G.length; i++) {
+        if (!G[i] || ow.region[i] < 0 || ow.cls[i] !== CLS_INNER || ow.st[i] === ST_GATE) continue;
+        var rk = ow.regions[ow.region[i]];
+        if (rk && rk.index > k) {
+          report.sealed = false;
+          problems.push(ckItem('progression', 'early-ground', 'error', 'Chapter ' + rk.chapter + ' ground can be walked to during chapter ' + chp + ' without the airship.', { record: 'world', chapter: chp, at: i }));
+          break;
+        }
+      }
+      report.ok = problems.length === before;
+      chapters.push(report);
+    });
+    return { ok: !problems.length, problems: problems, chapters: chapters, interiors: !!sites };
+  }
+
+  // spec: {ow, sites {key: site}, kinds {key: kind}, art (plain), render (ENGINE_RENDER)}. Rules, by what play needs:
+  // errors change where a party can walk (water that is walkable, a wall or ridge that is, a door, floor, exit, lock
+  // cell, or person's cell that is not, a tile the art lacks); warnings change only drawing or triggering (a wall that
+  // does not autotile, a door with no layer above, a dungeon floor without the encounter flag, a building floor with it,
+  // a counter without the counter flag, a chest that can be walked through).
+  function ckFlags(spec) {
+    var R = spec.render, art = spec.art, problems = [], stats = { maps: 0, cells: 0, walls: 0, doors: 0, counters: 0, floors: 0 };
+    if (!R || !R.tiles) return { ok: false, problems: [ckItem('flags', 'no-render', 'error', 'The render engine is not available, so no tile can be read.')], stats: stats };
+    var T = R.tiles, memoRef = {};
+    function res(ref) { if (memoRef[ref] === undefined) memoRef[ref] = ref ? T.resolve(art, ref) : null; return memoRef[ref]; }
+    function tally(map, record) {
+      var got = {};
+      return {
+        add: function (code, level, msg, at) { var k = code + '|' + level; if (!got[k]) got[k] = { code: code, level: level, msg: msg, n: 0, at: at }; got[k].n++; },
+        flush: function () {
+          keys(got).forEach(function (k) {
+            var t = got[k];
+            problems.push(ckItem('flags', t.code, t.level, t.msg + (t.n > 1 ? ' (' + t.n + ' cells)' : ''), { record: record || 'world', map: map, at: t.at, count: t.n }));
+          });
+        }
+      };
+    }
+    var ow = spec.ow;
+    if (ow) {
+      var om = { w: ow.w, h: ow.h, ground: ow.ground, deco: ow.deco }, tl = tally('overworld', spec.overworldRecord), n = ow.w * ow.h, lockCell = {};
+      ow.gates.forEach(function (gq) { if (gq.kind === 'lock') lockCell[gq.cells[0]] = 1; });
+      stats.maps++;
+      for (var i = 0; i < n; i++) {
+        stats.cells++;
+        var gref = ow.ground[i], dref = ow.deco[i];
+        if (!res(gref)) { tl.add('missing-tile', 'broken', 'The overworld uses ' + gref + ', a tile the art does not have.', i); continue; }
+        if (dref && !res(dref)) { tl.add('missing-tile', 'broken', 'The overworld uses ' + dref + ', a tile the art does not have.', i); continue; }
+        var f = T.flagsAt(art, om, i % ow.w, (i - i % ow.w) / ow.w), st = ow.st[i];
+        if (ow.owner[i] < 0) {
+          if (f & 1) tl.add('water-walkable', 'error', 'Water on the overworld can be walked on, so the ship is not needed to cross it.', i);
+          if (ow.sea[i] && !(f & 4)) tl.add('sea-not-sailable', 'error', 'Sea on the overworld does not carry the swim flag, so the ship cannot sail it.', i);
+        } else if (st === ST_WALL || st === ST_GATE && !lockCell[i]) {
+          stats.walls++;
+          if (f & 5) tl.add('wall-open', 'error', 'A ridge or ring cell of the overworld can be ' + (f & 1 ? 'walked' : 'sailed') + ' over, so a gate could be bypassed.', i);
+        } else if (lockCell[i]) {
+          if (!(f & 1)) tl.add('lock-blocked', 'error', 'A boss lock cell on the overworld blocks even when open.', i);
+        } else if (st === ST_STAMP) {
+          if (f & 1) tl.add('stamp-open', 'error', 'A site wall on the overworld can be walked through.', i);
+        } else if (st === ST_DOOR) {
+          stats.doors++;
+          if (!(f & 1)) tl.add('door-blocked', 'error', 'A site entrance on the overworld cannot be walked into.', i);
+        }
+      }
+      if (ow.start != null && !(T.flagsAt(art, om, ow.start % ow.w, (ow.start - ow.start % ow.w) / ow.w) & 1)) tl.add('start-blocked', 'error', 'The start cell of the overworld cannot be stood on.', ow.start);
+      ow.sites.forEach(function (s) {
+        if (s.stamp === 'cave') return;
+        var e = s.entrance, fe = T.flagsAt(art, om, e % ow.w, (e - e % ow.w) / ow.w);
+        if (!(fe & 32)) tl.add('door-layer', 'warning', 'A town or dungeon entrance on the overworld has no lintel or arch drawn above the party.', e);
+      });
+      tl.flush();
+    }
+    each(spec.sites || {}, function (site, key) {
+      var kind = (spec.kinds || {})[key] || site.kind, rec = (spec.records || {})[key] || 'world';
+      site.floors.forEach(function (fl) {
+        var map = { w: fl.w, h: fl.h, ground: fl.ground, deco: fl.deco }, tl2 = tally(key + '|' + fl.floor, rec), w = fl.w, N = fl.w * fl.h, grid2 = { w: fl.w, h: fl.h, cells: fl.ground };
+        stats.maps++;
+        function F(c) { return T.flagsAt(art, map, c % w, (c - c % w) / w); }
+        for (var c = 0; c < N; c++) {
+          stats.cells++;
+          var gr = fl.ground[c], dc = fl.deco[c], rg = res(gr);
+          if (!rg) { tl2.add('missing-tile', 'broken', key + ' floor ' + fl.floor + ' uses ' + gr + ', a tile the art does not have.', c); continue; }
+          if (dc && !res(dc)) { tl2.add('missing-tile', 'broken', key + ' floor ' + fl.floor + ' uses ' + dc + ', a tile the art does not have.', c); continue; }
+          var fa = F(c), gk = rg.key, dk = dc ? res(dc).key : null;
+          if (gk === 'wall') {
+            stats.walls++;
+            if (rg.flags & 1) tl2.add('wall-open', 'error', key + ' floor ' + fl.floor + ' has a wall that can be walked through.', c);
+            var bi = T.blobIndex(T.mask8(grid2, c % w, (c - c % w) / w, function (a, b2) { return a === b2; }));
+            if (!rg.autotile || !(bi >= 0 && bi < 47)) tl2.add('wall-autotile', 'warning', key + ' floor ' + fl.floor + ' has a wall that does not autotile.', c);
+          } else if (gk === 'counter') {
+            stats.counters++;
+            if (fa & 1) tl2.add('counter-open', 'error', key + ' floor ' + fl.floor + ' has a counter that can be walked over.', c);
+            if (!(fa & 16)) tl2.add('counter-flag', 'warning', key + ' floor ' + fl.floor + ' has a counter without the counter flag, so no one can be spoken to across it.', c);
+          } else if (gk === 'floor' && !dc) {
+            stats.floors++;
+            if (!(fa & 1)) tl2.add('floor-blocked', 'error', key + ' floor ' + fl.floor + ' has floor that cannot be walked on.', c);
+            if (kind === 'town' && (fa & 2)) tl2.add('town-encounter', 'warning', key + ' has building floor carrying the encounter flag (building floors are flag 1).', c);
+            if (kind !== 'town' && !(fa & 2)) tl2.add('floor-encounter', 'warning', key + ' floor ' + fl.floor + ' has floor without the encounter flag, so its zone never triggers there.', c);
+          }
+          if (dk === 'lintel' || dk === 'arch') {
+            stats.doors++;
+            if (!(fa & 1)) tl2.add('door-blocked', 'error', key + ' floor ' + fl.floor + ' has a door that cannot be walked through.', c);
+            if (!(fa & 32)) tl2.add('door-layer', 'warning', key + ' floor ' + fl.floor + ' has a door whose ' + dk + ' is not drawn above the party.', c);
+          }
+          if (dk === 'chest' && (fa & 1)) tl2.add('chest-open', 'warning', key + ' floor ' + fl.floor + ' has a chest that can be walked through.', c);
+        }
+        fl.exits.forEach(function (ex) {
+          if (!(F(ex.at) & 1)) tl2.add('exit-blocked', 'error', key + ' floor ' + fl.floor + ' has a ' + ex.kind + ' exit that cannot be stood on.', ex.at);
+          if (!(F(ex.arrive) & 1)) tl2.add('arrive-blocked', 'error', key + ' floor ' + fl.floor + ' has an arrival cell that cannot be stood on.', ex.arrive);
+        });
+        fl.features.forEach(function (ft) { if (ft.kind === 'lock' && !(F(ft.at) & 1)) tl2.add('lock-blocked', 'error', key + ' floor ' + fl.floor + ' has a locked door that blocks even when unlocked.', ft.at); });
+        site.npcs.forEach(function (p) { if (p.floor === fl.floor && !(F(p.at) & 1)) tl2.add('npc-blocked', 'error', key + ': ' + p.slot + ' stands on a cell that cannot be stood on.', p.at); });
+        tl2.flush();
+      });
+    });
+    return { ok: !problems.some(function (p) { return p.level !== 'warning'; }), problems: problems, stats: stats };
+  }
+
+  // spec: plain data gathered from the bundle:
+  //   records {map_, reg_, npc_, twn_, dgn_: {id: record}}, chapters [chp ids], troops {trp_: {boss}}, tilesets {til_:
+  //   kind}, interiorSets {town, dungeon, cave, castle: til_ id} (interiors.palette sets), backgrounds {bgd_: 1}, music
+  //   {role ref: mus_} (subject refs such as music:battle), weather {wth_: 1}, sprites {spr_: subject ref}, quests {sdq_: 1},
+  //   zones (world.zones or null), graph (world.progression or null), archetypes [names].
+  // A missing ID is 'broken'; a missing role or sprite the world needs is an 'error'; anything only cosmetic is a warning.
+  function ckRefs(spec) {
+    var out = [], R = spec.records || {}, chap = heldOf(spec.chapters), trp = spec.troops || {}, til = spec.tilesets || {}, bg = spec.backgrounds || {};
+    var mus = spec.music || {}, wth = spec.weather || {}, spr = spec.sprites || {}, sdq = spec.quests || {}, sets = spec.interiorSets || {}, arch = heldOf(spec.archetypes);
+    function has(id) { var p = typeof id === 'string' ? id.slice(0, 4) : ''; return !!(R[p] && R[p][id]); }
+    function broken(rec, field, id, what) { out.push(ckItem('refs', 'missing-' + what, 'broken', (rec === 'world' ? 'The world' : rec) + ' refers to ' + what + ' ' + id + ', which does not exist.', { record: rec, field: field, id: id })); }
+    function need(rec, field, id, what) { if (id && !has(id)) broken(rec, field, id, what); }
+    function needTroop(rec, field, id) { if (id && !trp[id]) broken(rec, field, id, 'troop'); }
+    function needChapter(rec, field, id) { if (id && !chap[id]) broken(rec, field, id, 'chapter'); }
+    var used = { town: false, dungeon: false, battle: false, boss: false, field: {} };
+    each(R.reg_, function (r, id) {
+      (r.sites || []).forEach(function (s, k) { need(id, 'sites[' + k + ']', s, 'site'); });
+      need(id, 'next', r.next, 'region');
+    });
+    ['twn_', 'dgn_'].forEach(function (p) {
+      each(R[p], function (r, id) {
+        need(id, 'region', r.region, 'region');
+        if (r.interior) {
+          if (['town', 'dungeon', 'cave', 'castle'].indexOf(r.interior) < 0) out.push(ckItem('refs', 'interior-key', 'error', id + ' asks for an interior kind ' + r.interior + ', which no generator makes.', { record: id, field: 'interior' }));
+          else if (!sets[r.interior]) out.push(ckItem('refs', 'interior-key', 'error', id + ' is a ' + r.interior + ', but the art has no interior tileset to build it with. Add interior:' + r.interior + ' or interior:dungeon in Art and Audio Forge (Day 147).', { record: id, field: 'interior' }));
+          if (r.interior === 'town') used.town = true; else used.dungeon = true;
+        }
+        if (r.troop) {
+          needTroop(id, 'troop', r.troop);
+          if (trp[r.troop] && !trp[r.troop].boss) out.push(ckItem('refs', 'boss-not-boss', 'warning', id + ' sets troop ' + r.troop + ' as its boss, but no member of that troop is a boss.', { record: id, field: 'troop' }));
+          used.boss = true;
+        }
+        (r.spareBosses || []).forEach(function (t, k) { needTroop(id, 'spareBosses[' + k + ']', t); });
+        (r.maps || []).forEach(function (m, k) { need(id, 'maps[' + k + ']', m, 'map'); });
+        (r.people || []).forEach(function (m, k) { need(id, 'people[' + k + ']', m, 'person'); });
+        if (r.entrance) need(id, 'entrance.map', r.entrance.map, 'map');
+        if (r.overworld) need(id, 'overworld.map', r.overworld.map, 'map');
+      });
+    });
+    each(R.map_, function (m, id) {
+      if (m.kind === 'overworld') {
+        (m.continents || []).forEach(function (c, k) {
+          (c.regions || []).forEach(function (r, q) { need(id, 'continents[' + k + '].regions[' + q + ']', r, 'region'); });
+          if (c.continent && (c.regions || []).length) used.field[c.continent] = true;
+        });
+        (m.regions || []).forEach(function (r, k) { need(id, 'regions[' + k + ']', r.region, 'region'); needChapter(id, 'regions[' + k + '].chapter', r.chapter); });
+        (m.sites || []).forEach(function (s, k) {
+          need(id, 'sites[' + k + ']', s.site, 'site'); need(id, 'sites[' + k + '].region', s.region, 'region'); needChapter(id, 'sites[' + k + '].chapter', s.chapter);
+          if (s.enter) need(id, 'sites[' + k + '].enter.map', s.enter.map, 'map');
+        });
+        (m.gates || []).forEach(function (gq, k) { need(id, 'gates[' + k + '].region', gq.region, 'region'); need(id, 'gates[' + k + '].from', gq.from, 'region'); });
+        ((m.stats || {}).biomes || []).forEach(function (bm, k) {
+          if (!til[bm.biome]) broken(id, 'stats.biomes[' + k + ']', bm.biome, 'biome');
+          else if (til[bm.biome] !== 'biome') out.push(ckItem('refs', 'not-biome', 'error', id + ' paints ground with ' + bm.biome + ', which is not a biome tileset.', { record: id, field: 'stats.biomes' }));
+        });
+      } else {
+        need(id, 'site', m.site, 'site');
+        if (m.tileset) { if (!til[m.tileset]) broken(id, 'tileset', m.tileset, 'tileset'); else if (til[m.tileset] !== 'interior') out.push(ckItem('refs', 'not-interior', 'error', id + ' is drawn with ' + m.tileset + ', which is not an interior tileset.', { record: id, field: 'tileset' })); }
+        if (m.outdoor && !til[m.outdoor]) broken(id, 'outdoor', m.outdoor, 'biome');
+        if (m.path && !til[String(m.path).split(':')[0]]) broken(id, 'path', m.path, 'tileset');
+        (m.exits || []).forEach(function (ex, k) { if (!ex.to) out.push(ckItem('refs', 'exit-nowhere', 'error', id + ' has a ' + ex.kind + ' exit that leads nowhere.', { record: id, field: 'exits[' + k + ']' })); else need(id, 'exits[' + k + '].to.map', ex.to.map, 'map'); });
+        (m.people || []).forEach(function (p, k) { need(id, 'people[' + k + ']', p, 'person'); });
+        (m.features || []).forEach(function (ft, k) { if (ft.troop) needTroop(id, 'features[' + k + '].troop', ft.troop); });
+      }
+    });
+    each(R.npc_, function (p, id) {
+      need(id, 'site', p.site, 'site'); need(id, 'map', p.map, 'map');
+      if (p.archetype && spec.archetypes && !arch[p.archetype]) out.push(ckItem('refs', 'archetype', 'warning', id + ' is a ' + p.archetype + ', which is not one of the ten NPC archetypes.', { record: id, field: 'archetype' }));
+      // The archetype's sprite is what draws a person: the record's own sprite, else the art's npc:<archetype> role.
+      var roleHas = keys(spr).some(function (sid) { return spr[sid] === 'npc:' + p.archetype; });
+      if (!p.sprite && !roleHas) out.push(ckItem('refs', 'no-sprite', 'error', (p.name || id) + (p.archetype ? ' has no field sprite: the art has none for the ' + p.archetype + ' archetype. Add an npc:' + p.archetype + ' sprite in Art and Audio Forge (Day 147).' : ' has neither a sprite nor an archetype, so nothing can draw them.'), { record: id, field: 'sprite' }));
+      else if (p.sprite && !spr[p.sprite]) broken(id, 'sprite', p.sprite, 'sprite');
+      else if (p.sprite && spr[p.sprite] !== 'npc:' + p.archetype) out.push(ckItem('refs', 'sprite-archetype', 'warning', id + ' is a ' + p.archetype + ' drawn with ' + p.sprite + ', whose role is ' + spr[p.sprite] + '.', { record: id, field: 'sprite' }));
+      (p.quests || []).forEach(function (q, k) { if (!sdq[q]) broken(id, 'quests[' + k + ']', q, 'side quest'); });
+    });
+    var z = spec.zones;
+    if (z && Array.isArray(z.field)) {
+      var fire = function (q) { return !q.empty && (q.rate | 0) > 0 && (q.troops || []).length > 0; };
+      z.field.concat(z.interior || []).forEach(function (q) {
+        var at = 'zones.' + q.key;
+        needChapter('world', at + '.chapter', q.chapter);
+        if (q.biome && !til[q.biome]) broken('world', at + '.biome', q.biome, 'biome');
+        if (q.region) need('world', at + '.region', q.region, 'region');
+        if (q.map) need('world', at + '.map', q.map, 'map');
+        if (q.site) need('world', at + '.site', q.site, 'site');
+        (q.troops || []).forEach(function (t) { needTroop('world', at + '.troops', t.troop); if (trp[t.troop] && trp[t.troop].boss) out.push(ckItem('refs', 'boss-in-table', 'error', 'Zone ' + q.key + ' draws boss troop ' + t.troop + ' at random.', { record: 'world', field: at })); });
+        if (q.background && !bg[q.background]) broken('world', at + '.background', q.background, 'battle background');
+        if (!q.background && fire(q)) out.push(ckItem('refs', 'no-background', 'error', 'Zone ' + q.key + ' can start a battle, but no battle background has its role. Add one in Art and Audio Forge (Day 147).', { record: 'world', field: at }));
+        if (q.weather && !wth[q.weather]) broken('world', at + '.weather', q.weather, 'weather state');
+        if (fire(q)) used.battle = true;
+      });
+      (z.bosses || []).forEach(function (x, k) {
+        var at = 'zones.bosses[' + k + ']';
+        need('world', at + '.map', x.map, 'map');
+        if (x.site) need('world', at + '.site', x.site, 'site');
+        if (x.troop) { needTroop('world', at + '.troop', x.troop); used.boss = true; }
+        if (x.background && !bg[x.background]) broken('world', at + '.background', x.background, 'battle background');
+        if (!x.background && x.troop) out.push(ckItem('refs', 'no-background', 'error', 'The ' + x.role + ' on ' + x.map + ' has no battle background. Add an interior:dungeon background in Art and Audio Forge (Day 147).', { record: 'world', field: at }));
+      });
+      if (!keys(wth).length && z.field.length) out.push(ckItem('refs', 'no-weather', 'warning', 'The rules hold no weather states, so every zone plays under no weather.', { record: 'world', field: 'zones' }));
+      each(z.givers || {}, function (n, q) { if (!sdq[q]) broken('world', 'zones.givers.' + q, q, 'side quest'); need('world', 'zones.givers.' + q, n, 'person'); });
+    }
+    var gr = spec.graph;
+    if (gr && Array.isArray(gr.nodes)) {
+      (gr.chapters || []).forEach(function (c, k) { needChapter('world', 'progression.chapters[' + k + ']', c); });
+      gr.nodes.forEach(function (nd) { if (nd.troop) needTroop('world', 'progression.' + nd.key + '.troop', nd.troop); if (nd.record) need('world', 'progression.' + nd.key, nd.record, 'site'); });
+    }
+    // Music the world plays: each continent's field theme, towns, dungeons, random battles, and bosses.
+    function role(r, why) { if (!mus[r]) out.push(ckItem('refs', 'no-music', 'error', 'The world plays music role ' + r + ' ' + why + ', but no music track has that role. Add it in Art and Audio Forge (Day 147).', { record: 'world', field: 'music', id: r })); }
+    keys(used.field).forEach(function (c) { role('music:field:' + c, 'on continent ' + c); });
+    if (used.town) role('music:town', 'in towns');
+    if (used.dungeon) role('music:dungeon', 'in dungeons and caves');
+    if (used.battle) role('music:battle', 'in random battles');
+    if (used.boss) role('music:boss', 'in boss battles');
+    return { ok: !out.some(function (p) { return p.level !== 'warning'; }), problems: out, used: { town: used.town, dungeon: used.dungeon, battle: used.battle, boss: used.boss, field: keys(used.field) } };
+  }
+
+  W.checks = { progression: ckProgression, flags: ckFlags, refs: ckRefs, reach: ckReach, landable: ckLandable };
+
   // ---------------------------------------------------------------- later phases insert sections above this line
   function freeze(o) { Object.freeze(o); keys(o).forEach(function (k) { var v = o[k]; if (v && (typeof v === 'object' || typeof v === 'function') && !Object.isFrozen(v)) freeze(v); }); return o; }
   return freeze(W);
@@ -5880,8 +6318,7 @@ var ENGINE_WORLD = (function () {
     var rec = overworldRecord(b);
     if (!rec || !rec.paramHash) return;
     if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
-    (rec.sites || []).forEach(function (s2) { if (s2.site && !WORLD.records.get(s2.site, b)) ctx.add({ recordId: rec.id, fieldPath: 'sites', message: 'Site ' + s2.site + ' on the overworld is missing from the world records.', level: 'error' }); });
-    (rec.regions || []).forEach(function (r) { if (r.region && !WORLD.records.get(r.region, b)) ctx.add({ recordId: rec.id, fieldPath: 'regions', message: 'Region ' + r.region + ' on the overworld is missing from the world records.', level: 'error' }); });
+    // Missing sites and regions are reported by world.refs (Phase 6), the one authority for references.
   });
 
   // ---------------------------------------------------------------- interiors (Phase 4)
@@ -5942,6 +6379,8 @@ var ENGINE_WORLD = (function () {
     specs: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b); },
     // The built site for one structural site key (memoized by its parameter hash), or null.
     site: function (key, b) { b = b || cur(); var sp = inSpecs(b).filter(function (x) { return x.key === key; })[0]; return sp ? inGenerate(sp) : null; },
+    // Every site's spec and built interior in map order (memoized like site), for the Phase 6 checks.
+    built: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b).map(function (sp) { return { sp: sp, site: inGenerate(sp) }; }); },
     mapKey: mapKey, npcKey: npcKey,
     maps: interiorMaps,
     generated: function (b) { b = b || cur(); return interiorMaps(b).length > 0; },
@@ -6042,15 +6481,8 @@ var ENGINE_WORLD = (function () {
     var maps = interiorMaps(b);
     if (!maps.length) { ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab.', level: 'warning' }); return; }
     if (WORLD.interiors.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The overworld, seed, settings, or art changed after the interiors were generated. Generate them again on the Sites tab.', level: 'warning' });
-    maps.forEach(function (m) {
-      (m.exits || []).forEach(function (ex) { if (!ex.to || !WORLD.records.get(ex.to.map, b)) ctx.add({ recordId: m.id, fieldPath: 'exits', message: 'An exit of ' + m.name + ' leads to a map that does not exist.', level: 'error' }); });
-      (m.people || []).forEach(function (p) { if (!WORLD.records.get(p, b)) ctx.add({ recordId: m.id, fieldPath: 'people', message: 'Person ' + p + ' on ' + m.name + ' is missing from the world records.', level: 'error' }); });
-      if (m.site && !WORLD.records.get(m.site, b)) ctx.add({ recordId: m.id, fieldPath: 'site', message: 'The site of ' + m.name + ' is missing from the world records.', level: 'error' });
-    });
-    WORLD.records.list('npc_', b).forEach(function (p) {
-      if (p.map && !WORLD.records.get(p.map, b)) ctx.add({ recordId: p.id, fieldPath: 'map', message: p.name + ' stands on a map that does not exist.', level: 'error' });
-      if (!p.sprite) ctx.add({ recordId: p.id, fieldPath: 'sprite', message: 'The art has no field sprite for the ' + p.archetype + ' archetype, so ' + p.name + ' has nothing to be drawn with. Add an npc:' + p.archetype + ' sprite in Art and Audio Forge (Day 147).', level: 'warning' });
-    });
+    // Exits, people, sites, maps, and sprites are reference checks: world.refs (Phase 6) reports them, and a person with
+    // no field sprite is now an error there, since nothing could draw them.
   });
 
   // ---------------------------------------------------------------- encounter zones (Phase 5)
@@ -6171,37 +6603,200 @@ var ENGINE_WORLD = (function () {
   };
 
   Kit.validate.register('world.zones', function (b, ctx) {
-    var z = zoneData(b), trp = (b.rules && b.rules.trp_) || {}, bg = (b.art && b.art.records && b.art.records.bgd_) || {}, wth = (b.rules && b.rules.wth_) || {};
+    var z = zoneData(b);
     if (!z) {
       if (WORLD.interiors.generated(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The world has no encounter zones yet. Generate them on the Encounters tab.', level: 'warning' });
       return;
     }
     if (WORLD.zones.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The maps, troops, art, or settings changed after the encounter zones were made. Generate them again on the Encounters tab.', level: 'warning' });
-    z.field.concat(z.interior).forEach(function (q) {
-      q.troops.forEach(function (t) { if (!trp[t.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' draws troop ' + t.troop + ', which does not exist.', level: 'error' }); });
-      if (q.background && !bg[q.background]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses battle background ' + q.background + ', which does not exist.', level: 'error' });
-      if (q.weather && !wth[q.weather]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses weather ' + q.weather + ', which does not exist.', level: 'error' });
-      if (q.map && !WORLD.records.get(q.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' is on a map that does not exist.', level: 'error' });
-    });
-    z.bosses.forEach(function (x) {
-      if (x.troop && !trp[x.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The ' + x.role + ' on ' + x.map + ' is troop ' + x.troop + ', which does not exist.', level: 'error' });
-      if (!WORLD.records.get(x.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'A ' + x.role + ' stands on map ' + x.map + ', which does not exist.', level: 'error' });
-    });
-    // Empty tables and missing backgrounds are warnings here; Phase 6's reference check decides what blocks export.
-    (z.warnings || []).forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+    // Troops, backgrounds, weather, and maps the zones name are reference checks (world.refs, Phase 6). DECISION: an empty
+    // table stays a warning, because a zone with no troop never starts a battle; a missing battle background is left to
+    // world.refs, which makes it an error exactly when that zone (or boss) can start a battle and passes it otherwise.
+    (z.warnings || []).forEach(function (w) { if (w.code !== 'no-background') ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
   });
 
-  // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
+  // Graph level checks (Phase 6's world.progression adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);
     if (!g) return;
     PG.check(g).forEach(function (p) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: p.message, level: 'error' }); });
     g.warnings.forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: w.message, level: 'warning' }); });
     if (WORLD.progression.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'The Charter\'s chapters or the progression settings changed after the graph was laid out. Lay it out again on the Start tab.', level: 'warning' });
-    g.nodes.forEach(function (n) { if (n.record && !WORLD.records.get(n.record, b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'Site ' + n.record + ' is missing from the world records.', level: 'error' }); });
+    // A site record the graph names but the records lack is a world.refs error (Phase 6).
   });
 })();
 // === WORLD:GENERATE END ===
+// === WORLD:CHECKS BEGIN ===
+(function () {
+  'use strict';
+  // Phase 6: the world's validators. ENGINE_WORLD.checks does the proving on plain data; this fence gathers that data
+  // from the bundle, memoizes the expensive walks by the hashes the maps were made from, and registers four validators
+  // with Kit.validate:
+  //   world.refs         every reference the world holds resolves (missing IDs are broken, missing roles and sprites are
+  //                      errors), the one authority for references (Phases 3 to 5 now report only missing and stale).
+  //   world.progression  the flood fill per chapter with held keys, ship and airship included, plus the walking proof
+  //                      inside every site. Runs once the overworld is generated and up to date.
+  //   world.flags        every tile resolves and carries the flags play depends on, on the overworld and every floor.
+  //   world.zones        (Phase 5's, kept) none yet and stale as warnings, empty tables as warnings.
+  // DECISION, the Final gate: a generated world (its overworld record carries a paramHash) exports Final only when it is
+  // complete and current: progression, overworld, interiors, and zones all generated and none stale, so every record
+  // agrees with what Day 150 regenerates from the seed. A hand made overworld (no paramHash) is not held to this.
+  var U = Kit.util, CK = ENGINE_WORLD.checks, memo = { key: null, value: null };
+  function cur() { return Kit.bundle.current(); }
+  function recs(b, ns, p) { var r = b && b[ns] && (ns === 'art' ? b.art.records : b[ns]); return r && U.isObj(r[p]) ? r[p] : {}; }
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') return '{' + Object.keys(v).sort().filter(function (k) { return v[k] !== undefined; }).map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    return JSON.stringify(v);
+  }
+
+  // ---------------------------------------------------------------- what the checks read
+  function refSpec(b) {
+    WORLD.ensure(b);
+    var trp = recs(b, 'rules', 'trp_'), enm = recs(b, 'rules', 'enm_'), troops = {}, tilesets = {}, sprites = {}, sets = {};
+    Object.keys(trp).sort().forEach(function (id) { troops[id] = { boss: !!(trp[id] && ENGINE_WORLD.zones.isBoss(trp[id], enm)) }; });
+    var til = recs(b, 'art', 'til_');
+    Object.keys(til).sort().forEach(function (id) { tilesets[id] = til[id] && til[id].kind || 'unknown'; });
+    var spr = recs(b, 'art', 'spr_');
+    Object.keys(spr).sort().forEach(function (id) { sprites[id] = spr[id] && spr[id].subject && spr[id].subject.ref || ''; });
+    var pal = ENGINE_WORLD.interiors.palette(b.art);
+    Object.keys(pal.sets).sort().forEach(function (k) { sets[k] = pal.sets[k].til; });
+    function ids(o) { var out = {}; Object.keys(o).sort().forEach(function (id) { out[id] = 1; }); return out; }
+    return {
+      records: b.world.records, chapters: WORLD.chapters(b).map(function (c) { return c.id; }), troops: troops, tilesets: tilesets, interiorSets: sets,
+      backgrounds: ids(recs(b, 'art', 'bgd_')), music: WORLD.art.musicRoles(b), weather: ids(recs(b, 'rules', 'wth_')), sprites: sprites,
+      quests: ids(recs(b, 'rules', 'sdq_')), zones: WORLD.zones.data(b), graph: WORLD.progression.graph(b), archetypes: ENGINE_WORLD.interiors.ARCHETYPES.slice()
+    };
+  }
+
+  // Where the world stands: what exists and what is current. Geometric checks run only on a current, generated map.
+  function state(b) {
+    var rec = WORLD.overworld.record(b), gen = !!(rec && rec.paramHash);
+    var s = { graph: !!WORLD.progression.graph(b), overworld: !!rec, generated: gen, owFresh: false, interiors: false, inFresh: false, zones: false, znFresh: false, graphFresh: false };
+    s.graphFresh = s.graph && !WORLD.progression.stale(b);
+    if (!gen) return s;
+    s.owFresh = s.graphFresh && !WORLD.overworld.stale(b);
+    s.interiors = WORLD.interiors.generated(b);
+    s.inFresh = s.interiors && s.owFresh && !WORLD.interiors.stale(b);
+    s.zones = WORLD.zones.generated(b);
+    s.znFresh = s.zones && s.inFresh && !WORLD.zones.stale(b);
+    return s;
+  }
+
+  // Tile flags are not part of the maps' parameter hashes (a map is laid out from tile keys, not flags), yet the walks
+  // read them, so the memo is keyed by every tile's flags as well.
+  function flagKey(b) {
+    var til = recs(b, 'art', 'til_'), parts = [];
+    Object.keys(til).sort().forEach(function (id) {
+      var t = til[id];
+      if (!t) return;
+      parts.push(id + '=' + (Number(t.flags) | 0) + ':' + (t.kind || ''));
+      (t.tiles || []).forEach(function (it) { if (it && it.key) parts.push(it.key + '=' + (Number(it.flags) | 0) + (it.autotile ? 'a' : '')); });
+    });
+    return ENGINE_WORLD.util.digest(parts);
+  }
+  // The walks (progression and flags) for the current maps, memoized by every hash the maps were made from.
+  function walks(b, st) {
+    if (!st.owFresh) return null;
+    var ow = WORLD.overworld.generate(b), g = WORLD.progression.graph(b), built = st.inFresh ? WORLD.interiors.built(b) : [];
+    var key = ow.paramHash + '|' + built.map(function (x) { return x.sp.key + '=' + x.sp.hash; }).join(',') + '|' + (st.inFresh ? 1 : 0) + '|' + flagKey(b);
+    if (memo.key === key && memo.value) return memo.value;
+    var t0 = Date.now(), sites = null, kinds = {}, recIds = {};
+    if (st.inFresh) { sites = {}; built.forEach(function (x) { sites[x.sp.key] = x.site; kinds[x.sp.key] = x.sp.kind; recIds[x.sp.key] = x.sp.site.record; }); }
+    var pal = ENGINE_WORLD.interiors.palette(b.art);
+    var prog = CK.progression({ ow: ow, graph: g, sites: sites, palette: pal });
+    var t1 = Date.now();
+    var owRec = WORLD.overworld.record(b);
+    var flags = CK.flags({ ow: ow, sites: sites || {}, kinds: kinds, records: recIds, overworldRecord: owRec && owRec.id, art: b.art, render: ENGINE_RENDER });
+    var value = { progression: prog, flags: flags, interiors: !!sites, ms: { progression: t1 - t0, flags: Date.now() - t1 } };
+    memo = { key: key, value: value };
+    return value;
+  }
+
+  function item(p) {
+    var o = { recordId: p.record || 'world', fieldPath: p.field || p.check, message: p.message, level: p.level, check: p.check, code: p.code };
+    if (p.id) o.id = p.id;
+    if (p.chapter) o.chapter = p.chapter;
+    if (p.map) o.map = p.map;
+    return o;
+  }
+
+  WORLD.checks = {
+    refSpec: refSpec,
+    state: state,
+    refs: function (b) { b = b || cur(); return CK.refs(refSpec(b)); },
+    walks: function (b) { b = b || cur(); WORLD.ensure(b); return walks(b, state(b)); },
+    // Why a generated world may not export Final yet (null when nothing holds it back).
+    finalBlock: function (b) {
+      b = b || cur();
+      var s = state(b);
+      if (!s.generated) return null;
+      if (!s.graphFresh) return 'Final export is blocked: the chapters changed since the progression was laid out. Lay it out again on the Start tab.';
+      if (!s.owFresh) return 'Final export is blocked: the overworld is out of date. Generate it again on the World tab.';
+      if (!s.interiors) return 'Final export is blocked: the towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab.';
+      if (!s.inFresh) return 'Final export is blocked: the interiors are out of date. Generate them again on the Sites tab.';
+      if (!s.zones) return 'Final export is blocked: the world has no encounter zones yet. Generate them on the Encounters tab.';
+      if (!s.znFresh) return 'Final export is blocked: the encounter zones are out of date. Generate them again on the Encounters tab.';
+      return null;
+    },
+    // A compact record of what was proven, for the manifest and the Validation tab.
+    summary: function (b) {
+      b = b || cur();
+      var s = state(b), r = CK.refs(refSpec(b)), w = walks(b, s);
+      function lv(list) { var o = { error: 0, broken: 0, warning: 0 }; list.forEach(function (p) { o[p.level] = (o[p.level] || 0) + 1; }); return o; }
+      return {
+        engine: ENGINE_WORLD.version, refs: lv(r.problems), state: s,
+        progression: w ? { ok: w.progression.ok, interiors: w.interiors, problems: lv(w.progression.problems), chapters: w.progression.chapters.map(function (c) { return { chapter: c.chapter, ok: c.ok, sites: c.sites.length, sealed: c.sealed, ship: c.ship, airship: c.airship }; }) } : null,
+        flags: w ? { ok: w.flags.ok, problems: lv(w.flags.problems), stats: U.clone(w.flags.stats) } : null,
+        finalBlock: WORLD.checks.finalBlock(b)
+      };
+    }
+  };
+
+  Kit.validate.register('world.refs', function (b, ctx) {
+    if (!b.world || WORLD.isEmpty(b)) return;
+    CK.refs(refSpec(b)).problems.forEach(function (p) { ctx.add(item(p)); });
+  });
+  Kit.validate.register('world.progression', function (b, ctx) {
+    var s = state(b), w = walks(b, s);
+    if (!w) return;
+    w.progression.problems.forEach(function (p) { var o = item(p); o.fieldPath = 'progression'; ctx.add(o); });
+  });
+  Kit.validate.register('world.flags', function (b, ctx) {
+    var s = state(b), w = walks(b, s);
+    if (!w) return;
+    w.flags.problems.forEach(function (p) { var o = item(p); o.fieldPath = 'flags' + (p.map ? '.' + p.map : ''); ctx.add(o); });
+  });
+
+  // ---------------------------------------------------------------- jump links
+  // The validation panel's Jump buttons: a site, its maps, and its people open the Sites tab on that site; a region or
+  // the overworld opens the World tab; 'world' itself routes by field (WORLD:STORE's handler calls WORLD.jumpWorld).
+  function siteKeyOf(b, rec) {
+    if (!rec) return null;
+    var p = Kit.ids.prefixOf(rec.id);
+    if (p === 'twn_' || p === 'dgn_') return rec.key || null;
+    if ((p === 'map_' && rec.kind !== 'overworld') || p === 'npc_') { var s = WORLD.records.get(rec.site, b); return s ? s.key : null; }
+    return null;
+  }
+  WORLD.jumpWorld = function (fieldPath) {
+    var f = String(fieldPath || '');
+    if (/^zones/.test(f)) return Kit.go('encounters');
+    if (/^interiors/.test(f)) return Kit.go('sites');
+    if (/^(progression|flags|refs|music)/.test(f)) return Kit.go('validation');
+    return Kit.go('start');
+  };
+  Kit.jump.register({
+    test: function (id) { return WORLD.PREFIXES.indexOf(Kit.ids.prefixOf(id)) >= 0; },
+    name: function (id) { var r = WORLD.records.get(id); return r && r.name ? r.name : id; },
+    go: function (id) {
+      var b = cur(), rec = WORLD.records.get(id, b), key = siteKeyOf(b, rec);
+      if (key && WORLD.sitesUi) { WORLD.sitesUi.site = key; WORLD.sitesUi.floor = rec && rec.floor ? rec.floor : 1; return Kit.go('sites'); }
+      if (rec) return Kit.go('world');
+      return Kit.go('validation');
+    }
+  });
+})();
+// === WORLD:CHECKS END ===
 // === WS:WORLD BEGIN ===
 (function () {
   'use strict';
@@ -6672,6 +7267,115 @@ var ENGINE_WORLD = (function () {
   WORLD.WS.encounters = { render: render };
 })();
 // === WS:ENCOUNTERS END ===
+// === WS:VALIDATION BEGIN ===
+(function () {
+  'use strict';
+  // The Validation tab. Phase 6: one pass or fail card per check (references, progression, map flags, encounter zones,
+  // generation, records), each item with a Jump button, then the progression walk chapter by chapter and what the flag
+  // check read. Phase 7 polishes it; everything here reads Kit.validate and WORLD.checks, so it never disagrees with
+  // the badge or the Final gate.
+  var U = Kit.util, el = U.el, esc = U.esc;
+  function cur() { return Kit.bundle.current(); }
+  var SHOW = 8;
+  var CARDS = [
+    { key: 'refs', title: 'References', lead: 'Every chapter, troop, biome, tileset, interior kind, battle background, music role, weather state, and person sprite the world names exists.' },
+    { key: 'progression', title: 'Progression', lead: 'Each chapter, walking with only the keys earlier chapters gave, reaches all of its sites, and nothing of a later chapter opens early.' },
+    { key: 'flags', title: 'Map flags', lead: 'Every tile resolves in the art and blocks, opens, or triggers the way play needs.' },
+    { key: 'zones', title: 'Encounter zones', lead: 'Every zone and boss is current; a zone with no troops never starts a battle.' },
+    { key: 'generation', title: 'Generation', lead: 'Progression, overworld, interiors, and zones exist and are current, so the records match what the seed regenerates.' },
+    { key: 'records', title: 'Records', lead: 'The bundle\'s own record checks: shapes, IDs, envelopes, and references across forges.' }
+  ];
+  // Which card an item belongs to: Phase 6 items carry check; earlier validators are known by their field.
+  function cardOf(it) {
+    if (it.check === 'refs' || it.check === 'progression' || it.check === 'flags') return it.check;
+    var f = String(it.fieldPath || '');
+    if (f === 'zones') return 'zones';
+    if (f === 'progression') return /changed after|Lay it out again/.test(it.message) ? 'generation' : 'progression';
+    if (f === 'interiors' || f === 'paramHash') return 'generation';
+    return 'records';
+  }
+  function jumpBtn(it) {
+    if (!Kit.jump.can(it.recordId)) return null;
+    var j = el('button', 'btn btn-ghost w8-jump', Kit.icon('jump') + '<span>Jump</span>');
+    j.type = 'button';
+    j.setAttribute('aria-label', 'Jump to ' + it.recordId);
+    j.addEventListener('click', function () { Kit.jump(it.recordId, it.fieldPath); });
+    return j;
+  }
+  function itemRow(it) {
+    var row = el('li', 'w8-vitem', '<span class="chip chip-' + esc(it.level) + '">' + esc(it.level) + '</span><span class="w8-vmsg">' + esc(it.message) + '</span>');
+    var j = jumpBtn(it);
+    if (j) row.appendChild(j);
+    return row;
+  }
+  function statusChip(items, waiting) {
+    var bad = items.filter(function (x) { return x.level === 'error' || x.level === 'broken'; }).length, warn = items.filter(function (x) { return x.level === 'warning'; }).length;
+    if (waiting && !items.length) return '<span class="chip chip-muted">Waiting</span>';
+    if (bad) return '<span class="chip chip-error">Fail: ' + bad + '</span>' + (warn ? '<span class="chip chip-warning">' + warn + ' warn</span>' : '');
+    return '<span class="chip chip-ok">' + Kit.icon('check') + 'Pass</span>' + (warn ? '<span class="chip chip-warning">' + warn + ' warn</span>' : '');
+  }
+
+  function render(host) {
+    var b = cur();
+    WORLD.ensure(b);
+    var res = Kit.refreshValidation(), s = Kit.validate.summary(res), st = WORLD.checks.state(b), why = WORLD.finalBlock(b);
+    var head = el('section', 'panel');
+    head.innerHTML = '<h2 class="panel-title">Validation</h2><p class="muted">Before a Final export the world must prove itself: its references resolve, every chapter can be played in order with only the keys the chapters before it gave (the ship sails the sea, the airship lands on open ground, and every site still needs its own chapter key), every map reads the right tile flags, and everything is current. Errors and broken references block a Final export; warnings never do; drafts can always be exported.</p>' +
+      '<p class="w8-chips"><span class="chip chip-error">' + s.errors + ' errors</span><span class="chip chip-broken">' + s.broken + ' broken</span><span class="chip chip-warning">' + s.warnings + ' warnings</span><span class="chip chip-forward">' + s.forward + ' forward</span></p>';
+    head.appendChild(el('p', 'msg ' + (why ? 'msg-error' : 'w8-msg-ok'), esc(why || 'Ready for a Final export: every check passes and the world is current.')));
+    var row = el('div', 'btn-row');
+    row.appendChild(WORLD.ui.button('Check again', 'check', 'btn-primary', function () { Kit.rerender(); Kit.ui.toast('Checks run again.', 'ok'); }));
+    row.appendChild(WORLD.ui.button('Open the validation panel', null, '', function () { Kit.openValidation(); }));
+    head.appendChild(row);
+    host.appendChild(head);
+
+    var items = res.errors.concat(res.broken, res.warnings), by = {};
+    CARDS.forEach(function (c) { by[c.key] = []; });
+    items.forEach(function (it) { by[cardOf(it)].push(it); });
+    var waiting = { refs: !WORLD.count(b), progression: !st.owFresh, flags: !st.owFresh, zones: !st.zones, generation: !st.generated, records: false };
+    var grid = el('div', 'grid-cards w8-grid w8-vcards');
+    CARDS.forEach(function (c) {
+      var list = by[c.key], card = el('section', 'card w8-vcard', '<h3 class="section-h">' + esc(c.title) + '</h3><p class="w8-chips">' + statusChip(list, waiting[c.key]) + '</p><p class="muted w8-vlead">' + esc(c.lead) + '</p>');
+      card.dataset.check = c.key;
+      if (list.length) {
+        var ul = el('ul', 'w8-vlist');
+        list.slice(0, SHOW).forEach(function (it) { ul.appendChild(itemRow(it)); });
+        card.appendChild(ul);
+        if (list.length > SHOW) card.appendChild(el('p', 'muted', 'And ' + (list.length - SHOW) + ' more in the validation panel.'));
+      } else if (waiting[c.key]) {
+        card.appendChild(el('p', 'muted', c.key === 'zones' ? 'Generate the encounter zones on the Encounters tab.' : c.key === 'refs' ? 'Nothing to check until the world has records.' : 'Generate the world (and keep it current) to run this check.'));
+      }
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+
+    var w = WORLD.checks.walks(b);
+    if (!w) return;
+    var P = w.progression, pp = el('section', 'panel w8-walk');
+    pp.innerHTML = '<h2 class="panel-title">The walk, chapter by chapter</h2><p class="muted">A flood fill from the start, once per chapter, holding what the chapters before it granted.' +
+      (w.interiors ? ' Inside every site, the key chest comes before the locked door and the seal or the boss waits behind it.' : ' The interiors are not current, so only the overworld was walked.') + '</p>';
+    var rows = P.chapters.map(function (c) {
+      var ch = WORLD.chapters(b).filter(function (x) { return x.id === c.chapter; })[0], name = ch ? ch.name || c.chapter : c.chapter;
+      var keys = c.held.filter(function (k) { return /^chapter:/.test(k); }).length, seals = c.held.filter(function (k) { return /^item:seal:/.test(k); }).length;
+      var hold = '<span class="chip chip-muted">' + keys + ' chapter key' + (keys === 1 ? '' : 's') + '</span>' + (seals ? '<span class="chip chip-muted">' + seals + ' seal' + (seals === 1 ? '' : 's') + '</span>' : '') +
+        (c.ship ? '<span class="chip chip-accent">Ship</span>' : '') + (c.airship ? '<span class="chip chip-accent">Airship</span>' : '');
+      var okSites = c.sites.filter(function (x) { return x.ok; }).length, lock = c.lock;
+      var lockTxt = !lock ? 'None' : lock.shut && lock.opens ? 'Shut, opens with the seal' : !lock.shut ? 'Opens early' : 'Stays shut';
+      return '<tr><th scope="row">' + esc(name) + '</th><td><span class="w8-chips w8-tight">' + hold + '</span></td><td class="num">' + okSites + ' of ' + c.sites.length + '</td><td>' + esc(lockTxt) + '</td><td>' + (c.sealed ? 'Yes' : '<span class="chip chip-error">No</span>') + '</td><td>' +
+        (c.ok ? '<span class="chip chip-ok">' + Kit.icon('check') + 'Pass</span>' : '<span class="chip chip-error">Fail</span>') + '</td></tr>';
+    });
+    var t = el('table', 'tbl w8-walk-tbl');
+    t.innerHTML = '<thead><tr><th scope="col">Chapter</th><th scope="col">Holding</th><th scope="col" class="num">Sites</th><th scope="col">Boss lock</th><th scope="col">Later sealed</th><th scope="col">Result</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+    var wrap = el('div', 'tbl-wrap'); wrap.appendChild(t); pp.appendChild(wrap);
+    var fs = w.flags.stats;
+    pp.appendChild(el('p', 'muted w8-flagstats', 'The flag check read ' + fs.cells + ' cells on ' + fs.maps + ' maps: ' + fs.walls + ' walls and ridges, ' + fs.doors + ' doors, ' + fs.counters + ' counters, and ' + fs.floors + ' floor cells, in ' + w.ms.flags + ' ms; the walk took ' + w.ms.progression + ' ms.'));
+    host.appendChild(pp);
+  }
+
+  WORLD.WS = WORLD.WS || {};
+  WORLD.WS.validation = { render: render };
+})();
+// === WS:VALIDATION END ===
 // === WS:WORLD148 BEGIN ===
 (function () {
   'use strict';
@@ -6773,7 +7477,7 @@ var ENGINE_WORLD = (function () {
       forge: WORLD.FORGE, bundleHash: hash || '', worldVersion: b.world.version, generator: U.clone(b.world.generator), seed: b.world.seed,
       charterVersion: b.charter.version || 0, artVersion: b.art && b.art.version || null, exportedAt: U.now(),
       created: created, referenced: referenced, unresolved: unresolved.sort(), forward: fw, worldOpened: Kit.codex.isOpened('world', b), counts: counts,
-      validation: s, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
+      validation: s, checks: WORLD.checks ? WORLD.checks.summary(b) : null, engines: [{ key: 'world', global: ENG.GLOBAL, file: ENG.FILE, version: ENGINE_WORLD.version }]
     };
   };
 
@@ -6786,7 +7490,8 @@ var ENGINE_WORLD = (function () {
     if (n) return 'Final export is blocked by ' + n + ' error' + (n === 1 ? '' : 's') + ' or broken reference' + (n === 1 ? '' : 's') + '.';
     if (!WORLD.isGenerated(b)) return 'Final export is blocked: the world has not been generated yet.';
     if (!WORLD.canOpen(b)) return 'Final export is blocked: a side quest giver or a world reference points at a world record that does not exist.';
-    return null;
+    // Phase 6: a generated world must be complete and current, so the records agree with what the seed regenerates.
+    return WORLD.checks ? WORLD.checks.finalBlock(b) : null;
   }
   WORLD.finalBlock = finalBlock;
   Kit.buildExport = function (status, opts) {

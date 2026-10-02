@@ -44,7 +44,7 @@ if (engineBase.split(FREEZE).length !== 2) throw new Error('ENGINE:WORLD freeze 
 const engineWorld = engineBase.replace(FREEZE, () => ENGINE_SECTIONS.map((f) => R(f).replace(/\s+$/, '') + '\n\n').join('') + FREEZE).trim();
 // Workspace fences arrive with later phases; each is optional until its phase.
 const CSS_FENCES = ['src/world-map.css', 'src/world-sites.css', 'src/world-encounters.css', 'src/world-validation.css'].filter(exists);
-const JS_FENCES = ['src/world-generate.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
+const JS_FENCES = ['src/world-generate.js', 'src/world-checks.js', 'src/ws-world.js', 'src/ws-sites.js', 'src/ws-encounters.js', 'src/ws-validation.js'].filter(exists);
 
 const html = `<!--
 ${buildLog.trim()}

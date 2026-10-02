@@ -396,6 +396,87 @@ SESSION 5 / PHASE 5 (2026-10-02, Opus): ENCOUNTER ZONES. COMPLETE.
     music roles, weather, NPC archetype sprites), world.progression flood fill per chapter with held keys, world.flags,
     and world.zones (decide whether an empty table or a missing background blocks export).
 === END SESSION 5 ===
+SESSION 6 / PHASE 6 (2026-10-02, Opus): VALIDATION. COMPLETE.
+  Session start: the repo built clean and phase0 63/63, phase1 37/37, phase2 40/40, phase3 61/61, phase4 53/53, phase5 58/58.
+  ENGINE:WORLD section src/engine-checks.js: ENGINE_WORLD.checks {progression, flags, refs, reach, landable}. Pure: plain
+    data in, the render engine passed in for tiles, nothing else read. A problem is {check, code, level (error, broken,
+    warning), message, record (ID or 'world'), field, id, chapter, map, at}.
+  progression({ow, graph, sites, palette}): once per chapter, holding start keys plus every earlier chapter's grants. Ship:
+    sea cells walkable and the party steps ashore (overworld.reach). Airship: every landable cell (land, structurally free,
+    not a gate, passable, not sea) also seeds the fill, so it reaches every land cell and never a shut gate or a site.
+    Proven per chapter: non boss fronts reached and requires held; the boss approach reached, the lock shut without the
+    seal and open with it, the boss entrance's requires held with the seal; inside each site interiors.check plus the key
+    dungeon's prize is the chapter seal and the boss grants exactly the graph's grants. Early: holding everything up to
+    and including the chapter's seal (boss not yet beaten), no later site may be both reached and enterable (early-key for
+    golden sites, early-site otherwise); without the airship no later region's inner ground may be walked to
+    (early-ground). Without sites only the overworld is proven (interiors false). Report per chapter: held, ship,
+    airship, reach, sites [{key, record, role, golden, ok, why}], lock {shut, opens, approach}, sealed, ok.
+  flags({ow, sites, kinds, records, art, render}): by what play needs. Errors: walkable or unsailable sea, a ridge, ring,
+    or stamp wall that can be walked or sailed over, a blocked lock cell, entrance, start, door, floor, exit, arrival, or a
+    person's cell, a wall that can be walked through, a counter that can be walked over. Broken: a tile the art lacks.
+    Warnings: a wall that does not autotile to a valid blobIndex, a door without the above layer (32), a dungeon or cave
+    floor without the encounter flag, a building floor with it, a counter without 16, a chest that can be walked through.
+    One problem per map and code with a count. Stats: maps, cells, walls, doors, counters, floors.
+  refs(spec): the one authority for references (the overworld, interiors, zones, and graph validators of Phases 2 to 5 now
+    report only missing and stale). Broken (a missing ID): sites, regions, maps, people, troops, spare bosses, biomes,
+    tilesets, sprites, side quests, chapters inside world data, backgrounds, weather states, zone maps and sites, givers.
+    Errors: an interior kind no generator makes or no interior tileset builds; a map drawn with a non interior tileset;
+    a biome entry that is not a biome; a boss troop drawn at random; a person with no sprite whose archetype has no
+    npc:<archetype> role in the art (DECISION: the archetype role is what draws a person, so a record may leave sprite
+    empty when the role exists); a zone that can start a battle (not empty, rate above 0) or a boss with a troop and no
+    battle background; a music role the world plays that no track has (music:field:<slug> for every continent with
+    regions, music:town, music:dungeon, music:battle, music:boss, each only when used); an exit leading nowhere.
+    Warnings: a boss slot holding a troop with no boss member, an unknown archetype, a sprite whose role is another
+    archetype's, no weather states at all.
+  DECISIONS on zones: an empty table stays a warning (it never starts a battle) and never blocks Final; a missing battle
+    background is an error exactly when its zone or boss can start a battle, and passes otherwise; Phase 5's engine
+    no-background warning is no longer repeated by world.zones.
+  WORLD side, new fence src/world-checks.js (WORLD:CHECKS, after WORLD:GENERATE; build.js lists it): WORLD.checks {refSpec,
+    state, refs, walks, finalBlock, summary}. state: graph, overworld, generated (the overworld record has a paramHash),
+    and fresh flags for graph, overworld, interiors, zones. walks runs progression and flags only on a generated, current
+    overworld (interiors joined when they are current), memoized by the overworld paramHash, every interior hash, and a
+    digest of every tile's flags (flags are not in the maps' hashes, yet the walks read them, so an art flag edit is seen
+    at once). WORLD.interiors.built(b) added to WORLD:GENERATE. Validators: world.refs, world.progression (fieldPath
+    'progression'), world.flags (fieldPath flags.<map>); world.zones kept with the decisions above.
+  DECISION, the Final gate: finalBlock now also refuses a generated world that is incomplete or stale (progression,
+    overworld, interiors, zones all present and current), each with a reason naming the tab that fixes it, so every
+    record agrees with what Day 150 regenerates from the seed. Staleness stays a warning in validation (drafts are free).
+    A hand made overworld (no paramHash) is not held to it and is not walked. The manifest gains checks (refs counts by
+    level, state, progression ok with a row per chapter, flags ok and stats, finalBlock).
+  Jumps: any world ID jumps (twn_, dgn_, and their maps and people open the Sites tab on that site and floor; reg_ and the
+    overworld open the World tab; a missing ID opens Validation). 'world' routes by field (zones to Encounters, interiors
+    to Sites, progression, flags, refs, music to Validation, else Start) through WORLD.jumpWorld, which WORLD:STORE's
+    handler now calls.
+  Validation tab (WS:VALIDATION, src/ws-validation.js, CSS src/world-validation.css): totals, the Final status line (the
+    block reason, or Ready for a Final export), Check again and Open the validation panel; six cards (References,
+    Progression, Map flags, Encounter zones, Generation, Records), each Pass, Fail with a count, or Waiting, up to eight
+    items with 44 px Jump buttons; then the walk chapter by chapter (holding, sites reached, boss lock, later sealed,
+    result) and what the flag check read. Phase 7 polishes it.
+  Speed (plain Node): the walk 21 ms and the flags 20 ms per world, averaged over 16 worlds.
+  Tests: test/phase6.js 75 of 75 (identical proofs in two vm contexts and the plain context; 16 worlds, demo and four on 8
+    seeds, clean with not one warning; the ship reaches no sea before it is held and over a thousand cells after; the
+    airship reaches every landable cell, lands on no shut gate, and still cannot enter a later site; airshipAt 0; caught
+    with the right code: open pass, keyless later landing, lock without the seal, lock nothing opens, an early golden key
+    naming the chapter it leaks into, a site needing a key its chapter never holds, a prize that is not the seal, wrong
+    boss grants, a lost locked door, an interior not built; flags: passable dungeon wall, floor without encounter flag
+    (warning only), building floor with it, counter without 16 and walkable counter, lintel without 32, walkable sea,
+    unsailable sea, passable mountain ridge, a deleted tile, a person in a wall, no render engine; the page: validators
+    registered, waiting before generation, Final blocked for want of interiors then zones, clean four fixture but the
+    Marches warning, the page's walks equal the engine's, memoized; refs at their levels (missing troop broken with
+    record, field, and ID, interior kind, biome, tileset, field and boss music, sprite gone, no sprite and no role, deleted
+    background broken then stale, regenerated no-background error, empty zone without background passes, empty table a
+    warning that does not block, deleted weather broken then one warning); an art wall flag edit shows flag and progression
+    errors at once without regenerating and blocks Final; restoring clears; prior namespaces untouched but the givers;
+    a reroll blocks Final until regenerated; jumps; the Validation tab (six passing cards, the Marches warning on
+    Progression only, six walk rows with Ship and Airship, the flag line, a fault's Fail card and Jump); the Draft and
+    Final manifests carry checks; Days 146 and 147 open the Final with every namespace identical, 0 broken, 0 forward; a
+    hand made overworld is not blocked). test/worldspec.js holds the fixture world builder Phase 5's tests use. phase0 63,
+    phase1 37 (the static scan covers the new section), phase2 40, phase3 61, phase4 53, phase5 58; layout.js 32 views pass
+    (Validation generated added). Pictures: test/out/phase6-validation-390.png, phase6-validation-1280.png.
+  Next: Phase 7, the interface: tiles.drawMap previews with pan and pinch, overlays for zones and gates, per continent
+    controls, the tap inspector writing sparse overrides, editable zone weights and rates (world.overrides.zones), field
+    music audition, and polish of the Validation tab; measure generation on a phone before adding the Worker.
+=== END SESSION 6 ===
 DECISIONS (2026-10-02, from the Planning session, accepted as the plan of record):
   World follows Day 147's open policy; filling sdq_.giver is the only write outside world. Day 148 mints no flg_; gates use
   world local keys (chapter:<chp id>, vehicle:ship, vehicle:airship, item:<key>) that Day 149 binds later. The climate

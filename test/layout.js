@@ -49,6 +49,10 @@ const ROOT = require('path').join(__dirname, '..');
     await pg.evaluate(() => { window.WORLD.zones.apply(); window.Kit.go('encounters'); window.Kit.rerender(); }); await pg.waitForTimeout(250);
     report.push(Object.assign({ w }, await audit('encounters (generated)')));
     await pg.screenshot({ path: ROOT + '/test/out/phase5-encounters-' + w + '.png', fullPage: false });
+    // The Validation tab once everything exists (Phase 6): the check cards and the chapter walk.
+    await pg.evaluate(() => { window.Kit.go('validation'); window.Kit.rerender(); }); await pg.waitForTimeout(300);
+    report.push(Object.assign({ w }, await audit('validation (generated)')));
+    await pg.screenshot({ path: ROOT + '/test/out/phase6-validation-' + w + '.png', fullPage: true });
     await pg.evaluate(() => window.Kit.openExport()); await pg.waitForTimeout(150);
     report.push(Object.assign({ w }, await audit('export dialog')));
     await pg.evaluate(() => window.Kit.ui.closeTop()); await pg.waitForTimeout(100);

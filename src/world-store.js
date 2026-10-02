@@ -374,7 +374,7 @@
       });
     });
   });
-  Kit.jump.register({ test: function (rid) { return rid === 'world'; }, name: function () { return 'World namespace'; }, go: function () { return Kit.go('start'); } });
+  Kit.jump.register({ test: function (rid) { return rid === 'world'; }, name: function () { return 'World namespace'; }, go: function (rid, fieldPath) { return WORLD.jumpWorld ? WORLD.jumpWorld(fieldPath) : Kit.go('start'); } });
 
   // Keep every loaded bundle shaped for this forge (an empty world gets its skeleton; nothing else is touched).
   Kit.on('load', function (b) { if (WORLD.ensure(b)) Kit.bundle.touch('world-ensure'); });

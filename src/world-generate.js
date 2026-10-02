@@ -172,8 +172,7 @@
     var rec = overworldRecord(b);
     if (!rec || !rec.paramHash) return;
     if (WORLD.overworld.stale(b)) ctx.add({ recordId: rec.id, fieldPath: 'paramHash', message: 'The seed, settings, chapters, or art changed after the overworld was generated. Generate it again on the World tab.', level: 'warning' });
-    (rec.sites || []).forEach(function (s2) { if (s2.site && !WORLD.records.get(s2.site, b)) ctx.add({ recordId: rec.id, fieldPath: 'sites', message: 'Site ' + s2.site + ' on the overworld is missing from the world records.', level: 'error' }); });
-    (rec.regions || []).forEach(function (r) { if (r.region && !WORLD.records.get(r.region, b)) ctx.add({ recordId: rec.id, fieldPath: 'regions', message: 'Region ' + r.region + ' on the overworld is missing from the world records.', level: 'error' }); });
+    // Missing sites and regions are reported by world.refs (Phase 6), the one authority for references.
   });
 
   // ---------------------------------------------------------------- interiors (Phase 4)
@@ -234,6 +233,8 @@
     specs: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b); },
     // The built site for one structural site key (memoized by its parameter hash), or null.
     site: function (key, b) { b = b || cur(); var sp = inSpecs(b).filter(function (x) { return x.key === key; })[0]; return sp ? inGenerate(sp) : null; },
+    // Every site's spec and built interior in map order (memoized like site), for the Phase 6 checks.
+    built: function (b) { b = b || cur(); WORLD.ensure(b); return inSpecs(b).map(function (sp) { return { sp: sp, site: inGenerate(sp) }; }); },
     mapKey: mapKey, npcKey: npcKey,
     maps: interiorMaps,
     generated: function (b) { b = b || cur(); return interiorMaps(b).length > 0; },
@@ -334,15 +335,8 @@
     var maps = interiorMaps(b);
     if (!maps.length) { ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The towns, dungeons, and caves have no interiors yet. Generate them on the Sites tab.', level: 'warning' }); return; }
     if (WORLD.interiors.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'interiors', message: 'The overworld, seed, settings, or art changed after the interiors were generated. Generate them again on the Sites tab.', level: 'warning' });
-    maps.forEach(function (m) {
-      (m.exits || []).forEach(function (ex) { if (!ex.to || !WORLD.records.get(ex.to.map, b)) ctx.add({ recordId: m.id, fieldPath: 'exits', message: 'An exit of ' + m.name + ' leads to a map that does not exist.', level: 'error' }); });
-      (m.people || []).forEach(function (p) { if (!WORLD.records.get(p, b)) ctx.add({ recordId: m.id, fieldPath: 'people', message: 'Person ' + p + ' on ' + m.name + ' is missing from the world records.', level: 'error' }); });
-      if (m.site && !WORLD.records.get(m.site, b)) ctx.add({ recordId: m.id, fieldPath: 'site', message: 'The site of ' + m.name + ' is missing from the world records.', level: 'error' });
-    });
-    WORLD.records.list('npc_', b).forEach(function (p) {
-      if (p.map && !WORLD.records.get(p.map, b)) ctx.add({ recordId: p.id, fieldPath: 'map', message: p.name + ' stands on a map that does not exist.', level: 'error' });
-      if (!p.sprite) ctx.add({ recordId: p.id, fieldPath: 'sprite', message: 'The art has no field sprite for the ' + p.archetype + ' archetype, so ' + p.name + ' has nothing to be drawn with. Add an npc:' + p.archetype + ' sprite in Art and Audio Forge (Day 147).', level: 'warning' });
-    });
+    // Exits, people, sites, maps, and sprites are reference checks: world.refs (Phase 6) reports them, and a person with
+    // no field sprite is now an error there, since nothing could draw them.
   });
 
   // ---------------------------------------------------------------- encounter zones (Phase 5)
@@ -463,34 +457,26 @@
   };
 
   Kit.validate.register('world.zones', function (b, ctx) {
-    var z = zoneData(b), trp = (b.rules && b.rules.trp_) || {}, bg = (b.art && b.art.records && b.art.records.bgd_) || {}, wth = (b.rules && b.rules.wth_) || {};
+    var z = zoneData(b);
     if (!z) {
       if (WORLD.interiors.generated(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The world has no encounter zones yet. Generate them on the Encounters tab.', level: 'warning' });
       return;
     }
     if (WORLD.zones.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The maps, troops, art, or settings changed after the encounter zones were made. Generate them again on the Encounters tab.', level: 'warning' });
-    z.field.concat(z.interior).forEach(function (q) {
-      q.troops.forEach(function (t) { if (!trp[t.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' draws troop ' + t.troop + ', which does not exist.', level: 'error' }); });
-      if (q.background && !bg[q.background]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses battle background ' + q.background + ', which does not exist.', level: 'error' });
-      if (q.weather && !wth[q.weather]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' uses weather ' + q.weather + ', which does not exist.', level: 'error' });
-      if (q.map && !WORLD.records.get(q.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'Zone ' + q.key + ' is on a map that does not exist.', level: 'error' });
-    });
-    z.bosses.forEach(function (x) {
-      if (x.troop && !trp[x.troop]) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'The ' + x.role + ' on ' + x.map + ' is troop ' + x.troop + ', which does not exist.', level: 'error' });
-      if (!WORLD.records.get(x.map, b)) ctx.add({ recordId: 'world', fieldPath: 'zones', message: 'A ' + x.role + ' stands on map ' + x.map + ', which does not exist.', level: 'error' });
-    });
-    // Empty tables and missing backgrounds are warnings here; Phase 6's reference check decides what blocks export.
-    (z.warnings || []).forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
+    // Troops, backgrounds, weather, and maps the zones name are reference checks (world.refs, Phase 6). DECISION: an empty
+    // table stays a warning, because a zone with no troop never starts a battle; a missing battle background is left to
+    // world.refs, which makes it an error exactly when that zone (or boss) can start a battle and passes it otherwise.
+    (z.warnings || []).forEach(function (w) { if (w.code !== 'no-background') ctx.add({ recordId: 'world', fieldPath: 'zones', message: w.message, level: 'warning' }); });
   });
 
-  // Graph level checks (Phase 6 adds the geometric ones). Only runs once a graph has been laid out.
+  // Graph level checks (Phase 6's world.progression adds the geometric ones). Only runs once a graph has been laid out.
   Kit.validate.register('world.graph', function (b, ctx) {
     var g = WORLD.progression.graph(b);
     if (!g) return;
     PG.check(g).forEach(function (p) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: p.message, level: 'error' }); });
     g.warnings.forEach(function (w) { ctx.add({ recordId: 'world', fieldPath: 'progression', message: w.message, level: 'warning' }); });
     if (WORLD.progression.stale(b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'The Charter\'s chapters or the progression settings changed after the graph was laid out. Lay it out again on the Start tab.', level: 'warning' });
-    g.nodes.forEach(function (n) { if (n.record && !WORLD.records.get(n.record, b)) ctx.add({ recordId: 'world', fieldPath: 'progression', message: 'Site ' + n.record + ' is missing from the world records.', level: 'error' }); });
+    // A site record the graph names but the records lack is a world.refs error (Phase 6).
   });
 })();
 // === WORLD:GENERATE END ===

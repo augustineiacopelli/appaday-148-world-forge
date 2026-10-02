@@ -16,10 +16,10 @@
       "detail": [
         1,
         139593,
-        162468,
-        530461,
-        732356,
-        761519
+        162529,
+        530522,
+        778616,
+        807995
       ]
     },
     {
@@ -92,7 +92,7 @@
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 3328565689,
+        "seed": 3400130600,
         "settings": {
           "mapSize": {
             "base": 96,
@@ -268,7 +268,7 @@
         },
         "148": {
           "status": "draft",
-          "exportedAt": "2026-10-02T14:26:05.892Z",
+          "exportedAt": "2026-10-02T15:01:30.638Z",
           "worldVersion": "1.0.0",
           "generatorVersion": "1.0.0",
           "charterVersion": 1
@@ -289,16 +289,16 @@
       "ok": true,
       "detail": {
         "forge": 148,
-        "bundleHash": "d97b65c83e72e8742056addd744b529877ff02a0e8a1bee176e0ee907d0006cf",
+        "bundleHash": "b1926423db9ecd0da74319a9f4f4af3d229a03938164cbcc3a892f0ad86675a2",
         "worldVersion": "1.0.0",
         "generator": {
           "name": "appaday-148-world",
           "version": "1.0.0"
         },
-        "seed": 407323697,
+        "seed": 2857844089,
         "charterVersion": 1,
         "artVersion": "1.0.0",
-        "exportedAt": "2026-10-02T14:26:05.921Z",
+        "exportedAt": "2026-10-02T15:01:30.665Z",
         "created": [
           "npc_npc_chp_the_lowlands_auem_start_innkeepe_kos2",
           "twn_twn_chp_the_lowlands_auem_start_c7hb"
@@ -322,6 +322,28 @@
           "broken": 0,
           "forward": 0,
           "warnings": 0
+        },
+        "checks": {
+          "engine": "1.0.0",
+          "refs": {
+            "error": 0,
+            "broken": 0,
+            "warning": 0
+          },
+          "state": {
+            "graph": false,
+            "overworld": false,
+            "generated": false,
+            "owFresh": false,
+            "interiors": false,
+            "inFresh": false,
+            "zones": false,
+            "znFresh": false,
+            "graphFresh": false
+          },
+          "progression": null,
+          "flags": null,
+          "finalBlock": null
         },
         "engines": [
           {
